@@ -165,3 +165,69 @@ class PrivacidadeTests(Base):
         r = self.client.get(reverse("captacao:privacidade"))
         self.assertEqual(r.status_code, 200)
         self.assertIn("LGPD".lower(), r.content.decode().lower().replace("lei geral de proteção de dados", "lgpd"))
+
+
+class ConversaoTests(Base):
+    """Elementos de conversão da página: troca, FIPE, interesse real, equipamentos e parecidos."""
+
+    def abrir(self, v):
+        from django.core.cache import cache
+        cache.clear()      # a página guarda os dados por 60 s
+        r = self.client.get(f"/v/{v.pk}-fiat-argo-2022/", HTTP_USER_AGENT="Mozilla/5.0")
+        self.assertEqual(r.status_code, 200)
+        return r.content.decode()
+
+    def test_aceitamos_troca_em_varios_pontos(self):
+        html = self.abrir(novo_veiculo())
+        self.assertIn("Aceitamos seu carro na troca", html)
+        self.assertIn("Aceitamos troca", html)
+        self.assertIn("Aceitam meu carro na troca?", html)
+        self.assertIn("Aceitamos o seu carro como parte do pagamento", html)
+
+    def test_selo_abaixo_da_fipe_so_com_dado_real(self):
+        from decimal import Decimal
+        self.assertNotIn("abaixo da tabela FIPE", self.abrir(novo_veiculo()))                 # sem FIPE: não aparece
+        self.assertNotIn("abaixo da tabela FIPE", self.abrir(novo_veiculo(fipe=Decimal("59500"))))   # FIPE menor que o preço
+        html = self.abrir(novo_veiculo(fipe=Decimal("65900")))
+        self.assertIn("R$ 6.000 abaixo da tabela FIPE", html)
+
+    def test_interesse_so_a_partir_de_3_leads_reais(self):
+        from .test_funil import criar_lead
+        v = novo_veiculo()
+        for i in range(2):
+            criar_lead(v, telefone=f"558199999000{i}")
+        self.assertNotIn("pediram simulação deste carro", self.abrir(v))
+        criar_lead(v, telefone="5581999990009")
+        self.assertIn("3 pessoas</b> pediram simulação deste carro nos últimos 7 dias", self.abrir(v))
+
+    def test_interesse_ignora_leads_antigos(self):
+        from .test_funil import criar_lead
+        v = novo_veiculo()
+        for i in range(4):
+            l = criar_lead(v, telefone=f"558199999100{i}")
+            Lead.objects.filter(pk=l.pk).update(criado_em=timezone.now() - timedelta(days=10))
+        self.assertNotIn("pediram simulação deste carro", self.abrir(v))
+
+    def test_equipamentos_viram_cartoes_com_categoria(self):
+        v = novo_veiculo(itens_serie=["Seis airbags", "Central multimídia com Apple CarPlay", "Ar-condicionado digital", "Tapetes de borracha"],
+                         opcionais=[])
+        html = self.abrir(v)
+        self.assertIn("Equipamentos", html)
+        self.assertIn("Seis airbags", html)
+        self.assertIn("Segurança", html)
+        self.assertIn("Tecnologia", html)
+        self.assertIn("Conforto", html)
+        self.assertIn("Tapetes de borracha", html)       # sem categoria: vai para a lista simples
+
+    def test_parecidos_aparecem_tambem_em_carro_disponivel(self):
+        v = novo_veiculo()
+        outro = novo_veiculo(modelo="Mobi", placa="XYZ1A11", valor_venda="61000")
+        html = self.abrir(v)
+        self.assertIn("Você também pode gostar", html)
+        self.assertIn(f"/v/{outro.pk}-", html)
+
+    def test_carro_sem_preco_nao_quebra(self):
+        v = novo_veiculo(valor_venda=None)
+        r = self.client.get(f"/v/{v.pk}-fiat-argo-2022/", HTTP_USER_AGENT="Mozilla/5.0")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Sob consulta", r.content.decode())

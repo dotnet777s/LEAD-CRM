@@ -1,6 +1,7 @@
 """Páginas públicas: captura do carro, obrigado (WhatsApp), contato (Meta), fotos e privacidade."""
 import re
 import uuid
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -9,6 +10,7 @@ from django.db.models import F, Func
 from django.http import FileResponse, Http404, HttpResponse, HttpResponsePermanentRedirect, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.decorators.cache import cache_control
 
@@ -37,6 +39,62 @@ def info_requisicao(request, fbclid=""):
             "fbc": utils.montar_fbc(request.COOKIES.get("_fbc", ""), fbclid)}
 
 
+# Equipamentos em cartões: (padrão, ícone, categoria). O que não casar vira item simples na lista.
+EQUIPAMENTOS = (
+    (re.compile(r"airbag|freio|abs|estabilidade|tra[cç][aã]o|cinto|isofix|rebatimento", re.I), "shield", "Segurança"),
+    (re.compile(r"multim[ií]dia|tela|carplay|android auto|bluetooth|usb|som|display|painel digital", re.I), "screen", "Tecnologia"),
+    (re.compile(r"ar[- ]condicionado|climatizador|ar digital", re.I), "snow", "Conforto"),
+    (re.compile(r"chave|alarme|trava|partida|presen[cç]a|keyless", re.I), "key", "Praticidade"),
+    (re.compile(r"farol|led|lanterna|neblina|drl", re.I), "light", "Iluminação"),
+    (re.compile(r"dire[cç][aã]o|volante|piloto|cruise|sensor|c[aâ]mera|estacionamento|ré", re.I), "wheel", "Condução"),
+)
+PREFIXOS = re.compile(r"^(adiciona|inclui|incluso|acrescenta|com|c/)\s+", re.I)
+MAX_RESTO = 10
+NUMEROS = {"um": "1", "uma": "1", "dois": "2", "duas": "2", "três": "3", "tres": "3", "quatro": "4", "cinco": "5", "seis": "6",
+           "sete": "7", "oito": "8", "nove": "9", "dez": "10"}
+
+
+def _chave(t):
+    """Texto comparável: minúsculas e números por extenso viram dígitos ('Seis airbags' == '6 airbags')."""
+    return " ".join(NUMEROS.get(w, w) for w in t.lower().split())
+
+
+def _limpo(t):
+    t = PREFIXOS.sub("", str(t).strip())
+    return (t[:1].upper() + t[1:]) if t else ""
+
+
+def equipamentos(veiculo):
+    """([{icone, texto, categoria}], [texto restante]) a partir dos itens de série e opcionais do ROUTE.
+    Um cartão por categoria (o texto mais curto que casar); itens que repetem um cartão ficam de fora da lista."""
+    vistos, itens = set(), []
+    for t in list(veiculo.opcionais or []) + list(veiculo.itens_serie or []):
+        t = _limpo(t)
+        if t and t.lower() not in vistos:
+            vistos.add(t.lower())
+            itens.append(t)
+    cartoes = []
+    for padrao, icone, cat in EQUIPAMENTOS:
+        candidatos = [t for t in itens if padrao.search(t) and len(t) <= 56]
+        if candidatos:
+            cartoes.append({"icone": icone, "texto": min(candidatos, key=len), "categoria": cat})
+    escolhidos = [_chave(c["texto"]) for c in cartoes]
+    resto = [t for t in itens if not any(e in _chave(t) or _chave(t) in e for e in escolhidos)]
+    return cartoes, resto[:MAX_RESTO]
+
+
+def _interesse(pk):
+    """Quantas pessoas pediram simulação deste carro nos últimos 7 dias. Só mostra a partir de 3 (nunca inventado)."""
+    n = Lead.objects.filter(veiculo_id=pk, criado_em__gte=timezone.now() - timedelta(days=7)).count()
+    return n if n >= 3 else 0
+
+
+def _abaixo_da_fipe(v):
+    if v.fipe and v.valor_venda and v.fipe > v.valor_venda and (v.fipe - v.valor_venda) / v.fipe >= Decimal("0.01"):
+        return utils.preco_brl(v.fipe - v.valor_venda)
+    return ""
+
+
 def _dados_do_veiculo(pk):
     """Consultas pesadas da página, em cache por 60 s (o HTML em si não é cacheado: cada visita tem seu event_id)."""
     chave = f"captacao:veiculo:{pk}"
@@ -47,17 +105,18 @@ def _dados_do_veiculo(pk):
     disponivel = veiculo.em_loja and veiculo.possui_fotos and veiculo.valor_venda is not None
     lista, videos = fotos.midia_do_veiculo(pk)
     similares = []
-    if not disponivel and veiculo.valor_venda is not None:
+    if veiculo.valor_venda is not None:
         preco = veiculo.valor_venda
         qs = (Veiculo.objects.filter(status__in=Veiculo.EM_LOJA, total_fotos__gt=0,
                                      valor_venda__gte=preco * Decimal("0.85"), valor_venda__lte=preco * Decimal("1.15"))
               .exclude(pk=pk))
         similares = sorted(qs, key=lambda v: (abs(v.ano - veiculo.ano), abs(v.valor_venda - preco)))[:3]
     capa = fotos.capas([v.pk for v in similares])
+    equip = equipamentos(veiculo)
     dados = {
         "veiculo": veiculo, "disponivel": disponivel, "fotos": lista, "video": videos[0] if videos else None,
         "similares": [(v, capa.get(v.pk)) for v in similares],
-        "itens": list(veiculo.itens_serie or [])[:14], "diferenciais": list(veiculo.opcionais or [])[:5],
+        "equip": equip[0], "itens_extra": equip[1], "interesse": _interesse(pk), "fipe_abaixo": _abaixo_da_fipe(veiculo),
     }
     cache.set(chave, dados, CACHE_SEGUNDOS)
     return dados
