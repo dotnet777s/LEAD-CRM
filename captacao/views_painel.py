@@ -200,8 +200,18 @@ class MidiasView(LoginRequiredMixin, TemplateView):
 
 
 ROTULO_ETAPA = {"view": "Abriu a página", "comecou": "Começou o formulário", "contato": "Deixou nome e WhatsApp",
-                "q_pagamento": "Respondeu: pagamento", "q_entrada": "Respondeu: entrada", "q_troca": "Respondeu: troca",
-                "q_prazo": "Respondeu: prazo", "enviou": "Enviou (lead completo)"}
+                "q_pagamento": "Respondeu o pagamento", "q_entrada": "Respondeu a entrada", "q_troca": "Respondeu a troca",
+                "q_prazo": "Respondeu o prazo", "enviou": "Enviou o formulário"}
+# A pergunta de entrada some para quem paga à vista: fica fora da conta de perdas.
+ETAPAS_PRINCIPAIS = ["view", "comecou", "contato", "q_pagamento", "q_troca", "q_prazo", "enviou"]
+DICA_VAZAMENTO = {
+    "comecou": "A maioria vê a página e nem toca no formulário. Revise o que vem antes dele: foto principal, preço, botões e o quanto o formulário aparece sem rolar.",
+    "contato": "Começam a preencher e param antes de deixar o contato. Pedir nome e WhatsApp pesa: reforce o benefício (simulação sem compromisso) e confira o texto do aceite.",
+    "q_pagamento": "Deixam o contato e não respondem nenhuma pergunta. São leads incompletos: o SDR deve requalificar pelo WhatsApp (lista abaixo).",
+    "q_troca": "Respondem o pagamento e param antes da pergunta de troca. Veja se a pergunta de entrada está confusa ou lenta.",
+    "q_prazo": "Param na pergunta de troca. Considere deixá-la opcional ou mais simples.",
+    "enviou": "Respondem tudo e não enviam. Confira o botão de enviar e o carregamento da página seguinte.",
+}
 
 
 def _p_valor(n1, c1, n2, c2):
@@ -217,42 +227,107 @@ def _p_valor(n1, c1, n2, c2):
     return z, math.erfc(abs(z) / math.sqrt(2))
 
 
+def _contar(eventos):
+    """{etapa: pessoas}. Com cookies conta visitantes únicos (sid); sem cookies não há como deduplicar: conta visitas."""
+    unicos, anonimos = defaultdict(set), Counter()
+    for etapa, sid, consent in eventos:
+        if consent and sid:
+            unicos[etapa].add(sid)
+        else:
+            anonimos[etapa] += 1
+    return {e: len(unicos[e]) + anonimos[e] for e in ROTULO_ETAPA}
+
+
+def _pct(n, total, casas=1):
+    return round(100 * n / total, casas) if total else None
+
+
 class FunilFormView(LoginRequiredMixin, TemplateView):
-    """Onde as pessoas desistem no formulário da página de captura e qual variante (A/B) converte mais."""
+    """Dashboard do formulário da página de captura: onde as pessoas desistem, o que fazer e qual variante (A/B) converte mais."""
     template_name = "captacao/funil_form.html"
 
     def get_context_data(self, **kw):
         from .models import EventoFunil
         ctx = super().get_context_data(**kw)
+        req = self.request
         try:
-            dias = int(self.request.GET.get("dias", 30))
+            dias = int(req.GET.get("dias", 30))
         except ValueError:
             dias = 30
         dias = dias if dias in (7, 14, 30, 90) else 30
-        desde = timezone.now() - timedelta(days=dias)
-        eventos = list(EventoFunil.objects.filter(criado_em__gte=desde).values_list("etapa", "variante", "sid", "consent"))
-        grupos = [("A", "Variante A (com cookies)"), ("B", "Variante B (com cookies)"), ("anon", "Sem cookies (anônimo)")]
-        vistos = {g: defaultdict(set) for g, _ in grupos}
-        anonimos = defaultdict(int)
-        for etapa, var, sid, consent in eventos:
-            if consent and sid and var in ("A", "B"):
-                vistos[var][etapa].add(sid)
-            elif not consent:
-                anonimos[etapa] += 1
-        tabelas = []
-        for g, nome in grupos:
-            contagem = {e: (anonimos[e] if g == "anon" else len(vistos[g][e])) for e in EventoFunil.ETAPAS}
-            topo = contagem["view"]
-            linhas, anterior = [], None
-            for e in EventoFunil.ETAPAS:
-                n = contagem[e]
-                linhas.append({"nome": ROTULO_ETAPA[e], "n": n, "pct": round(100 * n / topo, 1) if topo else None,
-                               "perdeu": round(100 * (1 - n / anterior), 1) if anterior and e != "view" else None})
-                anterior = n or None
-            tabelas.append({"chave": g, "nome": nome, "linhas": linhas, "visitas": topo, "enviou": contagem["enviou"],
-                            "taxa": round(100 * contagem["enviou"] / topo, 1) if topo else None})
-        a, b = tabelas[0], tabelas[1]
-        veredito, p = "", None
+        try:
+            carro = int(req.GET.get("carro") or 0)
+        except ValueError:
+            carro = 0
+        agora = timezone.now()
+        desde = agora - timedelta(days=dias)
+        antes = desde - timedelta(days=dias)
+        base = EventoFunil.objects.all()
+        if carro:
+            base = base.filter(veiculo_id=carro)
+        todos = list(base.filter(criado_em__gte=antes).values_list("etapa", "sid", "consent", "variante", "veiculo_id", "criado_em"))
+        atuais = [e for e in todos if e[5] >= desde]
+        anteriores = [e for e in todos if e[5] < desde]
+
+        # ---- funil principal
+        cont = _contar([(e[0], e[1], e[2]) for e in atuais])
+        visitas = cont["view"]
+        linhas, anterior = [], None
+        for i, etapa in enumerate(ETAPAS_PRINCIPAIS):
+            n = cont[etapa]
+            perdeu_n = max(0, (anterior or 0) - n) if i else 0
+            linhas.append({"chave": etapa, "nome": ROTULO_ETAPA[etapa], "n": n, "pct": _pct(n, visitas),
+                           "perdeu_n": perdeu_n, "perdeu_pct": _pct(perdeu_n, anterior) if i and anterior else None,
+                           "largura": round(100 * n / visitas, 1) if visitas else 0})
+            anterior = n
+        elegiveis = [l for l in linhas[1:] if (l["perdeu_n"] or 0) > 0 and visitas >= 20]
+        vazamento = None
+        if elegiveis:
+            pior = max(elegiveis, key=lambda l: l["perdeu_n"])
+            de = linhas[linhas.index(pior) - 1]
+            vazamento = {"chave": pior["chave"], "de": de["nome"], "para": pior["nome"], "n": pior["perdeu_n"],
+                         "pct": pior["perdeu_pct"], "dica": DICA_VAZAMENTO.get(pior["chave"], "")}
+            pior["vazamento"] = True
+        entrada = {"nome": ROTULO_ETAPA["q_entrada"], "n": cont["q_entrada"], "pct": _pct(cont["q_entrada"], visitas)}
+
+        # ---- período anterior (para as setas de comparação)
+        cont_ant = _contar([(e[0], e[1], e[2]) for e in anteriores])
+        conv, conv_ant = _pct(cont["enviou"], visitas), _pct(cont_ant["enviou"], cont_ant["view"])
+        contato, contato_ant = _pct(cont["contato"], visitas), _pct(cont_ant["contato"], cont_ant["view"])
+
+        def delta(atual, ant, pontos=False):
+            if atual is None or ant is None:
+                return None
+            if pontos:
+                return round(atual - ant, 1)
+            return round(100 * (atual - ant) / ant, 1) if ant else None
+
+        kpis = {"visitas": visitas, "visitas_d": delta(visitas, cont_ant["view"]),
+                "contato": contato, "contato_d": delta(contato, contato_ant, True), "contato_n": cont["contato"],
+                "conversao": conv, "conversao_d": delta(conv, conv_ant, True), "enviou": cont["enviou"]}
+
+        # ---- série por dia (duas séries, duas escalas: dois gráficos)
+        dia_view, dia_env = Counter(), Counter()
+        for etapa, sid, consent, var, vid, criado in atuais:
+            d = timezone.localtime(criado).date()
+            if etapa == "view":
+                dia_view[d] += 1
+            elif etapa == "enviou":
+                dia_env[d] += 1
+        hoje = timezone.localdate()
+        dias_lista = [hoje - timedelta(days=i) for i in range(dias - 1, -1, -1)]
+        serie = {"rotulos": [d.strftime("%d/%m") for d in dias_lista],
+                 "visitas": [dia_view[d] for d in dias_lista], "enviados": [dia_env[d] for d in dias_lista]}
+
+        # ---- teste A/B (só quem aceitou os cookies tem variante)
+        ab = {}
+        for var in ("A", "B"):
+            ev = [(e[0], e[1], e[2]) for e in atuais if e[3] == var and e[2] and e[1]]
+            c = _contar(ev)
+            ab[var] = {"visitas": c["view"], "contato": c["contato"], "enviou": c["enviou"], "c": c,
+                       "taxa_contato": _pct(c["contato"], c["view"]), "taxa": _pct(c["enviou"], c["view"])}
+        veredito, tom, p = "", "neutro", None
+        a, b = ab["A"], ab["B"]
         if min(a["visitas"], b["visitas"]) < 100:
             veredito = "Amostra pequena (menos de 100 visitas por variante): ainda não dá para concluir qual é melhor."
         else:
@@ -260,11 +335,58 @@ class FunilFormView(LoginRequiredMixin, TemplateView):
             if p is None:
                 veredito = "Sem dados suficientes para comparar."
             elif p < 0.05:
-                veredito = f"A variante {'A' if z > 0 else 'B'} converte mais, com diferença estatisticamente confiável (p = {p:.3f})."
+                veredito, tom = f"A variante {'A' if z > 0 else 'B'} converte mais, com diferença estatisticamente confiável (p = {p:.3f}).", "bom"
             else:
                 veredito = f"Ainda não há diferença confiável entre A e B (p = {p:.2f}). Continue o teste."
-        incompletos = Lead.objects.filter(etapa=Lead.Etapa.REQUALIFICAR, criado_em__gte=desde).count()
+        maior = max(ab["A"]["taxa"] or 0, ab["B"]["taxa"] or 0)       # as barras comparam A com B (a maior ocupa a largura toda)
+        for var in ("A", "B"):
+            ab[var]["largura"] = round(100 * (ab[var]["taxa"] or 0) / maior, 1) if maior else 0
+        for var in ("A", "B"):
+            c = ab[var].pop("c")
+            ab[var]["retencao"] = [{"nome": ROTULO_ETAPA[e], "pct": _pct(c[e], c["view"])} for e in ETAPAS_PRINCIPAIS]
+
+        # ---- por carro
+        por = defaultdict(list)
+        for etapa, sid, consent, var, vid, criado in atuais:
+            por[vid].append((etapa, sid, consent))
+        nomes = {v.pk: v.nome for v in Veiculo.objects.filter(pk__in=[k for k in por if k])}
+        incompletos_carro = Counter(Lead.objects.filter(etapa=Lead.Etapa.REQUALIFICAR).values_list("veiculo_id", flat=True))
+        carros = []
+        for vid, evs in por.items():
+            c = _contar(evs)
+            carros.append({"nome": nomes.get(vid, f"Carro {vid}"), "pk": vid, "visitas": c["view"], "contato": c["contato"],
+                           "enviou": c["enviou"], "conv": _pct(c["enviou"], c["view"]), "incompletos": incompletos_carro.get(vid, 0),
+                           "alerta": c["view"] >= 20 and c["enviou"] == 0})
+        carros.sort(key=lambda x: -x["visitas"])
+
+        # ---- leads incompletos agora e por anúncio
+        incompletos_qs = Lead.objects.filter(etapa=Lead.Etapa.REQUALIFICAR).order_by("criado_em")
+        lista = [{"nome": l.nome, "carro": (l.carro_texto or "").split(" · ")[0], "telefone": l.telefone_formatado,
+                  "ha": _ha(agora - l.criado_em), "url": l.whatsapp_requalificar_url, "pk": l.pk} for l in incompletos_qs[:8]]
+        anuncios = defaultdict(lambda: {"total": 0, "incompletos": 0})
+        for utm, resp in Lead.objects.filter(criado_em__gte=desde).exclude(utm_content="").values_list("utm_content", "respostas"):
+            anuncios[utm]["total"] += 1
+            anuncios[utm]["incompletos"] += 1 if (resp or {}).get("parcial") else 0
+        por_anuncio = sorted(({"nome": k, **v, "pct_inc": _pct(v["incompletos"], v["total"], 0)} for k, v in anuncios.items()),
+                             key=lambda x: -x["total"])[:8]
         recuperados = Historico.objects.filter(criado_em__gte=desde, texto__startswith="Terminou o formulário").count()
-        ctx.update(tabelas=tabelas, dias=dias, veredito=veredito, incompletos=incompletos, recuperados=recuperados,
-                   opcoes_dias=[(7, "7 dias"), (14, "14 dias"), (30, "30 dias"), (90, "90 dias")])
+
+        ctx.update(
+            dias=dias, carro=carro, opcoes_dias=[(7, "7 dias"), (14, "14 dias"), (30, "30 dias"), (90, "90 dias")],
+            lista_carros=sorted(({"pk": k, "nome": v} for k, v in nomes.items()), key=lambda x: x["nome"]),
+            kpis=kpis, linhas=linhas, entrada=entrada, vazamento=vazamento, poucos_dados=visitas < 30, serie=serie,
+            ab=ab, veredito=veredito, veredito_tom=tom, carros=carros[:10], incompletos=incompletos_qs.count(),
+            lista_incompletos=lista, por_anuncio=por_anuncio, recuperados=recuperados,
+            sem_dados=not todos)
         return ctx
+
+
+def _ha(delta):
+    """'há 12 min', 'há 3 h', 'há 2 dias'."""
+    seg = int(delta.total_seconds())
+    if seg < 3600:
+        return f"há {max(1, seg // 60)} min"
+    if seg < 86400:
+        return f"há {seg // 3600} h"
+    d = seg // 86400
+    return "há 1 dia" if d == 1 else f"há {d} dias"

@@ -1,25 +1,219 @@
 {% extends "captacao/base.html" %}
 {% block title %}TopCar · Formulário{% endblock %}
+{% block head %}
+<style>
+.dsh{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--r1:#86b6ef;--r2:#6da7ec;--r3:#5598e7;--r4:#3987e5;--r5:#2a78d6;--r6:#256abf;--r7:#1c5cab;
+ --bom:#0ca30c;--ruim:#d03b3b;--alerta:#ec835a;--ink:#ededed;--ink2:#c3c2b7;--mudo:#898781;--grade:#2c2c2a;--base:#383835;--card:var(--sf);
+ max-width:1180px;margin:0 auto;padding:14px 14px 40px;color:var(--ink)}
+.dsh h1{font-size:24px;margin:2px 0 2px;letter-spacing:-.01em}.dsh .sub{color:var(--mudo);margin:0 0 14px;font-size:14px}
+.dsh .filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 16px}
+.dsh .pill{padding:7px 14px;border-radius:999px;border:1px solid var(--bd);color:var(--ink2);text-decoration:none;font-weight:600;font-size:14px;background:var(--sf)}
+.dsh .pill:hover{background:var(--sf2)}.dsh .pill.on{border-color:var(--gr);color:var(--gr);background:#0d2a17}
+.dsh select{width:auto;min-width:190px;padding:8px 12px;border-radius:999px}
+.dsh .grade{display:grid;gap:12px;grid-template-columns:repeat(12,minmax(0,1fr));margin-bottom:12px}
+.dsh .c{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:18px;min-width:0}
+.dsh .c h2{font-size:15px;margin:0 0 4px;font-weight:700;letter-spacing:-.005em}.dsh .c .leg{color:var(--mudo);font-size:13px;margin:0 0 14px}
+.dsh .s12{grid-column:span 12}.dsh .s8{grid-column:span 8}.dsh .s7{grid-column:span 7}.dsh .s6{grid-column:span 6}.dsh .s5{grid-column:span 5}.dsh .s4{grid-column:span 4}
+@media(max-width:900px){.dsh .s8,.dsh .s7,.dsh .s6,.dsh .s5,.dsh .s4{grid-column:span 12}}
+/* número de destaque e blocos de número */
+.dsh .hero .rot{color:var(--mudo);font-size:13px;margin:0}.dsh .hero .big{font-size:56px;font-weight:800;line-height:1.05;letter-spacing:-.03em;margin:6px 0 4px}
+.dsh .hero .big small{font-size:26px;font-weight:700;color:var(--ink2)}.dsh .hero p.det{margin:8px 0 0;color:var(--ink2);font-size:14px}
+.dsh .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;height:100%}
+@media(max-width:620px){.dsh .kpis{grid-template-columns:1fr}.dsh .hero .big{font-size:46px}}
+.dsh .kpi{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px}
+.dsh .kpi .rot{color:var(--mudo);font-size:13px;margin:0}.dsh .kpi .v{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:6px 0 2px;line-height:1.1}
+.dsh .kpi .sub2{color:var(--mudo);font-size:12.5px;margin:0}
+.dsh .dl{display:inline-flex;gap:4px;align-items:center;font-size:12.5px;font-weight:700;margin-top:6px}.dsh .dl.up{color:var(--bom)}.dsh .dl.down{color:var(--ruim)}.dsh .dl.zero{color:var(--mudo)}
+/* aviso de vazamento: ícone + texto, nunca só cor */
+.dsh .vaza{display:flex;gap:14px;align-items:flex-start;border:1px solid rgba(236,131,90,.45);background:linear-gradient(100deg,rgba(236,131,90,.12),rgba(236,131,90,.02) 70%),var(--card)}
+.dsh .vaza svg{flex:none;width:26px;height:26px;color:var(--alerta);margin-top:2px}.dsh .vaza b{font-size:17px}.dsh .vaza p{margin:6px 0 0;color:var(--ink2);font-size:14.5px}
+.dsh .vaza.ok{border-color:var(--bd);background:var(--card)}.dsh .vaza.ok svg{color:var(--bom)}
+.dsh .aviso-dados{background:#241b09;border:1px solid #5a4415;color:var(--am);border-radius:12px;padding:10px 14px;margin:0 0 12px;font-size:14px}
+/* funil: barras horizontais finas, valor na ponta, perda ao lado */
+.dsh .fr{display:grid;grid-template-columns:190px minmax(0,1fr) 120px;gap:12px;align-items:center;padding:7px 4px;border-radius:10px;outline:none}
+.dsh .fr:hover,.dsh .fr:focus-visible{background:rgba(255,255,255,.04)}
+.dsh .fn{font-size:14px;color:var(--ink2)}.dsh .ft{position:relative;height:22px}
+.dsh .ft i{position:absolute;left:0;top:1px;height:20px;border-radius:0 4px 4px 0;width:calc(var(--w)*.82%);min-width:2px;background:var(--cor);transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.dsh .ft span{position:absolute;top:0;left:calc(var(--w)*.82% + 10px);line-height:22px;font-size:14px;white-space:nowrap}.dsh .ft span b{font-weight:800}.dsh .ft span em{font-style:normal;color:var(--mudo);margin-left:6px;font-size:13px}
+.dsh .fd{font-size:13px;color:var(--mudo);text-align:right}.dsh .fd.leak{color:var(--alerta);font-weight:700}
+.dsh .fr.lateral .fn,.dsh .fr.lateral .ft span{color:var(--mudo)}.dsh .fr.lateral .ft i{opacity:.55}
+.dsh .fr .tag{display:inline-flex;gap:5px;align-items:center;font-size:11.5px;font-weight:700;color:var(--alerta);border:1px solid rgba(236,131,90,.5);border-radius:999px;padding:1px 8px;margin-top:2px}
+.dsh .nota{color:var(--mudo);font-size:12.5px;margin:10px 0 0}
+@media(max-width:700px){.dsh .fr{grid-template-columns:minmax(0,1fr) 84px}.dsh .fr .fn{grid-column:1/-1}.dsh .fr .ft{grid-column:1}.dsh .ft i{width:calc(var(--w)*.5%)}.dsh .ft span{left:calc(var(--w)*.5% + 10px)}}
+/* gráficos de linha */
+.dsh .graf{width:100%;height:auto;display:block;overflow:visible}
+.dsh .graf text{fill:var(--mudo);font-size:11px}.dsh .graf .gl{stroke:var(--grade);stroke-width:1}.dsh .graf .eixo{stroke:var(--base);stroke-width:1}
+.dsh .graf .linha{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.dsh .graf .mira{stroke:var(--mudo);stroke-width:1;opacity:0}
+.dsh .graf .ponto{stroke:var(--card);stroke-width:2}
+/* A/B */
+.dsh .ab{display:grid;gap:8px}.dsh .abl{display:grid;grid-template-columns:260px minmax(0,1fr);gap:12px;align-items:center}
+@media(max-width:700px){.dsh .abl{grid-template-columns:1fr;gap:6px}}
+.dsh .abl .ft{height:22px}.dsh .chave{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:7px;vertical-align:middle}
+.dsh .veredito{display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;padding:12px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--sf2);font-size:14px;color:var(--ink2)}
+.dsh .veredito svg{flex:none;width:20px;height:20px;margin-top:1px;color:var(--mudo)}.dsh .veredito.bom svg{color:var(--bom)}
+/* tabelas */
+.dsh .rolar{overflow-x:auto;-webkit-overflow-scrolling:touch}.dsh .rolar table{min-width:560px}
+.dsh table{width:100%;border-collapse:collapse;font-size:14px}.dsh th{color:var(--mudo);font-weight:600;font-size:12px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 8px;border-bottom:1px solid var(--grade)}
+.dsh td{padding:10px 8px;border-bottom:1px solid var(--grade)}.dsh td.n,.dsh th.n{text-align:right;font-variant-numeric:tabular-nums}.dsh tr:last-child td{border-bottom:0}
+.dsh .badge{display:inline-flex;gap:5px;align-items:center;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;border:1px solid var(--bd);color:var(--ink2)}
+.dsh .badge.alerta{color:var(--alerta);border-color:rgba(236,131,90,.5)}
+.dsh .lista .li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 2px;border-bottom:1px solid var(--grade)}.dsh .lista .li:last-child{border-bottom:0}
+.dsh .lista b{display:block;font-size:14.5px}.dsh .lista span{color:var(--mudo);font-size:13px}
+.dsh details{margin-top:12px}.dsh summary{cursor:pointer;color:var(--ink2);font-weight:600;font-size:14px}
+.dsh .vazio{color:var(--mudo);padding:8px 0;font-size:14px}
+.dsh .tip{position:fixed;z-index:50;pointer-events:none;background:#101214;border:1px solid var(--bd);border-radius:10px;padding:9px 12px;font-size:13px;box-shadow:0 12px 30px -8px #000;max-width:260px;opacity:0;transition:opacity .08s}
+.dsh .tip.on{opacity:1}.dsh .tip strong{display:block;font-size:15px;margin:1px 0 3px}.dsh .tip span{display:block;color:var(--mudo)}
+@media(prefers-reduced-motion:reduce){.dsh .ft i{transition:none}}
+</style>
+{% endblock %}
 {% block content %}
-<div class="pg">
-<form class="barra" method="get" style="padding:0 0 12px">
-  <select name="dias" onchange="this.form.submit()">{% for v, r in opcoes_dias %}<option value="{{ v }}" {% if v == dias %}selected{% endif %}>{{ r }}</option>{% endfor %}</select>
-  <span style="color:var(--mu);font-size:13px">Onde as pessoas desistem no formulário da página de captura · teste A/B dos botões</span>
+<div class="dsh">
+<h1>Diagnóstico do formulário</h1>
+<p class="sub">Onde as pessoas desistem na página de captura, o que fazer e qual versão dos botões converte mais.</p>
+
+<form class="filtros" method="get" id="filtros">
+  {% for v, r in opcoes_dias %}<a class="pill{% if v == dias %} on{% endif %}" href="?dias={{ v }}{% if carro %}&carro={{ carro }}{% endif %}">{{ r }}</a>{% endfor %}
+  <input type="hidden" name="dias" value="{{ dias }}">
+  <select name="carro" onchange="this.form.submit()" aria-label="Carro"><option value="">Todos os carros</option>{% for c in lista_carros %}<option value="{{ c.pk }}" {% if c.pk == carro %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}</select>
 </form>
 
-<div class="box" style="margin-bottom:12px"><h2>Resultado do teste A/B</h2>
-<p style="margin:0 0 6px">{{ veredito }}</p>
-<p style="margin:0;color:var(--mu);font-size:13.5px">A = botões "Simular" e "Agendar visita". B = "Falar com consultor" e "Ver na loja". Só entram na comparação visitantes que aceitaram os cookies; quem recusou aparece à parte, sempre na variante A e sem identificador.</p></div>
+{% if sem_dados %}<div class="c vazio" style="padding:28px">Ainda não há visitas medidas neste período. Os números aparecem assim que alguém abrir a página de um carro.</div>
+{% else %}
+{% if poucos_dados %}<div class="aviso-dados">Poucos dados ({{ kpis.visitas }} visitas): os percentuais ainda variam muito de um dia para o outro. Use como pista, não como conclusão.</div>{% endif %}
 
-<div class="box" style="margin-bottom:12px"><h2>Formulário incompleto</h2>
-<p style="margin:0;color:var(--mu);font-size:14px"><b style="color:var(--tx)">{{ incompletos }}</b> leads deixaram o contato e não terminaram (coluna <b>Requalificar</b> do funil) · <b style="color:var(--tx)">{{ recuperados }}</b> terminaram depois.</p></div>
+<section class="grade" aria-label="Resumo">
+  <div class="c hero s4">
+    <p class="rot">Conversão da página · visitas que viraram formulário enviado</p>
+    <div class="big">{% if kpis.conversao is not None %}{{ kpis.conversao|floatformat:1 }}<small>%</small>{% else %}—{% endif %}</div>
+    {% if kpis.conversao_d is not None %}<span class="dl {% if kpis.conversao_d > 0 %}up{% elif kpis.conversao_d < 0 %}down{% else %}zero{% endif %}">{% if kpis.conversao_d > 0 %}▲ +{% elif kpis.conversao_d < 0 %}▼ {% else %}— {% endif %}{{ kpis.conversao_d|floatformat:1 }} pontos <span style="color:var(--mudo);font-weight:500">vs. {{ dias }} dias antes</span></span>{% endif %}
+    <p class="det">{{ kpis.enviou|floatformat:"0g" }} formulários enviados em {{ kpis.visitas|floatformat:"0g" }} visitas</p>
+  </div>
+  <div class="s8" style="padding:0"><div class="kpis">
+    <div class="kpi"><p class="rot">Visitas</p><div class="v">{{ kpis.visitas|floatformat:"0g" }}</div>
+      {% if kpis.visitas_d is not None %}<span class="dl {% if kpis.visitas_d > 0 %}up{% elif kpis.visitas_d < 0 %}down{% else %}zero{% endif %}">{% if kpis.visitas_d > 0 %}▲ +{% elif kpis.visitas_d < 0 %}▼ {% else %}— {% endif %}{{ kpis.visitas_d|floatformat:1 }}%</span>{% endif %}
+      <p class="sub2">pessoas que abriram a página</p></div>
+    <div class="kpi"><p class="rot">Deixaram o contato</p><div class="v">{% if kpis.contato is not None %}{{ kpis.contato|floatformat:1 }}%{% else %}—{% endif %}</div>
+      {% if kpis.contato_d is not None %}<span class="dl {% if kpis.contato_d > 0 %}up{% elif kpis.contato_d < 0 %}down{% else %}zero{% endif %}">{% if kpis.contato_d > 0 %}▲ +{% elif kpis.contato_d < 0 %}▼ {% else %}— {% endif %}{{ kpis.contato_d|floatformat:1 }} pontos</span>{% endif %}
+      <p class="sub2">{{ kpis.contato_n|floatformat:"0g" }} pessoas (nome + WhatsApp)</p></div>
+    <div class="kpi"><p class="rot">Aguardando requalificação</p><div class="v">{{ incompletos|floatformat:"0g" }}</div>
+      <p class="sub2">{{ recuperados|floatformat:"0g" }} terminaram depois do contato</p></div>
+  </div></div>
+</section>
 
-{% for t in tabelas %}
-<div class="box" style="margin-bottom:12px"><h2>{{ t.nome }}</h2>
-<p style="margin:0 0 8px;color:var(--mu);font-size:13.5px">{{ t.visitas }} visitas · {{ t.enviou }} formulários enviados{% if t.taxa is not None %} · conversão <b style="color:var(--tx)">{{ t.taxa }}%</b>{% endif %}</p>
-<table class="t"><tr><th>Etapa</th><th class="n">Pessoas</th><th class="n">% das visitas</th><th class="n">Perdeu desde a etapa anterior</th></tr>
-{% for l in t.linhas %}<tr><td>{{ l.nome }}</td><td class="n">{{ l.n }}</td><td class="n">{% if l.pct is not None %}{{ l.pct }}%{% else %}—{% endif %}</td><td class="n">{% if l.perdeu is not None %}{{ l.perdeu }}%{% else %}—{% endif %}</td></tr>{% endfor %}
-</table></div>
-{% endfor %}
+{% if vazamento %}
+<section class="c vaza s12" style="margin-bottom:12px" aria-label="Maior vazamento">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+  <div><b>Maior vazamento: entre “{{ vazamento.de }}” e “{{ vazamento.para }}”</b>
+  <p><strong>{{ vazamento.n|floatformat:"0g" }} pessoas</strong> ({{ vazamento.pct|floatformat:0 }}% de quem chegou à etapa anterior) não passaram daqui.</p>
+  <p>{{ vazamento.dica }}</p></div>
+</section>
+{% endif %}
+
+<section class="c s12" style="margin-bottom:12px" aria-label="Funil">
+  <h2>Funil do formulário</h2>
+  <p class="leg">Quantas pessoas chegam a cada etapa. A barra é a parte das visitas; o número à direita é quanto se perdeu desde a etapa anterior.</p>
+  {% for l in linhas %}
+  <div class="fr" tabindex="0" data-tip="{{ l.nome }}|{{ l.n|floatformat:'0g' }} pessoas|{% if l.pct is not None %}{{ l.pct|floatformat:1 }}% das visitas{% endif %}{% if l.perdeu_n %}|Perdeu {{ l.perdeu_n|floatformat:'0g' }} ({{ l.perdeu_pct|floatformat:0 }}%) desde a etapa anterior{% endif %}">
+    <div class="fn">{{ l.nome }}</div>
+    <div class="ft" style="--w:{{ l.largura|stringformat:'.1f' }};--cor:var(--r{{ forloop.counter }})"><i></i><span><b>{{ l.n|floatformat:"0g" }}</b><em>{% if l.pct is not None %}{{ l.pct|floatformat:1 }}%{% endif %}</em></span></div>
+    <div class="fd{% if l.vazamento %} leak{% endif %}">{% if l.perdeu_n %}−{{ l.perdeu_pct|floatformat:0 }}%{% if l.vazamento %}<br><span class="tag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v9M12 19h.01"/></svg>maior perda</span>{% endif %}{% else %}—{% endif %}</div>
+  </div>
+  {% if l.chave == "q_pagamento" %}
+  <div class="fr lateral" tabindex="0" data-tip="{{ entrada.nome }}|{{ entrada.n|floatformat:'0g' }} pessoas|Só aparece para quem não paga à vista">
+    <div class="fn">↳ {{ entrada.nome }} <span style="font-size:12px">(só quem não paga à vista)</span></div>
+    <div class="ft" style="--w:{% if entrada.pct is not None %}{{ entrada.pct|stringformat:'.1f' }}{% else %}0{% endif %};--cor:var(--r4)"><i></i><span><b>{{ entrada.n|floatformat:"0g" }}</b></span></div>
+    <div class="fd">fora da conta</div>
+  </div>
+  {% endif %}
+  {% endfor %}
+  <p class="nota">Cada visitante conta uma vez por etapa. Sem aceitar cookies não dá para identificar quem volta, então essas pessoas contam por visita.</p>
+  <details><summary>Ver como tabela</summary>
+    <table style="margin-top:8px"><tr><th>Etapa</th><th class="n">Pessoas</th><th class="n">% das visitas</th><th class="n">Perdeu</th></tr>
+    {% for l in linhas %}<tr><td>{{ l.nome }}</td><td class="n">{{ l.n|floatformat:"0g" }}</td><td class="n">{% if l.pct is not None %}{{ l.pct|floatformat:1 }}%{% else %}—{% endif %}</td><td class="n">{% if l.perdeu_n %}{{ l.perdeu_n|floatformat:"0g" }} ({{ l.perdeu_pct|floatformat:0 }}%){% else %}—{% endif %}</td></tr>{% endfor %}
+    <tr><td>{{ entrada.nome }} (só quem não paga à vista)</td><td class="n">{{ entrada.n|floatformat:"0g" }}</td><td class="n">{% if entrada.pct is not None %}{{ entrada.pct|floatformat:1 }}%{% else %}—{% endif %}</td><td class="n">—</td></tr></table>
+  </details>
+</section>
+
+<section class="grade" aria-label="Evolução por dia">
+  <div class="c s6"><h2>Visitas por dia</h2><p class="leg">Pessoas que abriram a página</p><svg class="graf" id="g-visitas" viewBox="0 0 560 190" role="img" aria-label="Visitas por dia"></svg></div>
+  <div class="c s6"><h2>Formulários enviados por dia</h2><p class="leg">Leads completos</p><svg class="graf" id="g-enviados" viewBox="0 0 560 190" role="img" aria-label="Formulários enviados por dia"></svg></div>
+</section>
+
+<section class="c s12" style="margin-bottom:12px" aria-label="Teste A/B">
+  <h2>Teste A/B dos botões</h2>
+  <p class="leg">Só entram visitantes que aceitaram os cookies (é o que permite saber quem viu qual versão).</p>
+  <div class="ab">
+    <div class="abl"><div class="fn"><span class="chave" style="background:var(--s1)"></span>A · Simular / Agendar visita<br><span style="color:var(--mudo);font-size:12.5px">{{ ab.A.visitas|floatformat:"0g" }} visitas</span></div>
+      <div class="ft" style="--w:{{ ab.A.largura|stringformat:'.1f' }};--cor:var(--s1)" data-tip="Variante A|{% if ab.A.taxa is not None %}{{ ab.A.taxa|floatformat:1 }}% de conversão{% else %}sem visitas{% endif %}|{{ ab.A.enviou }} enviados em {{ ab.A.visitas }} visitas"><i></i><span><b>{% if ab.A.taxa is not None %}{{ ab.A.taxa|floatformat:1 }}%{% else %}—{% endif %}</b><em>{{ ab.A.enviou }} enviados</em></span></div></div>
+    <div class="abl"><div class="fn"><span class="chave" style="background:var(--s2)"></span>B · Falar com consultor / Ver na loja<br><span style="color:var(--mudo);font-size:12.5px">{{ ab.B.visitas|floatformat:"0g" }} visitas</span></div>
+      <div class="ft" style="--w:{{ ab.B.largura|stringformat:'.1f' }};--cor:var(--s2)" data-tip="Variante B|{% if ab.B.taxa is not None %}{{ ab.B.taxa|floatformat:1 }}% de conversão{% else %}sem visitas{% endif %}|{{ ab.B.enviou }} enviados em {{ ab.B.visitas }} visitas"><i></i><span><b>{% if ab.B.taxa is not None %}{{ ab.B.taxa|floatformat:1 }}%{% else %}—{% endif %}</b><em>{{ ab.B.enviou }} enviados</em></span></div></div>
+  </div>
+  <div class="veredito {{ veredito_tom }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{% if veredito_tom == "bom" %}<circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>{% else %}<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/>{% endif %}</svg><span>{{ veredito }}</span></div>
+  <details><summary>Quanto de cada etapa cada versão mantém</summary>
+    <table style="margin-top:8px"><tr><th>Etapa</th><th class="n"><span class="chave" style="background:var(--s1)"></span>A</th><th class="n"><span class="chave" style="background:var(--s2)"></span>B</th></tr>
+    {% for la in ab.A.retencao %}{% with lb=ab.B.retencao|slice:":7" %}<tr><td>{{ la.nome }}</td><td class="n">{% if la.pct is not None %}{{ la.pct|floatformat:1 }}%{% else %}—{% endif %}</td><td class="n">{% for x in ab.B.retencao %}{% if x.nome == la.nome %}{% if x.pct is not None %}{{ x.pct|floatformat:1 }}%{% else %}—{% endif %}{% endif %}{% endfor %}</td></tr>{% endwith %}{% endfor %}</table>
+  </details>
+</section>
+
+<section class="grade" aria-label="Ações">
+  <div class="c s6"><h2>Leads incompletos para requalificar</h2><p class="leg">Deixaram o contato e não terminaram. O botão abre o WhatsApp com a mensagem pronta.</p>
+    <div class="lista">{% for l in lista_incompletos %}<div class="li"><div><b>{{ l.nome }}</b><span>{{ l.carro|default:"Sem carro" }} · {{ l.telefone }} · {{ l.ha }}</span></div><a class="btn sm" href="{{ l.url }}" target="_blank" rel="noopener">Requalificar</a></div>
+    {% empty %}<div class="vazio">Nenhum lead incompleto agora.</div>{% endfor %}</div>
+    {% if incompletos > 8 %}<p class="nota">Mostrando os 8 mais antigos de {{ incompletos }}. Os demais estão na coluna Requalificar do funil.</p>{% endif %}</div>
+  <div class="c s6"><h2>Por anúncio</h2><p class="leg">Leads do período por anúncio (utm_content) e quantos ficaram incompletos.</p>
+    <div class="rolar"><table><tr><th>Anúncio</th><th class="n">Leads</th><th class="n">Incompletos</th></tr>
+    {% for a in por_anuncio %}<tr><td>{{ a.nome|truncatechars:34 }}</td><td class="n">{{ a.total }}</td><td class="n">{{ a.incompletos }}{% if a.total >= 5 and a.pct_inc >= 50 %} <span class="badge alerta">alto</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="3" class="vazio">Ainda não há leads com anúncio identificado neste período.</td></tr>{% endfor %}</table></div></div>
+</section>
+
+<section class="c s12" aria-label="Por carro">
+  <h2>Por carro</h2><p class="leg">Os 10 carros com mais visitas no período. “Tráfego sem conversão” indica 20 ou mais visitas e nenhum formulário enviado.</p>
+  <div class="rolar"><table><tr><th>Carro</th><th class="n">Visitas</th><th class="n">Contato</th><th class="n">Enviaram</th><th class="n">Conversão</th><th class="n">Incompletos</th><th></th></tr>
+  {% for c in carros %}<tr><td>{{ c.nome }}</td><td class="n">{{ c.visitas|floatformat:"0g" }}</td><td class="n">{{ c.contato|floatformat:"0g" }}</td><td class="n">{{ c.enviou|floatformat:"0g" }}</td><td class="n">{% if c.conv is not None %}{{ c.conv|floatformat:1 }}%{% else %}—{% endif %}</td><td class="n">{{ c.incompletos }}</td><td class="n">{% if c.alerta %}<span class="badge alerta"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v9M12 19h.01"/></svg>Tráfego sem conversão</span>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="7" class="vazio">Sem visitas por carro neste período.</td></tr>{% endfor %}</table></div>
+</section>
+{% endif %}
+<div class="tip" id="tip" role="tooltip"></div>
 </div>
+{{ serie|json_script:"serie" }}
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+var tip=document.getElementById('tip');
+function mostrar(linhas,x,y){tip.textContent='';
+ linhas.forEach(function(t,i){if(!t)return;var e=document.createElement(i===1?'strong':'span');e.textContent=t;if(i===0){e.style.color='#c3c2b7';e.style.fontWeight='600'}tip.appendChild(e);});
+ tip.classList.add('on');var r=tip.getBoundingClientRect(),nx=Math.min(x+14,innerWidth-r.width-8),ny=y-r.height-12;if(ny<8)ny=y+16;tip.style.left=Math.max(8,nx)+'px';tip.style.top=ny+'px';}
+function esconder(){tip.classList.remove('on');}
+/* barras: dica ao passar o mouse ou ao focar pelo teclado */
+document.querySelectorAll('[data-tip]').forEach(function(el){
+ var l=el.dataset.tip.split('|');
+ el.addEventListener('pointermove',function(e){mostrar(l,e.clientX,e.clientY);});
+ el.addEventListener('pointerleave',esconder);
+ el.addEventListener('focus',function(){var r=el.getBoundingClientRect();mostrar(l,r.left+r.width/2,r.top);});
+ el.addEventListener('blur',esconder);
+});
+/* gráficos de linha: 2px, área a 10%, ponto final com anel, mira que gruda no dia mais próximo */
+var S=JSON.parse(document.getElementById('serie').textContent);
+function grafico(id,valores,cor,unidade){
+ var svg=document.getElementById(id);if(!svg)return;var W=560,H=190,pl=34,pr=14,pt=12,pb=26,n=valores.length,max=Math.max.apply(null,valores.concat([1]));
+ var topo=max<=4?4:Math.ceil(max/4)*4,iw=W-pl-pr,ih=H-pt-pb,NS='http://www.w3.org/2000/svg';
+ function el(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);return e;}
+ function X(i){return pl+(n===1?iw/2:iw*i/(n-1));}function Y(v){return pt+ih-ih*v/topo;}
+ [0,.5,1].forEach(function(f){var v=Math.round(topo*f),y=Y(v);svg.appendChild(el('line',{x1:pl,x2:W-pr,y1:y,y2:y,class:f===0?'eixo':'gl'}));var t=el('text',{x:pl-8,y:y+4,'text-anchor':'end'});t.textContent=v;svg.appendChild(t);});
+ [0,Math.floor((n-1)/2),n-1].forEach(function(i,k){if(k&&i===0)return;var t=el('text',{x:X(i),y:H-6,'text-anchor':k===0?'start':k===2?'end':'middle'});t.textContent=S.rotulos[i];svg.appendChild(t);});
+ var pts=valores.map(function(v,i){return X(i)+','+Y(v);}).join(' ');
+ svg.appendChild(el('polygon',{points:X(0)+','+Y(0)+' '+pts+' '+X(n-1)+','+Y(0),fill:cor,'fill-opacity':.1}));
+ svg.appendChild(el('polyline',{points:pts,class:'linha',stroke:cor}));
+ svg.appendChild(el('circle',{cx:X(n-1),cy:Y(valores[n-1]),r:5,fill:cor,class:'ponto'}));
+ var mira=el('line',{y1:pt,y2:pt+ih,class:'mira'}),dot=el('circle',{r:5,fill:cor,class:'ponto',opacity:0});svg.appendChild(mira);svg.appendChild(dot);
+ var area=el('rect',{x:pl,y:pt,width:iw,height:ih,fill:'transparent'});svg.appendChild(area);
+ function ir(e){var r=svg.getBoundingClientRect(),px=(e.clientX-r.left)*W/r.width,i=Math.max(0,Math.min(n-1,Math.round((px-pl)/iw*(n-1))));
+  mira.setAttribute('x1',X(i));mira.setAttribute('x2',X(i));mira.style.opacity=1;dot.setAttribute('cx',X(i));dot.setAttribute('cy',Y(valores[i]));dot.setAttribute('opacity',1);
+  mostrar([S.rotulos[i],String(valores[i]),unidade],e.clientX,e.clientY);}
+ area.addEventListener('pointermove',ir);area.addEventListener('pointerleave',function(){mira.style.opacity=0;dot.setAttribute('opacity',0);esconder();});
+}
+if(S.rotulos.length){grafico('g-visitas',S.visitas,'#3987e5','visitas');grafico('g-enviados',S.enviados,'#199e70','formulários enviados');}
+})();
+</script>
 {% endblock %}

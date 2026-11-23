@@ -246,7 +246,7 @@ class MedicaoDoFunilTests(Base):
         self.client.get(f"/v/{self.v.pk}-fiat-argo-2022/", HTTP_USER_AGENT="Googlebot/2.1")
         self.assertEqual(EventoFunil.objects.count(), 0)
 
-    def test_painel_do_formulario(self):
+    def test_painel_do_formulario_compara_as_variantes(self):
         for var, n_view, n_env in (("A", 120, 10), ("B", 120, 25)):
             for i in range(n_view):
                 EventoFunil.objects.create(veiculo_id=self.v.pk, etapa="view", variante=var, sid=f"{var}{i:031d}", consent=True)
@@ -256,16 +256,19 @@ class MedicaoDoFunilTests(Base):
         self.client.force_login(get_user_model().objects.create_user("g", password="x12345678", is_staff=True))
         r = self.client.get("/painel/formulario/")
         self.assertEqual(r.status_code, 200)
-        a, b, anon = r.context["tabelas"]
-        self.assertEqual((a["visitas"], a["enviou"], a["taxa"]), (120, 10, 8.3))
-        self.assertEqual((b["visitas"], b["enviou"], b["taxa"]), (120, 25, 20.8))
-        self.assertEqual(anon["visitas"], 1)
+        ab = r.context["ab"]
+        self.assertEqual((ab["A"]["visitas"], ab["A"]["enviou"], ab["A"]["taxa"]), (120, 10, 8.3))
+        self.assertEqual((ab["B"]["visitas"], ab["B"]["enviou"], ab["B"]["taxa"]), (120, 25, 20.8))
         self.assertIn("A variante B converte mais", r.context["veredito"])
+        self.assertEqual(r.context["veredito_tom"], "bom")
+        self.assertEqual(r.context["kpis"]["visitas"], 241)              # 240 com cookies + 1 anônimo
 
     def test_painel_com_amostra_pequena_nao_conclui(self):
         EventoFunil.objects.create(veiculo_id=self.v.pk, etapa="view", variante="A", sid="a" * 32, consent=True)
         self.client.force_login(get_user_model().objects.create_user("g", password="x12345678", is_staff=True))
-        self.assertIn("Amostra pequena", self.client.get("/painel/formulario/").context["veredito"])
+        r = self.client.get("/painel/formulario/")
+        self.assertIn("Amostra pequena", r.context["veredito"])
+        self.assertTrue(r.context["poucos_dados"])
 
     def test_painel_exige_login(self):
         self.client.logout()
@@ -300,3 +303,106 @@ class PaginaDoFormularioTests(Base):
         html = self.abrir()
         self.assertIn("classList.add('leve')", html)
         self.assertIn(".leve .fundo", html)
+
+
+class DashboardTests(Base):
+    """O dashboard do formulário: funil, maior vazamento, comparação com o período anterior, listas de ação."""
+
+    def setUp(self):
+        super().setUp()
+        self.v = novo_veiculo()
+        self.client.force_login(get_user_model().objects.create_user("g", password="x12345678", is_staff=True))
+
+    def eventos(self, etapa, n, prefixo, dias_atras=0, var="A", vid=None):
+        quando = timezone.now() - timedelta(days=dias_atras)
+        for i in range(n):
+            e = EventoFunil.objects.create(veiculo_id=vid or self.v.pk, etapa=etapa, variante=var, sid=f"{prefixo}{i:030d}"[:32], consent=True)
+            EventoFunil.objects.filter(pk=e.pk).update(criado_em=quando)
+
+    def funil_padrao(self, **kw):
+        for etapa, n in (("view", 200), ("comecou", 80), ("contato", 60), ("q_pagamento", 20), ("q_troca", 18), ("q_prazo", 15), ("enviou", 14)):
+            self.eventos(etapa, n, etapa[:2], **kw)
+
+    def test_funil_com_perdas_e_maior_vazamento(self):
+        self.funil_padrao()
+        ctx = self.client.get("/painel/formulario/").context
+        linhas = {l["chave"]: l for l in ctx["linhas"]}
+        self.assertEqual(linhas["view"]["n"], 200)
+        self.assertEqual(linhas["comecou"]["perdeu_n"], 120)
+        self.assertEqual(linhas["comecou"]["perdeu_pct"], 60.0)
+        self.assertEqual(linhas["q_pagamento"]["perdeu_n"], 40)
+        v = ctx["vazamento"]
+        self.assertEqual((v["de"], v["para"], v["n"]), ("Abriu a página", "Começou o formulário", 120))       # maior perda em número de pessoas
+        self.assertIn("nem toca no formulário", v["dica"])
+
+    def test_vazamento_nos_leads_incompletos_recomenda_requalificar(self):
+        for etapa, n in (("view", 100), ("comecou", 95), ("contato", 90), ("q_pagamento", 20), ("q_troca", 18), ("q_prazo", 16), ("enviou", 15)):
+            self.eventos(etapa, n, etapa[:2])
+        v = self.client.get("/painel/formulario/").context["vazamento"]
+        self.assertEqual(v["para"], "Respondeu o pagamento")
+        self.assertIn("requalificar pelo WhatsApp", v["dica"])
+
+    def test_poucas_visitas_nao_apontam_vazamento(self):
+        self.eventos("view", 5, "vv")
+        ctx = self.client.get("/painel/formulario/").context
+        self.assertIsNone(ctx["vazamento"])
+        self.assertTrue(ctx["poucos_dados"])
+
+    def test_pergunta_de_entrada_fica_fora_da_conta_de_perdas(self):
+        self.funil_padrao()
+        self.eventos("q_entrada", 5, "en")
+        ctx = self.client.get("/painel/formulario/").context
+        self.assertNotIn("q_entrada", [l["chave"] for l in ctx["linhas"]])
+        self.assertEqual(ctx["entrada"]["n"], 5)
+
+    def test_comparacao_com_o_periodo_anterior(self):
+        self.eventos("view", 100, "at")
+        self.eventos("enviou", 10, "at")
+        self.eventos("view", 50, "an", dias_atras=40)
+        self.eventos("enviou", 10, "an", dias_atras=40)
+        k = self.client.get("/painel/formulario/?dias=30").context["kpis"]
+        self.assertEqual((k["visitas"], k["conversao"]), (100, 10.0))
+        self.assertEqual(k["visitas_d"], 100.0)                           # de 50 para 100 visitas
+        self.assertEqual(k["conversao_d"], -10.0)                         # de 20% para 10%: -10 pontos
+
+    def test_serie_por_dia_tem_um_ponto_para_cada_dia(self):
+        self.eventos("view", 3, "sd")
+        s = self.client.get("/painel/formulario/?dias=7").context["serie"]
+        self.assertEqual((len(s["rotulos"]), len(s["visitas"]), len(s["enviados"])), (7, 7, 7))
+        self.assertEqual(s["visitas"][-1], 3)
+
+    def test_filtro_por_carro(self):
+        outro = novo_veiculo(modelo="Mobi", placa="MOB1A11")
+        self.eventos("view", 7, "aa")
+        self.eventos("view", 4, "bb", vid=outro.pk)
+        self.assertEqual(self.client.get("/painel/formulario/").context["kpis"]["visitas"], 11)
+        self.assertEqual(self.client.get(f"/painel/formulario/?carro={outro.pk}").context["kpis"]["visitas"], 4)
+
+    def test_tabela_por_carro_sinaliza_trafego_sem_conversao(self):
+        self.eventos("view", 25, "tr")
+        c = self.client.get("/painel/formulario/").context["carros"]
+        self.assertEqual((c[0]["visitas"], c[0]["enviou"], c[0]["alerta"]), (25, 0, True))
+
+    def test_lista_de_incompletos_e_por_anuncio(self):
+        for i in range(3):
+            self.client.post(f"/v/{self.v.pk}/inicio/", {"nome": f"Pessoa {i}", "telefone": f"(81) 99999-60{i:02d}", "lgpd": "1"},
+                             HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR=f"200.7.7.{i}", **{"HTTP_REFERER": "x"})
+        Lead.objects.update(utm_content="anuncio-teste")
+        ctx = self.client.get("/painel/formulario/").context
+        self.assertEqual(ctx["incompletos"], 3)
+        self.assertEqual(len(ctx["lista_incompletos"]), 3)
+        self.assertIn("wa.me/55819999960", ctx["lista_incompletos"][0]["url"])
+        self.assertEqual(ctx["por_anuncio"][0]["total"], 3)
+        self.assertEqual(ctx["por_anuncio"][0]["incompletos"], 3)
+
+    def test_pagina_renderiza_com_dados_e_sem_dados(self):
+        r = self.client.get("/painel/formulario/")
+        self.assertContains(r, "Ainda não há visitas medidas")
+        self.funil_padrao()
+        r = self.client.get("/painel/formulario/")
+        html = r.content.decode()
+        self.assertIn("Maior vazamento", html)
+        self.assertIn("Funil do formulário", html)
+        self.assertIn('id="g-visitas"', html)
+        self.assertIn("Ver como tabela", html)                          # versão em tabela de cada gráfico
+        self.assertNotIn("None", html.split("<style>")[0] + html.split("</style>")[1])
