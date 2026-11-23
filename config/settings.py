@@ -128,6 +128,13 @@ LOJA = {
     "endereco": "Loja 11 - Shopping do Automóvel, Olinda - PE",
     "horario": "Seg a sex 08h às 18h · Sáb 08h às 17h",
     "mapa_url": "https://www.google.com/maps/search/?api=1&query=Shopping+do+Automovel+Olinda+PE",
+    "whatsapp_fmt": "(81) 96000-2209",
+    "telefone": "(81) 2137-0011",
+    "telefone_tel": "+558121370011",
+    "instagram": "@topcarveiculos.pe",
+    "instagram_url": "https://www.instagram.com/topcarveiculos.pe/",
+    "anos": "10",            # "mais de 10 anos de mercado"
+    "opcoes": "60",          # "mais de 60 opções disponíveis"
 }
 
 # --- Meta Pixel / Conversions API ---

@@ -33,3 +33,6 @@ FORM_OK = {"nome": "Maria Silva", "telefone": "(81) 99999-8888", "pagamento": "a
 class Base(TestCase):
     def setUp(self):
         cache.clear()
+
+    def tearDown(self):
+        cache.clear()      # a página de carro guarda dados por 60 s: não deixar resíduo para outros testes

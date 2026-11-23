@@ -10,7 +10,7 @@
 <link rel="canonical" href="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
 <meta property="og:type" content="product">
 <meta property="og:title" content="{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }} · {{ preco_fmt }}">
-<meta property="og:description" content="{% if veiculo.km %}{{ veiculo.km|floatformat:"0g" }} km · {% endif %}Revisado · Vistoria cautelar · Aceitamos carro ou moto na troca · Financiamento em até 60x · Cartão em até 21x">
+<meta property="og:description" content="{% if veiculo.km %}{{ veiculo.km|floatformat:"0g" }} km · {% endif %}Garantia · Revisado · Laudo cautelar · Aceitamos carro ou moto na troca · Financiamento em até 60x · Cartão em até 21x">
 <meta property="og:url" content="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
 {% if destaque %}<meta property="og:image" content="{{ site_url }}{% url 'captacao:foto' destaque.pk 1200 %}">
 <link rel="preload" as="image" href="{% url 'captacao:foto' destaque.pk 800 %}" imagesrcset="{% url 'captacao:foto' destaque.pk 480 %} 480w, {% url 'captacao:foto' destaque.pk 800 %} 800w, {% url 'captacao:foto' destaque.pk 1200 %} 1200w" imagesizes="(min-width:960px) 640px, 100vw" fetchpriority="high">{% endif %}
@@ -133,6 +133,14 @@ dialog img{max-width:96vw;max-height:84vh;display:block;border-radius:8px;margin
 .micro{display:flex;gap:7px;align-items:center;font-size:13px;color:var(--mu);margin:-8px 0 16px}.micro .ic{width:15px;height:15px;color:var(--gr)}
 .tags{display:flex;flex-wrap:wrap;gap:8px}.tags span{border:1px solid var(--bd2);background:var(--sf);border-radius:999px;padding:6px 13px;font-size:13.5px;color:#c9d3da}
 .fixo .btns{display:flex;gap:8px;flex:1}.fixo .btns .btn{padding:13px 8px;font-size:15px;white-space:nowrap}
+.sobre{border:1px solid var(--bd);background:var(--sf);border-radius:var(--r);padding:20px}
+.sobre p{margin:0 0 16px;color:#d3dbe1;font-size:15.5px;line-height:1.6}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.nums div{border:1px solid var(--bd);background:var(--bg);border-radius:12px;padding:14px 10px;text-align:center}
+.nums b{display:block;font-size:26px;line-height:1.1;color:var(--gr);letter-spacing:-.02em}.nums span{display:block;font-size:12.5px;color:var(--mu);margin-top:4px;line-height:1.3}
+.contatos{display:grid;gap:10px}
+.contatos a{display:flex;align-items:center;gap:12px;text-decoration:none;border:1px solid var(--bd2);background:var(--bg);border-radius:12px;padding:13px 14px;font-size:15px}
+.contatos a:hover{background:var(--sf2)}.contatos .ic{color:var(--gr)}.contatos small{display:block;color:var(--mu);font-size:12.5px}
 @media(min-width:960px){
  body{padding-bottom:0}.fixo{display:none}
  .grid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-areas:"top form" "rest form";align-items:start;column-gap:40px;row-gap:0;padding-top:28px}
@@ -171,6 +179,8 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <symbol id="i-light" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V17h5v-1.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z"/><path d="M10 20h4"/></symbol>
 <symbol id="i-wheel" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.2"/><path d="M12 14.2V21M9.9 11.1 3.4 9.5M14.1 11.1l6.5-1.6"/></symbol>
 <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2Z"/></symbol>
+<symbol id="i-insta" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r=".8"/></symbol>
 </defs></svg>
 
 <header><div class="w"><img src="{% static 'captacao/logo.png' %}" alt="TopCar Veículos" width="auto" height="30"><span class="aberto" id="aberto"><i></i><span>Atendimento pelo WhatsApp</span></span></div></header>
@@ -204,7 +214,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 {% if vendidos_modelo %}<div><svg class="ic"><use href="#i-check"/></svg><span>Já vendemos <b>{{ vendidos_modelo }} {{ veiculo.modelo_fmt }}</b> aqui na TopCar.</span></div>{% endif %}
 {% if vendidos_total %}<div><svg class="ic"><use href="#i-store"/></svg><span><b>Mais de {{ vendidos_total }} carros vendidos</b> pela TopCar.</span></div>{% endif %}
 </div>{% endif %}
-<div class="selos"><span><svg class="ic"><use href="#i-wrench"/></svg>Revisado</span><span><svg class="ic"><use href="#i-shield"/></svg>Vistoria cautelar</span></div>
+<div class="selos"><span><svg class="ic"><use href="#i-check"/></svg>Garantia</span><span><svg class="ic"><use href="#i-wrench"/></svg>Revisado</span><span><svg class="ic"><use href="#i-shield"/></svg>Laudo cautelar</span></div>
 </section>
 
 <section class="formcol">
@@ -259,11 +269,13 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <h2 class="s">Por que comprar na TopCar</h2>
 <div class="dif">
 <div><svg class="ic"><use href="#i-wrench"/></svg><b>Veículo revisado</b><span>Todos os carros passam por revisão antes da venda.</span></div>
-<div><svg class="ic"><use href="#i-shield"/></svg><b>Vistoria cautelar</b><span>Todos os veículos têm vistoria cautelar.</span></div>
+<div><svg class="ic"><use href="#i-check"/></svg><b>Garantia</b><span>Todo o estoque conta com garantia.</span></div>
+<div><svg class="ic"><use href="#i-shield"/></svg><b>Laudo cautelar</b><span>Todos os veículos têm laudo cautelar.</span></div>
 <div><svg class="ic"><use href="#i-bank"/></svg><b>Financiamento</b><span>Em até 60x, com simulação sem compromisso.</span></div>
 <div><svg class="ic"><use href="#i-card"/></svg><b>Cartão de crédito</b><span>Parcelamento em até 21x.</span></div>
 <div><svg class="ic"><use href="#i-swap"/></svg><b>Carro ou moto na entrada</b><span>Aceitamos o seu carro ou moto como parte do pagamento. A avaliação é feita na loja.</span></div>
 <div><svg class="ic"><use href="#i-store"/></svg><b>Loja física</b><span>Shopping do Automóvel, em Olinda. Venha ver o carro de perto.</span></div>
+<div><svg class="ic"><use href="#i-clock"/></svg><b>Mais de {{ loja.anos }} anos</b><span>De experiência no mercado de seminovos.</span></div>
 </div>
 
 {% if similares %}
@@ -288,11 +300,23 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 
 <h2 class="s">Dúvidas frequentes</h2>
 <div class="faq">
-<details><summary>O carro é revisado e tem vistoria?</summary><p>Sim. Todos os carros da TopCar passam por revisão e têm vistoria cautelar.</p></details>
+<details><summary>O carro é revisado e tem laudo cautelar?</summary><p>Sim. Todos os carros da TopCar passam por revisão e têm laudo cautelar.</p></details>
+<details><summary>Os carros têm garantia?</summary><p>Sim, todo o estoque conta com garantia, além de revisão e laudo cautelar.</p></details>
 <details><summary>Aceitam carro ou moto como entrada?</summary><p>Sim, aceitamos carro ou moto como parte da entrada. A avaliação é feita na loja.</p></details>
 <details><summary>Dá para financiar?</summary><p>Sim, em até 60x. A simulação sai no WhatsApp, sem compromisso.</p></details>
 <details><summary>Posso parcelar no cartão?</summary><p>Sim, em até 21x no cartão de crédito.</p></details>
 <details><summary>Preciso pagar algo para simular?</summary><p>Não. A simulação e a visita são gratuitas.</p></details>
+</div>
+
+<h2 class="s">Sobre a TopCar</h2>
+<div class="sobre">
+<p>A {{ loja.nome }} está há mais de {{ loja.anos }} anos no mercado de seminovos. Hoje são mais de {{ loja.opcoes }} opções disponíveis, e todo o estoque conta com garantia, revisão e laudo cautelar.</p>
+<div class="nums"><div><b>+{{ loja.anos }}</b><span>anos de mercado</span></div><div><b>+{{ loja.opcoes }}</b><span>opções disponíveis</span></div><div><b>100%</b><span>com garantia, revisão e laudo</span></div></div>
+<div class="contatos">
+<a href="https://wa.me/{{ loja.whatsapp }}" target="_blank" rel="noopener"><svg class="ic"><use href="#i-wa"/></svg><span>{{ loja.whatsapp_fmt }}<small>WhatsApp</small></span></a>
+<a href="tel:{{ loja.telefone_tel }}"><svg class="ic"><use href="#i-phone"/></svg><span>{{ loja.telefone }}<small>Telefone fixo</small></span></a>
+<a href="{{ loja.instagram_url }}" target="_blank" rel="noopener"><svg class="ic"><use href="#i-insta"/></svg><span>{{ loja.instagram }}<small>Instagram</small></span></a>
+</div>
 </div>
 
 <h2 class="s">Visite a loja</h2>
@@ -306,7 +330,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 </section>
 </main>
 
-<footer><div class="w"><img src="{% static 'captacao/logo.png' %}" alt="TopCar Veículos" width="auto" height="24">© TopCar Veículos · <a href="{% url 'captacao:privacidade' %}">Política de privacidade</a></div></footer>
+<footer><div class="w"><img src="{% static 'captacao/logo.png' %}" alt="TopCar Veículos" width="auto" height="24">© TopCar Veículos · {{ loja.whatsapp_fmt }} · {{ loja.telefone }} · {{ loja.instagram }} · <a href="{% url 'captacao:privacidade' %}">Política de privacidade</a></div></footer>
 
 <div class="fixo" id="fixo"><div class="p">{{ preco_fmt }}<small>{% if parcela_fmt and disponivel %}{{ parcela_fmt }}/mês em {{ parcelas_n }}x{% else %}{{ veiculo.modelo_fmt }} {{ veiculo.ano }}{% endif %}</small></div>{% if disponivel %}<div class="btns"><a class="btn" href="#form" id="cta" data-intencao="simular">Simular</a><a class="btn ghost" href="#form" data-intencao="visita">Agendar</a></div>{% else %}<a class="btn" href="#form" id="cta">Quero ser avisado</a>{% endif %}</div>
 

@@ -304,3 +304,36 @@ class BotoesParcelaProvasTests(Base):
         self.client.post(f"/v/{v.pk}-fiat-argo-2022/", {**FORM_OK, "event_id": "c" * 32},
                          HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.1.1.8")
         self.assertEqual(Lead.objects.get().respostas.get("intencao"), "simular")
+
+
+class SobreEmpresaTests(Base):
+    def abrir(self):
+        from django.core.cache import cache
+        cache.clear()
+        v = novo_veiculo()
+        return self.client.get(f"/v/{v.pk}-fiat-argo-2022/", HTTP_USER_AGENT="Mozilla/5.0").content.decode()
+
+    def test_secao_sobre_com_numeros_da_empresa(self):
+        html = self.abrir()
+        self.assertIn("Sobre a TopCar", html)
+        self.assertIn("há mais de 10 anos no mercado de seminovos", html)
+        self.assertIn("mais de 60 opções disponíveis", html)
+        self.assertIn("todo o estoque conta com garantia, revisão e laudo cautelar", html)
+        self.assertIn("<b>+10</b>", html)
+        self.assertIn("<b>+60</b>", html)
+
+    def test_contatos_da_loja(self):
+        html = self.abrir()
+        self.assertIn('href="https://wa.me/5581960002209"', html)
+        self.assertIn("(81) 96000-2209", html)
+        self.assertIn('href="tel:+558121370011"', html)
+        self.assertIn("(81) 2137-0011", html)
+        self.assertIn('href="https://www.instagram.com/topcarveiculos.pe/"', html)
+        self.assertIn("@topcarveiculos.pe", html)
+
+    def test_garantia_e_laudo_cautelar_em_toda_a_pagina(self):
+        html = self.abrir()
+        self.assertIn("Todo o estoque conta com garantia.", html)
+        self.assertIn("Os carros têm garantia?", html)
+        self.assertIn("Laudo cautelar", html)
+        self.assertNotIn("Vistoria cautelar", html)       # termo padronizado como "laudo cautelar"
