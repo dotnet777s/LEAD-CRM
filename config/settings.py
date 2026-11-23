@@ -143,10 +143,14 @@ TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", "leadsreceiverbot")
 TELEGRAM_SLA_MINUTOS = int(env("TELEGRAM_SLA_MINUTOS", "5") or 5)
 
 
+# Acesso por http://IP (só para testar antes de apontar o domínio). Desligue depois: ACESSO_HTTP_TEMPORARIO=0.
+ACESSO_HTTP_TEMPORARIO = env_bool("ACESSO_HTTP_TEMPORARIO", False)
+if ACESSO_HTTP_TEMPORARIO:
+    CSRF_TRUSTED_ORIGINS += [f"http://{h}" for h in ALLOWED_HOSTS if h not in ("127.0.0.1", "localhost", "testserver")]
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = not ACESSO_HTTP_TEMPORARIO
+    CSRF_COOKIE_SECURE = not ACESSO_HTTP_TEMPORARIO
 
 LOGGING = {
     "version": 1, "disable_existing_loggers": False,

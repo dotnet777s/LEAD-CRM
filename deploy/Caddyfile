@@ -20,3 +20,8 @@ __DOMINIO__ {
 		}
 	}
 }
+
+# TEMPORÁRIO: acesso por http://IP para testar antes de apontar o DNS. Remova este bloco depois.
+:80 {
+	reverse_proxy 127.0.0.1:8000
+}
