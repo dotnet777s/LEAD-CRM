@@ -15,7 +15,7 @@ from .helpers import Base, novo_veiculo
 
 def criar_lead(v=None, **kw):
     d = dict(nome="Maria Silva", telefone="5581999998888", veiculo=v, origem="meta_lp", fbp="fb.1.1.1", ip="1.2.3.4",
-             user_agent="UA", classe="A")
+             user_agent="UA", classe="A", consent_meta=True)
     d.update(kw)
     return Lead.objects.create(**d)
 

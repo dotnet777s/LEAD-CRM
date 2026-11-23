@@ -197,3 +197,74 @@ class MidiasView(LoginRequiredMixin, TemplateView):
         aba = self.request.GET.get("aba", "")
         ctx.update(v=v, aba=aba, fotos=lista, marcado=v.possui_fotos, videos=videos)
         return ctx
+
+
+ROTULO_ETAPA = {"view": "Abriu a página", "comecou": "Começou o formulário", "contato": "Deixou nome e WhatsApp",
+                "q_pagamento": "Respondeu: pagamento", "q_entrada": "Respondeu: entrada", "q_troca": "Respondeu: troca",
+                "q_prazo": "Respondeu: prazo", "enviou": "Enviou (lead completo)"}
+
+
+def _p_valor(n1, c1, n2, c2):
+    """Teste z de duas proporções (conversão de A contra B). Devolve (z, p) ou (None, None) se não der para calcular."""
+    import math
+    if n1 < 1 or n2 < 1:
+        return None, None
+    p1, p2, p = c1 / n1, c2 / n2, (c1 + c2) / (n1 + n2)
+    erro = math.sqrt(p * (1 - p) * (1 / n1 + 1 / n2))
+    if erro == 0:
+        return None, None
+    z = (p1 - p2) / erro
+    return z, math.erfc(abs(z) / math.sqrt(2))
+
+
+class FunilFormView(LoginRequiredMixin, TemplateView):
+    """Onde as pessoas desistem no formulário da página de captura e qual variante (A/B) converte mais."""
+    template_name = "captacao/funil_form.html"
+
+    def get_context_data(self, **kw):
+        from .models import EventoFunil
+        ctx = super().get_context_data(**kw)
+        try:
+            dias = int(self.request.GET.get("dias", 30))
+        except ValueError:
+            dias = 30
+        dias = dias if dias in (7, 14, 30, 90) else 30
+        desde = timezone.now() - timedelta(days=dias)
+        eventos = list(EventoFunil.objects.filter(criado_em__gte=desde).values_list("etapa", "variante", "sid", "consent"))
+        grupos = [("A", "Variante A (com cookies)"), ("B", "Variante B (com cookies)"), ("anon", "Sem cookies (anônimo)")]
+        vistos = {g: defaultdict(set) for g, _ in grupos}
+        anonimos = defaultdict(int)
+        for etapa, var, sid, consent in eventos:
+            if consent and sid and var in ("A", "B"):
+                vistos[var][etapa].add(sid)
+            elif not consent:
+                anonimos[etapa] += 1
+        tabelas = []
+        for g, nome in grupos:
+            contagem = {e: (anonimos[e] if g == "anon" else len(vistos[g][e])) for e in EventoFunil.ETAPAS}
+            topo = contagem["view"]
+            linhas, anterior = [], None
+            for e in EventoFunil.ETAPAS:
+                n = contagem[e]
+                linhas.append({"nome": ROTULO_ETAPA[e], "n": n, "pct": round(100 * n / topo, 1) if topo else None,
+                               "perdeu": round(100 * (1 - n / anterior), 1) if anterior and e != "view" else None})
+                anterior = n or None
+            tabelas.append({"chave": g, "nome": nome, "linhas": linhas, "visitas": topo, "enviou": contagem["enviou"],
+                            "taxa": round(100 * contagem["enviou"] / topo, 1) if topo else None})
+        a, b = tabelas[0], tabelas[1]
+        veredito, p = "", None
+        if min(a["visitas"], b["visitas"]) < 100:
+            veredito = "Amostra pequena (menos de 100 visitas por variante): ainda não dá para concluir qual é melhor."
+        else:
+            z, p = _p_valor(a["visitas"], a["enviou"], b["visitas"], b["enviou"])
+            if p is None:
+                veredito = "Sem dados suficientes para comparar."
+            elif p < 0.05:
+                veredito = f"A variante {'A' if z > 0 else 'B'} converte mais, com diferença estatisticamente confiável (p = {p:.3f})."
+            else:
+                veredito = f"Ainda não há diferença confiável entre A e B (p = {p:.2f}). Continue o teste."
+        incompletos = Lead.objects.filter(etapa=Lead.Etapa.REQUALIFICAR, criado_em__gte=desde).count()
+        recuperados = Historico.objects.filter(criado_em__gte=desde, texto__startswith="Terminou o formulário").count()
+        ctx.update(tabelas=tabelas, dias=dias, veredito=veredito, incompletos=incompletos, recuperados=recuperados,
+                   opcoes_dias=[(7, "7 dias"), (14, "14 dias"), (30, "30 dias"), (90, "90 dias")])
+        return ctx

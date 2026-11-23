@@ -100,8 +100,8 @@ def enfileirar_evento_web(nome, event_id, request_info, veiculo=None, lead=None,
 def enfileirar_evento_crm(lead, etapa):
     """QualifiedLead / Schedule / Purchase: no máximo um por lead (event_id = '<uuid>:<evento>').
     Só leads de anúncio entram. Devolve o EventoMeta ou None."""
-    if etapa not in EVENTOS_CRM or not lead.de_anuncio:
-        return None
+    if etapa not in EVENTOS_CRM or not lead.de_anuncio or not lead.consent_meta:
+        return None      # sem consentimento de marketing, nada vai à Meta
     nome, fonte = EVENTOS_CRM[etapa]
     event_id = f"{lead.uuid}:{nome}"
     if nome == "Purchase":

@@ -22,7 +22,7 @@ p{color:#8d99a4;margin:0 0 22px}
 small.a{display:block;margin-top:14px;color:#8d99a4;font-size:13.5px}
 </style>
 {% include "captacao/_pixel.html" %}
-{% if pixel_id %}<script>fbq('track','Lead',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicle',value:{{ preco|stringformat:"s" }},currency:'BRL'},{eventID:'{{ event_id_lead }}'});</script>{% endif %}
+{% if pixel_id and consent %}<script>carregarPixel();fbq('track','Lead',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicle',value:{{ preco|stringformat:"s" }},currency:'BRL'},{eventID:'{{ event_id_lead }}'});</script>{% endif %}
 </head>
 <body>
 <div class="c">
@@ -39,7 +39,7 @@ small.a{display:block;margin-top:14px;color:#8d99a4;font-size:13.5px}
 var enviado=false,a=document.getElementById('wa');
 function contato(){
  if(enviado)return;enviado=true;
- try{fbq('track','Contact',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicle',value:{{ preco|stringformat:"s" }},currency:'BRL'},{eventID:'{{ event_id_contact }}'});}catch(e){}
+ try{if(!window._pxok)throw 0;fbq('track','Contact',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicle',value:{{ preco|stringformat:"s" }},currency:'BRL'},{eventID:'{{ event_id_contact }}'});}catch(e){}
  try{fetch('{% url "captacao:contato" pk lead.uuid %}',{method:'POST',keepalive:true,headers:{'X-CSRFToken':'{{ csrf_token }}'}});}catch(e){}
 }
 a.addEventListener('click',contato);

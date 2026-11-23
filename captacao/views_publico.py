@@ -1,4 +1,5 @@
 """Páginas públicas: captura do carro, obrigado (WhatsApp), contato (Meta), fotos e privacidade."""
+import random
 import re
 import uuid
 from datetime import timedelta
@@ -17,8 +18,8 @@ from django.views.decorators.cache import cache_control
 from catalogo.models import Veiculo
 
 from . import fotos, meta, services, utils
-from .forms import CapturaForm
-from .models import Lead
+from .forms import CapturaForm, ContatoInicialForm
+from .models import EventoFunil, Lead
 
 CACHE_SEGUNDOS = 60
 LIMITE_ENVIOS = 5          # por IP
@@ -29,6 +30,59 @@ BOTS = re.compile(r"bot|crawl|spider|slurp|facebookexternalhit|whatsapp|preview|
 def ip_do_cliente(request):
     xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
     return (xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "")) or ""
+
+
+COOKIE_CONSENT = "tc_consent"        # "all" = aceitou cookies de estatística e marketing (Pixel, CAPI, Clarity, teste A/B)
+ETAPAS_DO_NAVEGADOR = {"comecou", "q_pagamento", "q_entrada", "q_troca", "q_prazo"}
+
+
+def consentiu(request):
+    return request.COOKIES.get(COOKIE_CONSENT) == "all"
+
+
+def variante_ab(request):
+    """Variante A/B do visitante. Só com consentimento (o cookie é dele); sem consentimento, sempre A e sem registro."""
+    if not settings.AB_ATIVO or not consentiu(request):
+        request._ab_valor = "A"
+        return "A"
+    v = request.COOKIES.get("tc_ab")
+    if v not in settings.AB_VARIANTES:
+        v = random.choice(sorted(settings.AB_VARIANTES))
+        request._ab_novo = True
+    request._ab_valor = v
+    return v
+
+
+def sid_visitante(request):
+    """Identificador anônimo da visita (cookie próprio), só com consentimento."""
+    if not consentiu(request):
+        request._sid_valor = ""
+        return ""
+    sid = request.COOKIES.get("tc_sid", "")
+    if not re.fullmatch(r"[0-9a-f]{32}", sid):
+        sid = uuid.uuid4().hex
+        request._sid_novo = True
+    request._sid_valor = sid
+    return sid
+
+
+def registrar_funil(request, pk, etapa):
+    """Grava um passo do formulário. Com consentimento leva identificador e variante; sem, é anônimo (variante A)."""
+    if request.user.is_authenticated or BOTS.search(request.META.get("HTTP_USER_AGENT", "")):
+        return
+    consent = consentiu(request)
+    sid = sid_visitante(request)
+    if sid and EventoFunil.objects.filter(sid=sid, etapa=etapa, veiculo_id=pk).exists():
+        return
+    EventoFunil.objects.create(veiculo_id=pk, etapa=etapa, variante=variante_ab(request), sid=sid, consent=consent)
+
+
+def _gravar_cookies(request, resp):
+    if getattr(request, "_ab_novo", False):
+        resp.set_cookie("tc_ab", request._ab_valor, max_age=60 * 86400, samesite="Lax")
+    if getattr(request, "_sid_novo", False):
+        resp.set_cookie("tc_sid", request._sid_valor, max_age=60 * 86400, samesite="Lax")
+    return resp
 
 
 def info_requisicao(request, fbclid=""):
@@ -161,6 +215,9 @@ def _dados_do_veiculo(pk):
 
 def _contexto_pagina(request, pk, form=None):
     dados = _dados_do_veiculo(pk)
+    consent = consentiu(request)
+    variante = variante_ab(request)
+    sid_visitante(request)
     v = dados["veiculo"]
     destaque = dados["fotos"][0] if dados["fotos"] else None
     form = form or CapturaForm()
@@ -180,6 +237,8 @@ def _contexto_pagina(request, pk, form=None):
             "destaque_h": fotos.altura_para(destaque, 800) if destaque else 600,
             "galeria": [{"pk": t.pk, "h": fotos.altura_para(t, 480)} for t in dados["fotos"]],
             "pixel_id": settings.META_PIXEL_ID, "site_url": settings.SITE_URL, "form": form, "grupos": grupos,
+            "consent": consent, "variante": variante, "ab": settings.AB_VARIANTES[variante],
+            "clarity_id": settings.CLARITY_ID if consent else "",
             "preco_fmt": utils.preco_brl(v.valor_venda)}
 
 
@@ -199,11 +258,13 @@ class CapturaView(View):
                    utm={k: request.GET.get(k, "") for k in ("utm_source", "utm_medium", "utm_campaign", "utm_term",
                                                             "utm_content", "fbclid")})
         if not request.user.is_authenticated and not BOTS.search(request.META.get("HTTP_USER_AGENT", "")):
-            info = info_requisicao(request)
-            url = ctx["url_pagina"]
-            meta.enfileirar_evento_web("PageView", event_id, info, url=url)
-            meta.enfileirar_evento_web("ViewContent", ctx["event_id_vc"], info, veiculo=v, url=url)
-        return render(request, "captacao/captura.html", ctx)
+            registrar_funil(request, pk, "view")
+            if ctx["consent"]:          # sem consentimento, nada é enviado à Meta (nem pelo servidor)
+                info = info_requisicao(request)
+                url = ctx["url_pagina"]
+                meta.enfileirar_evento_web("PageView", event_id, info, url=url)
+                meta.enfileirar_evento_web("ViewContent", ctx["event_id_vc"], info, veiculo=v, url=url)
+        return _gravar_cookies(request, render(request, "captacao/captura.html", ctx))
 
     def post(self, request, pk, slug=""):
         veiculo = get_object_or_404(Veiculo, pk=pk)
@@ -231,12 +292,78 @@ class CapturaView(View):
         info = info_requisicao(request, request.POST.get("fbclid", ""))
         tracking = {**_tracking_do_form(request), "ip": ip, "user_agent": info["ua"], "fbp": info["fbp"], "fbc": info["fbc"],
                     "url_origem": request.META.get("HTTP_REFERER", "") or request.build_absolute_uri(request.path),
-                    "event_id": event_id}
-        lead, _ = services.capturar_lead(veiculo, form.cleaned_data["nome"], form.cleaned_data["telefone"],
-                                         form.respostas(), tracking)
-        meta.enfileirar_evento_web("Lead", event_id, info, veiculo=veiculo, lead=lead,
-                                   url=request.build_absolute_uri(reverse("captacao:captura", args=[pk, utils.slug_veiculo(veiculo)])))
-        return redirect("captacao:obrigado", pk=pk, lead_uuid=lead.uuid)
+                    "event_id": event_id, "consent_meta": consentiu(request)}
+        respostas = form.respostas()
+        respostas["variante"] = variante_ab(request)
+        lead, _ = services.capturar_lead(veiculo, form.cleaned_data["nome"], form.cleaned_data["telefone"], respostas, tracking)
+        if consentiu(request):
+            meta.enfileirar_evento_web("Lead", event_id, info, veiculo=veiculo, lead=lead,
+                                       url=request.build_absolute_uri(reverse("captacao:captura", args=[pk, utils.slug_veiculo(veiculo)])))
+        registrar_funil(request, pk, "enviou")
+        return _gravar_cookies(request, redirect("captacao:obrigado", pk=pk, lead_uuid=lead.uuid))
+
+
+LIMITE_INICIOS = 10       # contatos parciais por IP
+
+class IniciarView(View):
+    """1ª etapa: o cliente deixou nome e WhatsApp. Salva o lead (parcial) sem esperar o fim do formulário."""
+    def post(self, request, pk):
+        veiculo = get_object_or_404(Veiculo, pk=pk)
+        form = ContatoInicialForm(request.POST)
+        if request.POST.get("website"):                         # honeypot
+            return JsonResponse({"ok": True})
+        ip = ip_do_cliente(request)
+        chave = f"captacao:rate_ini:{ip}"
+        n = cache.get(chave, 0)
+        if n >= LIMITE_INICIOS:
+            return JsonResponse({"ok": False}, status=429)
+        if not form.is_valid():
+            return JsonResponse({"ok": False, "erros": list(form.errors)}, status=400)
+        cache.set(chave, n + 1, JANELA_ENVIOS)
+        info = info_requisicao(request, request.POST.get("fbclid", ""))
+        tracking = {**_tracking_do_form(request), "ip": ip, "user_agent": info["ua"], "fbp": info["fbp"], "fbc": info["fbc"],
+                    "url_origem": request.META.get("HTTP_REFERER", "") or request.build_absolute_uri(request.path),
+                    "event_id": "", "consent_meta": consentiu(request)}
+        services.capturar_lead(veiculo, form.cleaned_data["nome"], form.cleaned_data["telefone"],
+                               {"parcial": True, "intencao": form.cleaned_data.get("intencao") or "simular",
+                                "variante": variante_ab(request)}, tracking, parcial=True)
+        registrar_funil(request, pk, "contato")
+        return _gravar_cookies(request, JsonResponse({"ok": True}))
+
+
+class EtapaView(View):
+    """Passos do questionário (medição do funil). Anônimo sem consentimento."""
+    def post(self, request, pk):
+        get_object_or_404(Veiculo, pk=pk)
+        etapa = request.POST.get("etapa", "")
+        if etapa not in ETAPAS_DO_NAVEGADOR:
+            return JsonResponse({"ok": False}, status=400)
+        chave = f"captacao:rate_etapa:{ip_do_cliente(request)}"
+        n = cache.get(chave, 0)
+        if n >= 80:
+            return JsonResponse({"ok": False}, status=429)
+        cache.set(chave, n + 1, JANELA_ENVIOS)
+        variante_ab(request), sid_visitante(request)
+        registrar_funil(request, pk, etapa)
+        return _gravar_cookies(request, JsonResponse({"ok": True}))
+
+
+class ConsentirView(View):
+    """O visitante acabou de aceitar os cookies: agora (e só agora) vão para a fila da Meta o PageView e o ViewContent
+    desta visita, com os mesmos ids que o navegador usou."""
+    def post(self, request, pk):
+        veiculo = get_object_or_404(Veiculo, pk=pk)
+        if not consentiu(request) or request.user.is_authenticated or BOTS.search(request.META.get("HTTP_USER_AGENT", "")):
+            return JsonResponse({"ok": False}, status=400)
+        event_id = request.POST.get("event_id", "")
+        if not re.fullmatch(r"[0-9a-f]{32}", event_id):
+            return JsonResponse({"ok": False}, status=400)
+        info = info_requisicao(request)
+        url = request.POST.get("url", "")[:500] or request.build_absolute_uri(reverse("captacao:captura", args=[pk, utils.slug_veiculo(veiculo)]))
+        meta.enfileirar_evento_web("PageView", event_id, info, url=url)
+        meta.enfileirar_evento_web("ViewContent", f"{event_id}-vc", info, veiculo=veiculo, url=url)
+        variante_ab(request), sid_visitante(request)
+        return _gravar_cookies(request, JsonResponse({"ok": True}))
 
 
 def _qs(request):
@@ -254,7 +381,7 @@ def obrigado(request, pk, lead_uuid):
     veiculo = lead.veiculo or get_object_or_404(Veiculo, pk=pk)
     texto = utils.mensagem_whatsapp(veiculo, lead.respostas or {}, lead.nome)
     return render(request, "captacao/obrigado.html", {
-        "lead": lead, "veiculo": veiculo, "pixel_id": settings.META_PIXEL_ID, "loja": settings.LOJA,
+        "lead": lead, "veiculo": veiculo, "pixel_id": settings.META_PIXEL_ID, "consent": consentiu(request), "loja": settings.LOJA,
         "wa_url": utils.link_whatsapp(settings.LOJA["whatsapp"], texto),
         "event_id_lead": lead.event_id_lead, "event_id_contact": _contact_event_id(lead),
         "preco": float(veiculo.valor_venda or 0), "pk": pk})
@@ -264,6 +391,8 @@ class ContatoView(View):
     """Beacon do clique no WhatsApp: enfileira o Contact da CAPI com o MESMO event_id do Pixel."""
     def post(self, request, pk, lead_uuid):
         lead = get_object_or_404(Lead, uuid=lead_uuid)
+        if not consentiu(request):
+            return JsonResponse({"ok": True})
         url = request.build_absolute_uri(reverse("captacao:obrigado", args=[pk, lead.uuid]))
         meta.enfileirar_evento_web("Contact", _contact_event_id(lead), info_requisicao(request),
                                    veiculo=lead.veiculo, lead=lead, url=url)

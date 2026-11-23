@@ -1,0 +1,25 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Formulário{% endblock %}
+{% block content %}
+<div class="pg">
+<form class="barra" method="get" style="padding:0 0 12px">
+  <select name="dias" onchange="this.form.submit()">{% for v, r in opcoes_dias %}<option value="{{ v }}" {% if v == dias %}selected{% endif %}>{{ r }}</option>{% endfor %}</select>
+  <span style="color:var(--mu);font-size:13px">Onde as pessoas desistem no formulário da página de captura · teste A/B dos botões</span>
+</form>
+
+<div class="box" style="margin-bottom:12px"><h2>Resultado do teste A/B</h2>
+<p style="margin:0 0 6px">{{ veredito }}</p>
+<p style="margin:0;color:var(--mu);font-size:13.5px">A = botões "Simular" e "Agendar visita". B = "Falar com consultor" e "Ver na loja". Só entram na comparação visitantes que aceitaram os cookies; quem recusou aparece à parte, sempre na variante A e sem identificador.</p></div>
+
+<div class="box" style="margin-bottom:12px"><h2>Formulário incompleto</h2>
+<p style="margin:0;color:var(--mu);font-size:14px"><b style="color:var(--tx)">{{ incompletos }}</b> leads deixaram o contato e não terminaram (coluna <b>Requalificar</b> do funil) · <b style="color:var(--tx)">{{ recuperados }}</b> terminaram depois.</p></div>
+
+{% for t in tabelas %}
+<div class="box" style="margin-bottom:12px"><h2>{{ t.nome }}</h2>
+<p style="margin:0 0 8px;color:var(--mu);font-size:13.5px">{{ t.visitas }} visitas · {{ t.enviou }} formulários enviados{% if t.taxa is not None %} · conversão <b style="color:var(--tx)">{{ t.taxa }}%</b>{% endif %}</p>
+<table class="t"><tr><th>Etapa</th><th class="n">Pessoas</th><th class="n">% das visitas</th><th class="n">Perdeu desde a etapa anterior</th></tr>
+{% for l in t.linhas %}<tr><td>{{ l.nome }}</td><td class="n">{{ l.n }}</td><td class="n">{% if l.pct is not None %}{{ l.pct }}%{% else %}—{% endif %}</td><td class="n">{% if l.perdeu is not None %}{{ l.perdeu }}%{% else %}—{% endif %}</td></tr>{% endfor %}
+</table></div>
+{% endfor %}
+</div>
+{% endblock %}

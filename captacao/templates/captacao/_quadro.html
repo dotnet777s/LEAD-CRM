@@ -15,6 +15,7 @@
       <div class="carro">{{ l.carro_texto|default:"Sem carro definido"|truncatechars:44 }}</div>
       <div class="meta">
         {% if l.sla %}<span class="tag {{ l.classe }}">{{ l.classe }}</span>{% endif %}
+        {% if l.incompleto %}<span class="tag inc" title="Deixou o contato e não terminou o formulário">Incompleto</span>{% endif %}
         <span>{{ l.get_origem_display }}</span>
         {% if l.utm_content %}<span title="Anúncio">{{ l.utm_content|truncatechars:18 }}</span>{% endif %}
         <span class="quem{% if not l.vendedor %} sem{% endif %}">{% if l.vendedor %}{{ l.vendedor.first_name|default:l.vendedor.username }}{% else %}Sem consultor{% endif %}</span>

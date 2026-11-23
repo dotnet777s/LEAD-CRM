@@ -40,6 +40,24 @@ class CapturaForm(forms.Form):
         return r
 
 
+class ContatoInicialForm(forms.Form):
+    """1ª etapa do formulário: só o contato (o lead já fica salvo para a equipe)."""
+    nome = forms.CharField(max_length=120, min_length=2)
+    telefone = forms.CharField(max_length=20)
+    lgpd = forms.BooleanField()
+    intencao = forms.ChoiceField(choices=utils.INTENCAO, required=False)
+    website = forms.CharField(required=False)   # honeypot
+
+    def clean_nome(self):
+        return " ".join(self.cleaned_data["nome"].split())
+
+    def clean_telefone(self):
+        tel = utils.normalizar_telefone(self.cleaned_data["telefone"])
+        if not tel:
+            raise forms.ValidationError("WhatsApp inválido.")
+        return tel
+
+
 class LeadManualForm(forms.Form):
     nome = forms.CharField(max_length=120)
     telefone = forms.CharField(max_length=20)

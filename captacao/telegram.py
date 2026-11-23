@@ -118,7 +118,9 @@ def texto_lead(lead, titulo):
     linhas = [cab, "", f"👤 <b>{esc(lead.nome)}</b>", f"📱 {esc(lead.telefone_formatado)}",
               f"🕒 {_quando(lead.criado_em)}", "", f"🚗 {_carro(lead)}", ""]
     resumo = ""
-    if r:
+    if r.get("parcial"):
+        linhas += [f"⏳ <i>Deixou o contato e não terminou o formulário. {esc('Quer: ' + quer)}</i>", ""]
+    elif r:
         troca = "Não" if r.get("troca") != "sim" else (f"Sim ({r['troca_carro']})" if r.get("troca_carro") else "Sim")
         pag, ent = utils.rotulo(utils.PAGAMENTO, r.get("pagamento")), utils.rotulo(utils.ENTRADA, r.get("entrada"))
         prazo = utils.rotulo(utils.PRAZO, r.get("prazo"))
@@ -155,6 +157,47 @@ def avisar_novo_lead(lead):
     for v in _chats():
         _, criada = enfileirar(v.chat_id, texto_lead(lead, "Novo lead"), botoes_lead(lead), lead, "novo", f"novo:{lead.pk}:{v.chat_id}")
         n += criada
+    return n
+
+
+def avisar_lead_completo(lead):
+    """Quem tinha deixado só o contato terminou o formulário. Se o SDR já foi avisado do formulário incompleto,
+    manda 'terminou o formulário'; se não (terminou rápido), é um lead novo comum."""
+    if not configurado():
+        return 0
+    ja_avisado = NotificacaoTelegram.objects.filter(lead=lead, tipo="requalificar").exists()
+    n = 0
+    for v in _chats():
+        _, criada = enfileirar(v.chat_id, texto_lead(lead, "Lead terminou o formulário" if ja_avisado else "Novo lead"),
+                               botoes_lead(lead), lead, "completo", f"completo:{lead.pk}:{v.chat_id}")
+        n += criada
+    return n
+
+
+def botoes_requalificar(lead):
+    from django.conf import settings as st
+    linha = []
+    if lead.whatsapp_requalificar_url:
+        linha.append({"text": "Requalificar no WhatsApp", "url": lead.whatsapp_requalificar_url})
+    linha.append({"text": "Abrir no CRM", "url": f"{st.SITE_URL}/lead/{lead.pk}/"})
+    return [linha]
+
+
+def alertas_requalificar(agora=None):
+    """Lead que deixou o contato e NÃO terminou o formulário depois de alguns minutos: avisa o SDR para requalificar
+    (uma vez por lead). Fica na coluna 'Requalificar' do funil."""
+    agora = agora or timezone.now()
+    espera = timedelta(minutes=settings.TELEGRAM_REQUALIFICAR_MINUTOS)
+    qs = Lead.objects.filter(etapa=Lead.Etapa.REQUALIFICAR, criado_em__lte=agora - espera,
+                             criado_em__gte=agora - timedelta(hours=24))
+    n = 0
+    for lead in qs:
+        if not lead.incompleto:
+            continue
+        for v in _chats():
+            _, criada = enfileirar(v.chat_id, texto_lead(lead, "Requalificar: não terminou o formulário"),
+                                   botoes_requalificar(lead), lead, "requalificar", f"requalificar:{lead.pk}:{v.chat_id}")
+            n += criada
     return n
 
 

@@ -10,6 +10,7 @@ class Lead(models.Model):
 
     class Etapa(models.TextChoices):
         NOVO = "novo", "Novo"
+        REQUALIFICAR = "requalificar", "Requalificar"
         ATENDIMENTO = "atendimento", "Em atendimento"
         QUALIFICADO = "qualificado", "Qualificado"
         VISITA = "visita", "Visita agendada"
@@ -18,9 +19,10 @@ class Lead(models.Model):
         VENDIDO = "vendido", "Vendido"
         PERDIDO = "perdido", "Perdido"
 
-    ABERTAS = [Etapa.NOVO, Etapa.ATENDIMENTO, Etapa.QUALIFICADO, Etapa.VISITA, Etapa.COMPARECEU, Etapa.NEGOCIACAO]
+    # REQUALIFICAR: quem deixou o contato mas não terminou o formulário. Fica fora do funil de vendas (taxas e 'avançar').
+    ABERTAS = [Etapa.NOVO, Etapa.REQUALIFICAR, Etapa.ATENDIMENTO, Etapa.QUALIFICADO, Etapa.VISITA, Etapa.COMPARECEU, Etapa.NEGOCIACAO]
     # Ordem do funil (quadro, botão "avançar" e taxas do painel)
-    FUNIL = ABERTAS + [Etapa.VENDIDO]
+    FUNIL = [Etapa.NOVO, Etapa.ATENDIMENTO, Etapa.QUALIFICADO, Etapa.VISITA, Etapa.COMPARECEU, Etapa.NEGOCIACAO, Etapa.VENDIDO]
 
     class Classe(models.TextChoices):
         A = "A", "A · quente"
@@ -89,6 +91,7 @@ class Lead(models.Model):
     # LGPD
     consentimento_em = models.DateTimeField(null=True, blank=True)
     consentimento_ip = models.GenericIPAddressField(null=True, blank=True)
+    consent_meta = models.BooleanField(default=False)     # aceitou cookies de marketing: só então enviamos eventos à Meta
 
     criado_em = models.DateTimeField(default=timezone.now, db_index=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -119,9 +122,28 @@ class Lead(models.Model):
 
     @property
     def proxima_etapa(self):
+        if self.etapa == self.Etapa.REQUALIFICAR:
+            return self.Etapa.ATENDIMENTO
         if self.etapa in self.ABERTAS:
             return self.FUNIL[self.FUNIL.index(self.etapa) + 1]
         return None
+
+    @property
+    def incompleto(self):
+        return bool((self.respostas or {}).get("parcial"))
+
+    @property
+    def whatsapp_requalificar_url(self):
+        """Link do WhatsApp com a mensagem para retomar quem não terminou o formulário (escrita pela loja, formal)."""
+        if not self.telefone:
+            return ""
+        from urllib.parse import quote
+        primeiro = (self.nome or "").split()[0].title() if (self.nome or "").strip() else ""
+        carro = f" do {self.carro_texto.split(' · ')[0]}" if self.carro_texto else ""
+        ola = f"Olá, {primeiro}!" if primeiro else "Olá!"
+        texto = (f"{ola} Aqui é da TopCar Veículos. Vi que você começou a simulação{carro} e gostaria de ajudar a concluí-la. "
+                 "Posso te passar as condições?")
+        return f"https://wa.me/{self.telefone}?text={quote(texto)}"
 
 
 class Interacao(models.Model):
@@ -227,3 +249,18 @@ class NotificacaoTelegram(models.Model):
     criado_em = models.DateTimeField(default=timezone.now)
     enviado_em = models.DateTimeField(null=True, blank=True)
     motivo = models.CharField(max_length=300, blank=True)
+
+
+class EventoFunil(models.Model):
+    """Passo do formulário da página de captura (para medir onde as pessoas desistem e comparar as variantes A/B).
+    Sem consentimento: sem identificador (sid vazio) e sempre variante A."""
+    ETAPAS = ["view", "comecou", "contato", "q_pagamento", "q_entrada", "q_troca", "q_prazo", "enviou"]
+    criado_em = models.DateTimeField(auto_now_add=True)
+    veiculo_id = models.IntegerField(null=True, blank=True)
+    etapa = models.CharField(max_length=20)
+    variante = models.CharField(max_length=2, default="A")
+    sid = models.CharField(max_length=32, blank=True)
+    consent = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [models.Index(fields=["criado_em", "etapa"])]

@@ -145,6 +145,16 @@ META_GRAPH_API_VERSION = env("META_GRAPH_API_VERSION", "v23.0")
 META_TEST_EVENT_CODE = env("META_TEST_EVENT_CODE")
 META_CAPI_ENABLED = env_bool("META_CAPI_ENABLED", False)
 
+# --- Medição do formulário, teste A/B e consentimento (LGPD) ---
+AB_ATIVO = env_bool("AB_ATIVO", True)
+AB_VARIANTES = {    # o que muda no teste: o texto dos dois botões principais
+    "A": {"b1": "Simular", "b2": "Agendar visita", "s1": "Simular", "s2": "Agendar",
+          "t1": "Receba a simulação no WhatsApp", "t2": "Agende a sua visita", "e1": "Receber no WhatsApp", "e2": "Agendar pelo WhatsApp"},
+    "B": {"b1": "Falar com consultor", "b2": "Ver na loja", "s1": "Consultor", "s2": "Visitar",
+          "t1": "Fale com um consultor no WhatsApp", "t2": "Combine a sua visita à loja", "e1": "Falar no WhatsApp", "e2": "Combinar visita"},
+}
+CLARITY_ID = env("CLARITY_ID")     # Microsoft Clarity (mapa de calor). Só carrega com o consentimento do visitante.
+
 # --- Parcela estimada exibida na página (ilustrativa: a aprovação e a taxa reais dependem do banco) ---
 FINANCIAMENTO_TAXA_AM = float(env("FINANCIAMENTO_TAXA_AM", "1.99") or 1.99)     # % ao mês
 FINANCIAMENTO_ENTRADA_PCT = int(env("FINANCIAMENTO_ENTRADA_PCT", "30") or 30)
@@ -154,6 +164,7 @@ FINANCIAMENTO_PARCELAS = int(env("FINANCIAMENTO_PARCELAS", "60") or 60)
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN")
 TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", "leadsreceiverbot")
 TELEGRAM_SLA_MINUTOS = int(env("TELEGRAM_SLA_MINUTOS", "5") or 5)
+TELEGRAM_REQUALIFICAR_MINUTOS = int(env("TELEGRAM_REQUALIFICAR_MINUTOS", "10") or 10)   # espera antes de avisar do formulário incompleto
 
 
 # Acesso por http://IP (só para testar antes de apontar o domínio). Desligue depois: ACESSO_HTTP_TEMPORARIO=0.

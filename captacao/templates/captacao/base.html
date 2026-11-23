@@ -16,6 +16,7 @@
   <a href="{% url 'captacao:kanban' %}" class="logo"><img src="{% static 'captacao/logo-menu.png' %}" alt="TopCar" height="26"></a>
   <a href="{% url 'captacao:kanban' %}" class="{% if request.resolver_match.url_name == 'kanban' %}on{% endif %}">Funil</a>
   <a href="{% url 'captacao:painel' %}" class="{% if request.resolver_match.url_name == 'painel' %}on{% endif %}">Painel</a>
+  <a href="{% url 'captacao:funil_form' %}" class="{% if request.resolver_match.url_name == 'funil_form' %}on{% endif %}">Formulário</a>
   <a href="{% url 'captacao:carros' %}" class="{% if request.resolver_match.url_name == 'carros' %}on{% endif %}">Carros</a>
   {% if eh_gestor %}<a href="{% url 'captacao:equipe' %}" class="{% if request.resolver_match.url_name == 'equipe' %}on{% endif %}">Equipe</a>{% endif %}
   <a href="{% url 'captacao:eventos' %}" class="{% if request.resolver_match.url_name == 'eventos' %}on{% endif %}">Meta</a>

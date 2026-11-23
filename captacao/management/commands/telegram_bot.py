@@ -35,6 +35,7 @@ class Command(BaseCommand):
                 if time.time() - ultima_verificacao > 30 or o["uma_vez"]:
                     telegram.lembretes_de_retorno()
                     telegram.alertas_lead_parado()
+                    telegram.alertas_requalificar()
                     ultima_verificacao = time.time()
                 enviados = telegram.processar_fila()
                 if o["uma_vez"]:

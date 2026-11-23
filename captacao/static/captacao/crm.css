@@ -29,7 +29,8 @@ label.l{display:block;font-size:13px;color:var(--mu);margin:10px 0 4px}
 .abas button.ativa{background:#0d2a17;border-color:var(--gr);color:var(--gr)}.abas b{margin-left:6px;font-size:13px}
 .quadro{display:flex;gap:10px;padding:0 12px 12px;overflow-x:auto;align-items:stretch;height:calc(100dvh - 128px);min-height:420px}
 .col{flex:1 0 258px;max-width:340px;display:flex;flex-direction:column;background:#101010;border:1px solid var(--bd);border-radius:14px;min-height:0;border-top:3px solid var(--bd)}
-.col[data-etapa=novo]{border-top-color:var(--bl)}.col[data-etapa=atendimento],.col[data-etapa=qualificado]{border-top-color:var(--am)}
+.col[data-etapa=novo]{border-top-color:var(--bl)}.col[data-etapa=requalificar]{border-top-color:#fb923c}
+.tag.inc{background:rgba(251,146,60,.16);color:#fdba74;border:1px solid rgba(251,146,60,.4)}.col[data-etapa=atendimento],.col[data-etapa=qualificado]{border-top-color:var(--am)}
 .col[data-etapa=visita],.col[data-etapa=compareceu],.col[data-etapa=negociacao]{border-top-color:#a78bfa}.col[data-etapa=vendido]{border-top-color:var(--gr)}.col[data-etapa=perdido]{border-top-color:var(--rd)}
 .col h3{margin:0;padding:11px 12px 8px;font-size:13px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:.05em;color:#cfcfcf}
 .col h3 span{background:var(--sf2);color:var(--tx);border-radius:999px;padding:1px 9px;font-size:12px}

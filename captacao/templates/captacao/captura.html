@@ -33,13 +33,13 @@ header img{height:30px;width:auto;display:block}
 .aberto.on{color:#c9d3da}.aberto.on i{background:var(--gr);box-shadow:0 0 0 3px rgba(37,211,102,.18)}
 .grid{display:grid;gap:24px;grid-template-areas:"top" "form" "rest";padding-bottom:12px}
 .top{grid-area:top;min-width:0}.formcol{grid-area:form}.rest{grid-area:rest;min-width:0}
-.hero{position:relative;background:var(--sf);aspect-ratio:4/3;overflow:hidden;margin:0 -20px}
+.hero{position:relative;background:var(--sf);aspect-ratio:16/10;overflow:hidden;margin:0;border-radius:18px;box-shadow:0 20px 50px -26px #000}
 .sem-foto{display:grid;place-items:center;height:100%;color:var(--mu);font-size:15px}
 .badge{position:absolute;z-index:2;background:rgba(10,12,15,.82);backdrop-filter:blur(8px);border:1px solid var(--bd2);border-radius:8px;padding:6px 11px;font-size:13px;font-weight:600;color:var(--tx);display:flex;gap:7px;align-items:center}
 .badge.contador{right:14px;bottom:16px;font-variant-numeric:tabular-nums}
 .badge.vend{left:14px;top:14px;background:#2b1213;border-color:#5a2426;color:#ff9d99}
 .thumbs{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}.thumbs::-webkit-scrollbar{display:none}
-.thumbs button{flex:0 0 76px;height:56px;padding:0;border:1px solid var(--bd);border-radius:8px;overflow:hidden;background:var(--sf);cursor:pointer}
+.thumbs button{flex:0 0 64px;height:46px;padding:0;border:1px solid var(--bd);border-radius:8px;overflow:hidden;background:var(--sf);cursor:pointer}
 .thumbs img{width:100%;height:100%;object-fit:cover;display:block}
 .thumbs .mais{display:grid;place-items:center;font-weight:700;font-size:14px;color:var(--tx);background:var(--sf2)}
 .marca{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gr);font-weight:700;margin:22px 0 6px}
@@ -202,6 +202,13 @@ h2.s:before{content:"";display:inline-block;width:22px;height:3px;border-radius:
  .specs b{font-size:15px}.specs>div{padding:11px 10px;gap:9px}h1{font-size:30px}
  .fixo{gap:8px;padding-left:12px;padding-right:12px}.fixo .p{font-size:15px;white-space:normal;max-width:84px;flex:0 1 auto}.fixo .p small{font-size:9.5px;line-height:1.2}.fixo .btns{gap:6px;min-width:0}.fixo .btns .btn{padding:12px 2px;font-size:13.5px;min-width:0}
 }
+.leve .fundo i,.leve .glow:before,.leve .hero:after,.leve .fundo .piso:before,.leve .acoes .btn,.leve .fixo .btn,.leve body::before{animation:none!important}
+.leve .fundo .piso,.leve body::before{display:none}.leve .fundo i{opacity:.7}
+.quiz:not(.stepper) #contato-ok{display:none}
+.cookies{position:fixed;z-index:20;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:560px;margin:0 auto;background:rgba(14,19,24,.97);border:1px solid var(--bd2);border-radius:16px;padding:16px 18px;box-shadow:0 24px 60px -18px #000;font-size:14px;line-height:1.5;color:var(--tx2)}
+.cookies[hidden]{display:none}.cookies p{margin:0 0 12px}.cookies a{color:#fff}
+.cookies .cb{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cookies .btn{padding:12px 10px;font-size:15px}
+.rodape-cookies{background:none;border:0;color:var(--mu);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
 @media(min-width:960px){
  body{padding-bottom:0}.pulso{left:24px;right:auto;bottom:24px}.fixo{display:none}
  .grid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-areas:"top form" "rest form";align-items:start;column-gap:40px;row-gap:0;padding-top:28px}
@@ -211,11 +218,13 @@ h2.s:before{content:"";display:inline-block;width:22px;height:3px;border-radius:
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 </style>
 {% include "captacao/_pixel.html" %}
-{% if pixel_id %}<script>
-fbq('track','PageView',{},{eventID:'{{ event_id }}'});
-fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicle',value:{{ veiculo.valor_venda|stringformat:"s" }},currency:'BRL'},{eventID:'{{ event_id_vc }}'});
+<script>
+window.TC={consent:{{ consent|yesno:"true,false" }},ev:'{{ event_id }}',vc:'{{ event_id_vc }}',pk:'{{ veiculo.pk }}',valor:{{ veiculo.valor_venda|default:0|stringformat:"s" }},
+ url:'{{ url_pagina|escapejs }}',inicio:'{% url "captacao:inicio" veiculo.pk %}',etapa:'{% url "captacao:etapa" veiculo.pk %}',consentir:'{% url "captacao:consentir" veiculo.pk %}',
+ clarity:'{{ clarity_id|escapejs }}',ab:{t1:'{{ ab.t1|escapejs }}',t2:'{{ ab.t2|escapejs }}',e1:'{{ ab.e1|escapejs }}',e2:'{{ ab.e2|escapejs }}'}};
+(function(){var n=navigator,c=n.connection||{};
+ if((n.deviceMemory&&n.deviceMemory<=2)||(n.hardwareConcurrency&&n.hardwareConcurrency<=2)||c.saveData||/(^|-)(2g|3g)$/.test(c.effectiveType||''))document.documentElement.classList.add('leve');})();
 </script>
-<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id={{ pixel_id }}&ev=PageView&noscript=1"></noscript>{% endif %}
 </head>
 <body>
 <div class="fundo" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i><div class="piso"></div></div>
@@ -285,13 +294,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <div><svg class="ic"><use href="#i-bank"/></svg><b>até 60x</b><span>Financiamento</span></div>
 <div><svg class="ic"><use href="#i-card"/></svg><b>até 21x</b><span>Cartão de crédito</span></div>
 <div><svg class="ic"><use href="#i-swap"/></svg><b>Entrada</b><span>Aceitamos carro ou moto como entrada</span></div>
-</div>{% if disponivel %}<div class="acoes"><a class="btn" href="#form" data-intencao="simular">Simular</a><a class="btn ghost" href="#form" data-intencao="visita">Agendar visita</a></div>{% endif %}</div>
-{% if disponivel and interesse %}<div class="provas"><div><svg class="ic"><use href="#i-users"/></svg><span><b>{{ interesse }} pessoas</b> pediram simulação deste carro {{ interesse_janela }}.</span></div></div>{% endif %}
-<div class="garantias">
-<div><i><svg class="ic"><use href="#i-check"/></svg></i><small>Garantia</small><b>{{ loja.garantia }}</b></div>
-<div><i><svg class="ic"><use href="#i-wrench"/></svg></i><small>Revisado</small><b>Revisão minuciosa</b></div>
-<div><i><svg class="ic"><use href="#i-shield"/></svg></i><small>Vistoria cautelar</small><b>Laudo cautelar 100% aprovado</b></div>
-</div>
+</div>{% if disponivel %}<div class="acoes"><a class="btn" href="#form" data-intencao="simular">{{ ab.b1 }}</a><a class="btn ghost" href="#form" data-intencao="visita">{{ ab.b2 }}</a></div>{% endif %}</div>
 </section>
 
 <section class="formcol">
@@ -307,20 +310,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 {% if disponivel %}<p class="micro"><svg class="ic"><use href="#i-clock"/></svg>Leva menos de 1 minuto · sem compromisso · sem custo</p>{% endif %}
 <div class="qtop"><span id="qpasso">Etapa 1 de 5</span><div class="bar"><i id="qbar"></i></div></div>
 
-{% for g in grupos %}{% with campo=g.campo %}
-<fieldset class="passo" data-campo="{{ campo }}"><legend>{{ g.titulo }}</legend>{% if campo == 'troca' %}<p class="dica">Aceitamos carro ou moto como parte do pagamento.</p>{% endif %}
-<div class="op">{% for val, rot, marcado in g.opcoes %}<label><input type="radio" name="{{ campo }}" value="{{ val }}" {% if marcado %}checked{% endif %}><span>{{ rot }}</span></label>{% endfor %}</div>
-{% for e in g.erros %}<div class="err">{{ e }}</div>{% endfor %}
-{% if campo == 'troca' %}
-<div id="troca-box" hidden style="margin-top:14px"><label class="t" for="id_troca_carro">Qual carro ou moto (modelo e ano)?</label>
-<input type="text" id="id_troca_carro" name="troca_carro" value="{{ form.troca_carro.value|default:'' }}" maxlength="100" placeholder="Ex.: Gol 2015 ou CG 160 2020">
-{% for e in form.troca_carro.errors %}<div class="err">{{ e }}</div>{% endfor %}
-<button type="button" class="btn peq" id="troca-ok" style="margin-top:12px">Continuar</button></div>
-{% endif %}
-</fieldset>
-{% endwith %}{% endfor %}
-
-<fieldset class="passo" data-final>
+<fieldset class="passo" data-contato>
 <legend>Para onde enviamos as condições?</legend>
 <label class="t" for="id_nome">Nome</label>
 <input type="text" id="id_nome" name="nome" value="{{ form.nome.value|default_if_none:'' }}" autocomplete="name" enterkeyhint="next" required>
@@ -334,8 +324,25 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <span>Concordo em ser contatado pela TopCar pelo WhatsApp e com a <a href="{% url 'captacao:privacidade' %}" target="_blank" rel="noopener">política de privacidade</a>.</span></label>
 {% for e in form.lgpd.errors %}<div class="err">{{ e }}</div>{% endfor %}
 <div class="err" id="e_lgpd" hidden></div>
-<button class="btn" type="submit" id="enviar" style="margin-top:18px"><svg class="ic"><use href="#i-wa"/></svg><span>Receber no WhatsApp</span></button>
+<button class="btn" type="button" id="contato-ok" style="margin-top:18px"><span>Continuar</span><svg class="ic"><use href="#i-right"/></svg></button>
 </fieldset>
+
+{% for g in grupos %}{% with campo=g.campo %}
+<fieldset class="passo" data-campo="{{ campo }}"><legend>{{ g.titulo }}</legend>{% if campo == 'troca' %}<p class="dica">Aceitamos carro ou moto como parte do pagamento.</p>{% endif %}
+<div class="op">{% for val, rot, marcado in g.opcoes %}<label><input type="radio" name="{{ campo }}" value="{{ val }}" {% if marcado %}checked{% endif %}><span>{{ rot }}</span></label>{% endfor %}</div>
+{% for e in g.erros %}<div class="err">{{ e }}</div>{% endfor %}
+{% if campo == 'troca' %}
+<div id="troca-box" hidden style="margin-top:14px"><label class="t" for="id_troca_carro">Qual carro ou moto (modelo e ano)?</label>
+<input type="text" id="id_troca_carro" name="troca_carro" value="{{ form.troca_carro.value|default:'' }}" maxlength="100" placeholder="Ex.: Gol 2015 ou CG 160 2020">
+{% for e in form.troca_carro.errors %}<div class="err">{{ e }}</div>{% endfor %}
+<button type="button" class="btn peq" id="troca-ok" style="margin-top:12px">Continuar</button></div>
+{% endif %}
+{% if forloop.last %}<div class="err" id="e_prazo" hidden></div>
+<button class="btn" type="submit" id="enviar" style="margin-top:18px"><svg class="ic"><use href="#i-wa"/></svg><span>{{ ab.e1 }}</span></button>{% endif %}
+</fieldset>
+{% endwith %}{% endfor %}
+
+
 <button type="button" class="voltar" id="voltar"><svg class="ic" style="width:16px;height:16px"><use href="#i-left"/></svg>Voltar</button>
 <div class="seguro"><svg class="ic"><use href="#i-lock"/></svg>Dados criptografados</div>
 </form>
@@ -343,6 +350,13 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 </section>
 
 <section class="rest">
+{% if disponivel and interesse %}<div class="provas"><div><svg class="ic"><use href="#i-users"/></svg><span><b>{{ interesse }} pessoas</b> pediram simulação deste carro {{ interesse_janela }}.</span></div></div>{% endif %}
+<div class="garantias">
+<div><i><svg class="ic"><use href="#i-check"/></svg></i><small>Garantia</small><b>{{ loja.garantia }}</b></div>
+<div><i><svg class="ic"><use href="#i-wrench"/></svg></i><small>Revisado</small><b>Revisão minuciosa</b></div>
+<div><i><svg class="ic"><use href="#i-shield"/></svg></i><small>Vistoria cautelar</small><b>Laudo cautelar 100% aprovado</b></div>
+</div>
+
 <h2 class="s">Por que comprar na TopCar</h2>
 <div class="dif">
 <div><svg class="ic"><use href="#i-wrench"/></svg><b>Revisão minuciosa</b><span>Todos os carros passam por revisão antes da venda.</span></div>
@@ -403,13 +417,17 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <a class="btn ghost peq" href="{{ loja.mapa_url }}" target="_blank" rel="noopener">Como chegar</a>
 </div>
 
-<div class="final"><h2>Gostou do {{ veiculo.modelo_fmt }}?</h2><p>Simule agora ou agende a sua visita.</p>{% if disponivel %}<div class="acoes"><a class="btn" href="#form" data-intencao="simular">Simular</a><a class="btn ghost" href="#form" data-intencao="visita">Agendar visita</a></div>{% else %}<a class="btn" href="#form" data-ir>Quero ser avisado</a>{% endif %}</div>
+<div class="final"><h2>Gostou do {{ veiculo.modelo_fmt }}?</h2><p>Simule agora ou agende a sua visita.</p>{% if disponivel %}<div class="acoes"><a class="btn" href="#form" data-intencao="simular">{{ ab.b1 }}</a><a class="btn ghost" href="#form" data-intencao="visita">{{ ab.b2 }}</a></div>{% else %}<a class="btn" href="#form" data-ir>Quero ser avisado</a>{% endif %}</div>
 </section>
 </main>
 
-<footer><div class="w"><img src="{% static 'captacao/logo-site.webp' %}" alt="TopCar Veículos" width="auto" height="24">© TopCar Veículos · {{ loja.whatsapp_fmt }} · {{ loja.telefone }} · {{ loja.instagram }} · <a href="{% url 'captacao:privacidade' %}">Política de privacidade</a></div></footer>
+<footer><div class="w"><img src="{% static 'captacao/logo-site.webp' %}" alt="TopCar Veículos" width="auto" height="24">© TopCar Veículos · {{ loja.whatsapp_fmt }} · {{ loja.telefone }} · {{ loja.instagram }} · <a href="{% url 'captacao:privacidade' %}">Política de privacidade</a> · <button type="button" class="rodape-cookies" id="ck-abrir">Preferências de cookies</button></div></footer>
 
-<div class="fixo" id="fixo"><div class="p">{{ preco_fmt }}<small>{% if parcela_fmt and disponivel %}{{ parcela_fmt }}/mês em {{ parcelas_n }}x{% else %}{{ veiculo.modelo_fmt }} {{ veiculo.ano }}{% endif %}</small></div>{% if disponivel %}<div class="btns"><a class="btn" href="#form" id="cta" data-intencao="simular">Simular</a><a class="btn ghost" href="#form" data-intencao="visita">Agendar</a></div>{% else %}<a class="btn" href="#form" id="cta">Quero ser avisado</a>{% endif %}</div>
+<div class="fixo" id="fixo"><div class="p">{{ preco_fmt }}<small>{% if parcela_fmt and disponivel %}{{ parcela_fmt }}/mês em {{ parcelas_n }}x{% else %}{{ veiculo.modelo_fmt }} {{ veiculo.ano }}{% endif %}</small></div>{% if disponivel %}<div class="btns"><a class="btn" href="#form" id="cta" data-intencao="simular">{{ ab.s1 }}</a><a class="btn ghost" href="#form" data-intencao="visita">{{ ab.s2 }}</a></div>{% else %}<a class="btn" href="#form" id="cta">Quero ser avisado</a>{% endif %}</div>
+
+<div class="cookies" id="cookies" role="dialog" aria-label="Aviso de cookies" hidden>
+<p>Usamos cookies para entender como a página é usada e medir nossos anúncios (Meta). Você pode aceitar ou recusar os não essenciais. <a href="{% url 'captacao:privacidade' %}" target="_blank" rel="noopener">Política de privacidade</a>.</p>
+<div class="cb"><button type="button" class="btn ghost" id="ck-nao">Recusar</button><button type="button" class="btn" id="ck-sim">Aceitar</button></div></div>
 
 {% if disponivel and sinais %}{{ sinais|json_script:"sinais" }}
 <div class="pulso" id="pulso" role="status" aria-live="polite" hidden><i aria-hidden="true"></i><span></span></div>{% endif %}
@@ -419,6 +437,9 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <script>
 (function(){
 var d=document,form=d.getElementById('form'),tel=d.getElementById('id_telefone');
+var reduz=matchMedia('(prefers-reduced-motion:reduce)').matches,fino=matchMedia('(hover:hover) and (pointer:fine)').matches,leve=d.documentElement.classList.contains('leve');
+var csrf=(form.querySelector('[name=csrfmiddlewaretoken]')||{}).value||'';
+function track(et){try{fetch(TC.etapa,{method:'POST',body:new URLSearchParams({etapa:et}),headers:{'X-CSRFToken':csrf},credentials:'same-origin',keepalive:true});}catch(e){}}
 tel.addEventListener('input',function(){var n=tel.value.replace(/\D/g,'').slice(0,11),s=n;
  if(n.length>2)s='('+n.slice(0,2)+') '+n.slice(2);
  if(n.length>7)s='('+n.slice(0,2)+') '+n.slice(2,7)+'-'+n.slice(7);
@@ -442,11 +463,11 @@ function mostrar(i){var l=ativos(),ant=atual;atual=Math.max(0,Math.min(i,l.lengt
  d.getElementById('qbar').style.width=((atual+1)/l.length*100)+'%';
  volt.classList.toggle('ok',atual>0);}
 function proximo(){var l=ativos();if(atual<l.length-1){mostrar(atual+1);
- var n=l[atual],f=n.dataset.final!==undefined&&n.querySelector('input[type=text]');if(f){setTimeout(function(){f.focus()},250)}}}
+}}
 function trocaBox(){var r=form.querySelector('input[name=troca]:checked');box.hidden=!(r&&r.value==='sim');}
 if(!form.hasAttribute('data-erro')){
  form.classList.add('stepper');mostrar(0);
- form.addEventListener('change',function(e){var t=e.target;if(t.type!=='radio')return;
+ form.addEventListener('change',function(e){var t=e.target;if(t.type!=='radio')return;track('q_'+t.name);
   if(t.name==='pagamento'&&t.value==='a_vista'){var s=form.querySelector('input[name=entrada][value=sem]');if(s)s.checked=true;}
   if(t.name==='troca'){trocaBox();if(t.value==='sim'){var c=d.getElementById('id_troca_carro');c&&c.focus();return;}}
   setTimeout(proximo,160);});
@@ -454,6 +475,20 @@ if(!form.hasAttribute('data-erro')){
   if(!c.value.trim()){c.style.borderColor='var(--rd)';c.focus();return;}proximo();});
  volt.addEventListener('click',function(){mostrar(atual-1);});
 }else{trocaBox();form.querySelectorAll('input[name=troca]').forEach(function(i){i.addEventListener('change',trocaBox)});d.getElementById('troca-ok').hidden=true;form.scrollIntoView();}
+function iniciar(){try{fetch(TC.inicio,{method:'POST',body:new FormData(form),credentials:'same-origin',keepalive:true});}catch(e){}}
+var okc=d.getElementById('contato-ok'),primeiro=false;
+form.addEventListener('focusin',function(){if(!primeiro){primeiro=true;track('comecou');}});
+if(okc&&form.classList.contains('stepper')){
+ okc.addEventListener('click',function(){
+  ['e_nome','e_tel','e_lgpd'].forEach(function(i){d.getElementById(i).hidden=true});
+  var ok=true,n=d.getElementById('id_nome').value.trim(),dig=tel.value.replace(/\D/g,'');
+  if(n.length<2){erro('e_nome','Informe seu nome.');ok=false}
+  if(dig.length<10){erro('e_tel','Informe um WhatsApp válido com DDD.');ok=false}
+  if(!form.lgpd.checked){erro('e_lgpd','Aceite para continuar.');ok=false}
+  if(!ok)return;
+  iniciar();proximo();});
+ form.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.closest('[data-contato]')){e.preventDefault();okc.click();}});
+}
 function erro(id,msg){var e=d.getElementById(id);e.textContent=msg;e.hidden=false;}
 form.addEventListener('submit',function(ev){
  ['e_nome','e_tel','e_lgpd'].forEach(function(i){d.getElementById(i).hidden=true});
@@ -461,6 +496,7 @@ form.addEventListener('submit',function(ev){
  if(n.length<2){erro('e_nome','Informe seu nome.');ok=false}
  if(dig.length<10){erro('e_tel','Informe um WhatsApp válido com DDD.');ok=false}
  if(!form.lgpd.checked){erro('e_lgpd','Aceite para continuar.');ok=false}
+ if(!form.querySelector('input[name=prazo]:checked')){erro('e_prazo','Escolha uma opção.');ok=false}
  if(!ok){ev.preventDefault();return;}
  var b=d.getElementById('enviar');b.disabled=true;b.querySelector('span').textContent='Enviando…';});
 
@@ -468,51 +504,68 @@ form.addEventListener('submit',function(ev){
 var fx=d.getElementById('fixo');
 if('IntersectionObserver' in window){new IntersectionObserver(function(es){fx.classList.toggle('esc',es[0].isIntersecting)},{threshold:.25}).observe(form);}
 var intent=d.getElementById('intencao'),ft=d.getElementById('ftitulo'),bt=d.getElementById('enviar').querySelector('span');
-function definirIntencao(v){intent.value=v;var vis=v==='visita';ft.textContent=vis?'Agende a sua visita':'Receba a simulação no WhatsApp';bt.textContent=vis?'Agendar pelo WhatsApp':'Receber no WhatsApp';}
+function definirIntencao(v){intent.value=v;var vis=v==='visita';ft.textContent=vis?TC.ab.t2:TC.ab.t1;bt.textContent=vis?TC.ab.e2:TC.ab.e1;}
 if(intent.value==='visita')definirIntencao('visita');
 d.querySelectorAll('#cta,[data-ir],[data-intencao]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();if(a.dataset.intencao)definirIntencao(a.dataset.intencao);form.scrollIntoView({block:'center'});});});
 
 /* carrossel de fotos na própria página */
 var tr=d.getElementById('trilho'),ct=d.getElementById('contador'),pr=d.getElementById('prog'),th=d.getElementById('thumbs');
-if(tr){var slides=tr.children.length,idx=0,parado=false,auto=null,tt=false;
+if(tr){var slides=tr.children.length,idx=0,tt=false,ult=0,sobre=false,visivel=true,heroEl=d.getElementById('hero');
  var mini=th?[].slice.call(th.children):[];
- function atual(){return Math.max(0,Math.min(slides-1,Math.round(tr.scrollLeft/tr.clientWidth)));}
- function marcar(){var i=atual();if(i===idx&&ct&&ct.dataset.ok)return;idx=i;
+ function fotoAtual(){return Math.max(0,Math.min(slides-1,Math.round(tr.scrollLeft/tr.clientWidth)));}
+ function marcar(){var i=fotoAtual();if(i===idx&&ct&&ct.dataset.ok)return;idx=i;
   if(ct){ct.textContent=(i+1)+' / '+slides;ct.dataset.ok=1;}
   if(pr)pr.style.width=((i+1)/slides*100)+'%';
   mini.forEach(function(m,k){m.classList.toggle('on',k===i);});
   if(mini[i]&&th){th.scrollTo({left:mini[i].offsetLeft-th.clientWidth/2+mini[i].clientWidth/2,behavior:reduz?'auto':'smooth'});}}
  function ir(i){i=(i+slides)%slides;tr.scrollTo({left:i*tr.clientWidth,behavior:reduz?'auto':'smooth'});}
- function pausar(){parado=true;if(auto){clearInterval(auto);auto=null;}}
+ function mexeu(){ult=Date.now();}
  tr.addEventListener('scroll',function(){if(tt)return;tt=true;requestAnimationFrame(function(){marcar();tt=false;});},{passive:true});
  var a1=d.getElementById('ant'),a2=d.getElementById('prox');
- if(a1)a1.addEventListener('click',function(){pausar();ir(idx-1);});
- if(a2)a2.addEventListener('click',function(){pausar();ir(idx+1);});
- mini.forEach(function(m){m.addEventListener('click',function(){pausar();ir(+m.dataset.foto);});});
- tr.addEventListener('keydown',function(e){if(e.key==='ArrowLeft'){pausar();ir(idx-1);e.preventDefault();}if(e.key==='ArrowRight'){pausar();ir(idx+1);e.preventDefault();}});
- ['pointerdown','touchstart','wheel'].forEach(function(ev){tr.addEventListener(ev,pausar,{passive:true});});
- d.getElementById('hero').addEventListener('mouseenter',pausar);
+ if(a1)a1.addEventListener('click',function(){mexeu();ir(idx-1);});
+ if(a2)a2.addEventListener('click',function(){mexeu();ir(idx+1);});
+ mini.forEach(function(m){m.addEventListener('click',function(){mexeu();ir(+m.dataset.foto);});});
+ tr.addEventListener('keydown',function(e){if(e.key==='ArrowLeft'){mexeu();ir(idx-1);e.preventDefault();}if(e.key==='ArrowRight'){mexeu();ir(idx+1);e.preventDefault();}});
+ ['pointerdown','touchstart'].forEach(function(ev){tr.addEventListener(ev,mexeu,{passive:true});});
+ heroEl.addEventListener('mouseenter',function(){sobre=true;});heroEl.addEventListener('mouseleave',function(){sobre=false;mexeu();});
+ if('IntersectionObserver' in window){new IntersectionObserver(function(es){visivel=es[0].isIntersecting;},{threshold:.35}).observe(heroEl);}
  window.addEventListener('resize',function(){tr.scrollLeft=idx*tr.clientWidth;});
  marcar();
- /* passa as fotos sozinho até o visitante mexer (desligado com "reduzir movimento") */
- if(slides>1&&!reduz){setTimeout(function(){if(parado)return;auto=setInterval(function(){if(d.hidden||parado)return;ir(idx+1);},4200);},3500);}
+ /* passa as fotos sozinho, em ciclo: só espera quando o visitante está mexendo (6 s depois) ou com o mouse em cima */
+ if(slides>1&&!reduz){setInterval(function(){if(d.hidden||sobre||!visivel||Date.now()-ult<6000)return;ir(idx+1);},3800);}
 }
 
 /* ===== movimento: só com preferência normal e sem prejudicar o carregamento ===== */
-var reduz=matchMedia('(prefers-reduced-motion:reduce)').matches,fino=matchMedia('(hover:hover) and (pointer:fine)').matches;
 var io=null;
 if('IntersectionObserver' in window){
  io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;var el=e.target;io.unobserve(el);
   el.classList.add('in');setTimeout(function(){el.classList.add('pronto')},900);});},{threshold:.15,rootMargin:'0px 0px -6% 0px'});
- if(!reduz){d.querySelectorAll('h2.s,.dif>div,.equip>div,.sobre,.loja,.final,.etapas li,.sim a,.faq details,.provas>div,.tags,.garantias>div,.bene>div,.nums>div,.contatos a').forEach(function(el,i){
+ if(!reduz&&!leve){d.querySelectorAll('h2.s,.dif>div,.equip>div,.sobre,.loja,.final,.etapas li,.sim a,.faq details,.provas>div,.tags,.garantias>div,.bene>div,.nums>div,.contatos a').forEach(function(el,i){
   el.classList.add('rv');el.style.setProperty('--d',((i%4)*.07)+'s');io.observe(el);});}
 }
 /* inclinação 3D com o mouse (só em telas com ponteiro preciso) */
-if(fino&&!reduz){d.querySelectorAll('.preco,.dif>div,.equip>div,.garantias>div,.bene>div,.sim a,.nums>div').forEach(function(el){
+if(fino&&!reduz&&!leve){d.querySelectorAll('.preco,.dif>div,.equip>div,.garantias>div,.bene>div,.sim a,.nums>div').forEach(function(el){
  var f=1;
  el.addEventListener('pointermove',function(e){var r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
   el.style.transform='perspective(900px) rotateX('+(-y*7*f)+'deg) rotateY('+(x*9*f)+'deg) translateZ(0)';});
  el.addEventListener('pointerleave',function(){el.style.transform='';});});}
+/* ===== cookies (LGPD): sem aceitar, nada de Pixel, Clarity nem identificadores ===== */
+function lerCk(){var m=d.cookie.match(/(?:^|; )tc_consent=([^;]*)/);return m?m[1]:'';}
+function gravarCk(v){d.cookie='tc_consent='+v+';max-age='+(180*86400)+';path=/;SameSite=Lax'+(location.protocol==='https:'?';Secure':'');}
+var bn=d.getElementById('cookies');
+function iniciarMarketing(){
+ if(window.carregarPixel){carregarPixel();fbq('track','PageView',{},{eventID:TC.ev});
+  fbq('track','ViewContent',{content_ids:[TC.pk],content_type:'vehicle',value:TC.valor,currency:'BRL'},{eventID:TC.vc});}
+ if(TC.clarity&&!window._clk){window._clk=1;(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,d,'clarity','script',TC.clarity);}}
+function ocioso(f){if('requestIdleCallback' in window)requestIdleCallback(f,{timeout:2500});else setTimeout(f,1500);}
+if(TC.consent){window.addEventListener('load',function(){ocioso(iniciarMarketing);});}
+else if(lerCk()===''){bn.hidden=false;}
+d.getElementById('ck-sim').addEventListener('click',function(){gravarCk('all');bn.hidden=true;
+ if(!TC.consent){TC.consent=true;iniciarMarketing();
+  try{fetch(TC.consentir,{method:'POST',body:new URLSearchParams({event_id:TC.ev,url:TC.url}),headers:{'X-CSRFToken':csrf},credentials:'same-origin',keepalive:true});}catch(e){}}});
+d.getElementById('ck-nao').addEventListener('click',function(){gravarCk('min');bn.hidden=true;});
+d.getElementById('ck-abrir').addEventListener('click',function(){bn.hidden=false;});
+
 /* notificação de pulso: só frases reais (pedidos de simulação e vendas do estoque) */
 var pl=d.getElementById('pulso'),sn=d.getElementById('sinais');
 if(pl&&sn){var frases=[];try{frases=JSON.parse(sn.textContent)||[];}catch(e){}

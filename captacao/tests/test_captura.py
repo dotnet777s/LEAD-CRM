@@ -292,7 +292,7 @@ class BotoesParcelaProvasTests(Base):
         self.assertNotIn("carros vendidos", html)
         self.assertNotIn("já vendidos", html)
         self.assertNotIn("Já vendemos", html)
-        self.assertNotIn("data-conta", html)
+        self.assertNotIn("data-conta=", html)
         self.assertNotIn('id="pulso"', html)                      # sem pedidos reais, sem notificação
         self.assertEqual(self.sinais(html), [])
 

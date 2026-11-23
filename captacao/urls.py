@@ -9,6 +9,9 @@ urlpatterns = [
     # ---- público (captação) ----
     path("v/<int:pk>-<slug:slug>/", pub.CapturaView.as_view(), name="captura"),
     path("v/<int:pk>/", pub.CapturaView.as_view(), name="captura"),
+    path("v/<int:pk>/inicio/", pub.IniciarView.as_view(), name="inicio"),
+    path("v/<int:pk>/etapa/", pub.EtapaView.as_view(), name="etapa"),
+    path("v/<int:pk>/consentir/", pub.ConsentirView.as_view(), name="consentir"),
     path("v/<int:pk>/obrigado/<uuid:lead_uuid>/", pub.obrigado, name="obrigado"),
     path("v/<int:pk>/contato/<uuid:lead_uuid>/", pub.ContatoView.as_view(), name="contato"),
     path("foto/<str:pk>/<int:largura>.webp", pub.foto, name="foto"),
@@ -27,6 +30,7 @@ urlpatterns = [
     path("lead/<int:pk>/whatsapp/", views.WhatsAppView.as_view(), name="whatsapp"),
     path("lead/<int:pk>/excluir/", views.ExcluirView.as_view(), name="excluir"),
     path("painel/", views_painel.PainelView.as_view(), name="painel"),
+    path("painel/formulario/", views_painel.FunilFormView.as_view(), name="funil_form"),
     path("painel/investimento/", views_painel.InvestimentoView.as_view(), name="investimento"),
     path("carros/", views_painel.CarrosView.as_view(), name="carros"),
     path("carros/<int:pk>/midias/", views_painel.MidiasView.as_view(), name="midias"),
