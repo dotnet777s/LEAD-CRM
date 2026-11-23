@@ -249,7 +249,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v3M12 18.200v3M2.800 12h3M18.200 12h3M5.500 5.500l2.100 2.100M16.400 16.400l2.100 2.100M18.500 5.500l-2.100 2.100M7.600 16.400l-2.100 2.100"/></symbol>
 </defs></svg>
 
-<header><div class="w"><img src="{% static 'captacao/logo.png' %}" alt="TopCar Veículos" width="auto" height="30"><span class="aberto" id="aberto"><i></i><span>Atendimento pelo WhatsApp</span></span></div></header>
+<header><div class="w"><img src="{% static 'captacao/logo-site.webp' %}" alt="TopCar Veículos" width="auto" height="30"><span class="aberto" id="aberto"><i></i><span>Atendimento pelo WhatsApp</span></span></div></header>
 
 <main class="w grid">
 <section class="top">
@@ -407,7 +407,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 </section>
 </main>
 
-<footer><div class="w"><img src="{% static 'captacao/logo.png' %}" alt="TopCar Veículos" width="auto" height="24">© TopCar Veículos · {{ loja.whatsapp_fmt }} · {{ loja.telefone }} · {{ loja.instagram }} · <a href="{% url 'captacao:privacidade' %}">Política de privacidade</a></div></footer>
+<footer><div class="w"><img src="{% static 'captacao/logo-site.webp' %}" alt="TopCar Veículos" width="auto" height="24">© TopCar Veículos · {{ loja.whatsapp_fmt }} · {{ loja.telefone }} · {{ loja.instagram }} · <a href="{% url 'captacao:privacidade' %}">Política de privacidade</a></div></footer>
 
 <div class="fixo" id="fixo"><div class="p">{{ preco_fmt }}<small>{% if parcela_fmt and disponivel %}{{ parcela_fmt }}/mês em {{ parcelas_n }}x{% else %}{{ veiculo.modelo_fmt }} {{ veiculo.ano }}{% endif %}</small></div>{% if disponivel %}<div class="btns"><a class="btn" href="#form" id="cta" data-intencao="simular">Simular</a><a class="btn ghost" href="#form" data-intencao="visita">Agendar</a></div>{% else %}<a class="btn" href="#form" id="cta">Quero ser avisado</a>{% endif %}</div>
 
