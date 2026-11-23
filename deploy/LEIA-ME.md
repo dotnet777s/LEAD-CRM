@@ -37,3 +37,8 @@ bash /opt/adcrm/deploy/atualizar.sh
 - Em Meta Business: **verificar o domínio** `topcarpe.com.br` e configurar o Pixel (`META_PIXEL_ID`, `META_CAPI_ACCESS_TOKEN`, `META_CAPI_ENABLED=1`).
 - No CRM, tela **Equipe**: gere o código do Telegram e envie `/start CODIGO` ao bot.
 - Ative os backups semanais (snapshots) no hPanel do VPS.
+
+## Cloudflare na frente (como está hoje)
+- O DNS do domínio fica na Cloudflare com o proxy ligado. A Cloudflare entrega o HTTPS; o trecho até este servidor é HTTP.
+- O ideal é o registro **A** `contato` apontar **direto** para o IP deste servidor. Se houver um repasse por outra máquina, ela deve preservar o cabeçalho `Host` (ou o `ALLOWED_HOSTS` precisa listar o IP).
+- O app usa `CF-Connecting-IP` como IP do visitante (limite de envios e qualidade dos eventos da Meta). Por isso o ideal é aceitar conexões só da Cloudflare (firewall) para ninguém forjar esse cabeçalho.

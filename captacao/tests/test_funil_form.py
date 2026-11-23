@@ -539,3 +539,15 @@ class IpDoVisitanteTests(Base):
             self.assertEqual(contato(i, "177.9.9.9").status_code, 200)
         self.assertEqual(contato(10, "177.9.9.9").status_code, 429)              # o 11º do mesmo visitante é barrado
         self.assertEqual(contato(11, "177.8.8.8").status_code, 200)              # outro visitante, mesma borda da Cloudflare: passa
+
+
+class UrlDoEventoTests(Base):
+    def test_url_enviada_a_meta_usa_o_dominio_oficial_mesmo_com_host_de_repasse(self):
+        from django.conf import settings
+        v = novo_veiculo()
+        self.client.get(f"/v/{v.pk}-fiat-argo-2022/", HTTP_USER_AGENT="Mozilla/5.0", HTTP_HOST="testserver")
+        urls = {e.payload["data"][0]["event_source_url"] if "data" in e.payload else e.payload["event_source_url"]
+                for e in EventoMeta.objects.all()}
+        self.assertTrue(urls)
+        for u in urls:
+            self.assertTrue(u.startswith(settings.SITE_URL), u)

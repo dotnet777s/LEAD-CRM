@@ -1,7 +1,8 @@
-# A Cloudflare fica na frente: ela entrega o HTTPS ao visitante e fala com este servidor em HTTP (modo "Flexible").
-# Por isso o site é "http://" aqui (sem pedir certificado). Para criptografar também o trecho Cloudflare -> servidor,
-# gere um "Origin Certificate" na Cloudflare, use `tls cert.pem chave.pem` neste bloco e troque o modo para "Full (strict)".
-http://__DOMINIO__ {
+# Este servidor fica atrás da Cloudflare (que entrega o HTTPS ao visitante e fala com cá em HTTP, modo "Flexible").
+# Aceita qualquer Host: o Django valida o host (ALLOWED_HOSTS) e usa SITE_URL para as URLs públicas.
+# Para criptografar também o trecho Cloudflare -> servidor: gere um "Origin Certificate" na Cloudflare,
+# troque `:80` por `__DOMINIO__` com `tls cert.pem chave.pem` e mude o modo SSL para "Full (strict)".
+:80 {
 	encode zstd gzip
 
 	# o app serve os próprios arquivos estáticos (WhiteNoise)

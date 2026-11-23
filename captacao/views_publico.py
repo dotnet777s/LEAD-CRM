@@ -27,6 +27,12 @@ JANELA_ENVIOS = 10 * 60    # segundos
 BOTS = re.compile(r"bot|crawl|spider|slurp|facebookexternalhit|whatsapp|preview|headless|curl|python-requests", re.I)
 
 
+def url_publica(request, caminho=None):
+    """URL com o domínio oficial (SITE_URL). O host que o app recebe pode ser o de um repasse (ex.: um IP), e o que vai
+    para a Meta como origem do evento precisa ser a página real."""
+    return settings.SITE_URL + (caminho if caminho is not None else request.path)
+
+
 def ip_do_cliente(request):
     """IP do visitante. Atrás da Cloudflare o IP que o servidor enxerga é o dela; o do visitante vem em CF-Connecting-IP
     (o servidor só aceita conexões da Cloudflare, então o cabeçalho não pode ser forjado de fora)."""
@@ -262,7 +268,7 @@ class CapturaView(View):
         if slug != ctx["slug"]:
             return HttpResponsePermanentRedirect(reverse("captacao:captura", args=[pk, ctx["slug"]]) + _qs(request))
         event_id = uuid.uuid4().hex
-        ctx.update(event_id=event_id, event_id_vc=f"{event_id}-vc", url_pagina=request.build_absolute_uri(request.path),
+        ctx.update(event_id=event_id, event_id_vc=f"{event_id}-vc", url_pagina=url_publica(request),
                    utm={k: request.GET.get(k, "") for k in ("utm_source", "utm_medium", "utm_campaign", "utm_term",
                                                             "utm_content", "fbclid")})
         if not request.user.is_authenticated and not BOTS.search(request.META.get("HTTP_USER_AGENT", "")):
@@ -292,21 +298,21 @@ class CapturaView(View):
 
         if not form.is_valid():
             ctx = _contexto_pagina(request, pk, form)
-            ctx.update(event_id=event_id, event_id_vc=f"{event_id}-vc", url_pagina=request.build_absolute_uri(request.path),
+            ctx.update(event_id=event_id, event_id_vc=f"{event_id}-vc", url_pagina=url_publica(request),
                        utm=_tracking_do_form(request), reabrir_form=True)
             return render(request, "captacao/captura.html", ctx, status=400)
 
         cache.set(chave_rate, n + 1, JANELA_ENVIOS)
         info = info_requisicao(request, request.POST.get("fbclid", ""))
         tracking = {**_tracking_do_form(request), "ip": ip, "user_agent": info["ua"], "fbp": info["fbp"], "fbc": info["fbc"],
-                    "url_origem": request.META.get("HTTP_REFERER", "") or request.build_absolute_uri(request.path),
+                    "url_origem": request.META.get("HTTP_REFERER", "") or url_publica(request),
                     "event_id": event_id, "consent_meta": consentiu(request)}
         respostas = form.respostas()
         respostas["variante"] = variante_ab(request)
         lead, _ = services.capturar_lead(veiculo, form.cleaned_data["nome"], form.cleaned_data["telefone"], respostas, tracking)
         if consentiu(request):
             meta.enfileirar_evento_web("Lead", event_id, info, veiculo=veiculo, lead=lead,
-                                       url=request.build_absolute_uri(reverse("captacao:captura", args=[pk, utils.slug_veiculo(veiculo)])))
+                                       url=url_publica(request, reverse("captacao:captura", args=[pk, utils.slug_veiculo(veiculo)])))
         registrar_funil(request, pk, "enviou")
         return _gravar_cookies(request, redirect("captacao:obrigado", pk=pk, lead_uuid=lead.uuid))
 
@@ -330,7 +336,7 @@ class IniciarView(View):
         cache.set(chave, n + 1, JANELA_ENVIOS)
         info = info_requisicao(request, request.POST.get("fbclid", ""))
         tracking = {**_tracking_do_form(request), "ip": ip, "user_agent": info["ua"], "fbp": info["fbp"], "fbc": info["fbc"],
-                    "url_origem": request.META.get("HTTP_REFERER", "") or request.build_absolute_uri(request.path),
+                    "url_origem": request.META.get("HTTP_REFERER", "") or url_publica(request),
                     "event_id": "", "consent_meta": consentiu(request)}
         services.capturar_lead(veiculo, form.cleaned_data["nome"], form.cleaned_data["telefone"],
                                form.respostas_parciais(variante_ab(request)), tracking, parcial=True)
@@ -366,7 +372,7 @@ class ConsentirView(View):
         if not re.fullmatch(r"[0-9a-f]{32}", event_id):
             return JsonResponse({"ok": False}, status=400)
         info = info_requisicao(request)
-        url = request.POST.get("url", "")[:500] or request.build_absolute_uri(reverse("captacao:captura", args=[pk, utils.slug_veiculo(veiculo)]))
+        url = request.POST.get("url", "")[:500] or url_publica(request, reverse("captacao:captura", args=[pk, utils.slug_veiculo(veiculo)]))
         meta.enfileirar_evento_web("PageView", event_id, info, url=url)
         meta.enfileirar_evento_web("ViewContent", f"{event_id}-vc", info, veiculo=veiculo, url=url)
         variante_ab(request), sid_visitante(request)
@@ -400,7 +406,7 @@ class ContatoView(View):
         lead = get_object_or_404(Lead, uuid=lead_uuid)
         if not consentiu(request):
             return JsonResponse({"ok": True})
-        url = request.build_absolute_uri(reverse("captacao:obrigado", args=[pk, lead.uuid]))
+        url = url_publica(request, reverse("captacao:obrigado", args=[pk, lead.uuid]))
         meta.enfileirar_evento_web("Contact", _contact_event_id(lead), info_requisicao(request),
                                    veiculo=lead.veiculo, lead=lead, url=url)
         return JsonResponse({"ok": True})
