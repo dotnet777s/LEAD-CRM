@@ -400,12 +400,14 @@ class ApresentacaoTests(Base):
         html = self.abrir(versao="1.0 LT")
         self.assertIn('<h1>Argo <span class="vers">1.0 LT</span></h1>', html)
 
-    def test_quatro_blocos_km_ano_cor_cambio_nessa_ordem(self):
-        html = self.abrir(cor="VERMELHO", cambio="AUTOMATICO")
-        ordem = [html.index(f"<small>{t}</small>") for t in ("Quilometragem", "Ano", "Cor", "Câmbio")]
+    def test_blocos_ano_cor_cambio_sem_quilometragem(self):
+        html = self.abrir(cor="VERMELHO", cambio="AUTOMATICO", km=48000)
+        ordem = [html.index(f"<small>{t}</small>") for t in ("Ano", "Cor", "Câmbio")]
         self.assertEqual(ordem, sorted(ordem))
         self.assertIn("<small>Câmbio</small><b>Automático</b>", html)
         self.assertIn("<small>Ano</small><b>2022</b>", html)
+        self.assertNotIn("Quilometragem", html)
+        self.assertNotIn("48.000", html)                      # o km não aparece nem nas descrições da página
 
     def test_cambio_some_quando_o_estoque_nao_informa(self):
         html = self.abrir(cambio=None)
@@ -416,6 +418,29 @@ class ApresentacaoTests(Base):
         for bruto, esperado in (("manual de 6 marchas", "Manual"), ("AUTOMATICO", "Automático"), ("automático", "Automático"),
                                 ("CVT", "CVT"), ("Automatizado", "Automatizado"), ("", ""), (None, "")):
             self.assertEqual(Veiculo(cambio=bruto).cambio_fmt, esperado, bruto)
+
+    def test_carrossel_direto_na_pagina_sem_janela_ampliada(self):
+        from catalogo.models import FotoVeiculo
+        html = self.abrir(fotos=4)
+        self.assertIn('id="trilho"', html)
+        self.assertEqual(html.count('class="slide"'), 4)
+        self.assertIn('id="contador"', html)
+        self.assertIn("1 / 4", html)
+        self.assertEqual(html.count("data-foto="), 4)            # miniaturas que rolam o carrossel
+        self.assertIn('id="ant"', html)
+        self.assertIn('id="prox"', html)
+        import re
+        self.assertEqual(len(re.findall(r'<img[^>]*fetchpriority="high"', html)), 1)    # só a primeira foto tem prioridade
+        self.assertNotIn("<dialog", html)
+        self.assertNotIn("showModal", html)
+        self.assertNotIn("data-abrir", html)
+        self.assertEqual(FotoVeiculo.objects.count(), 4)
+
+    def test_uma_foto_nao_mostra_controles_do_carrossel(self):
+        html = self.abrir(fotos=1)
+        self.assertEqual(html.count('class="slide"'), 1)
+        self.assertNotIn('id="prox"', html)
+        self.assertNotIn('id="contador"', html)
 
     def test_fundo_decorativo_e_fontes_proprias(self):
         html = self.abrir()

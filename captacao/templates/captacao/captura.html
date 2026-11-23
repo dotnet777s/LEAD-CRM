@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }} · {{ preco_fmt }} | TopCar Veículos</title>
-<meta name="description" content="{{ veiculo.nome }} {{ veiculo.ano }}{% if veiculo.km %}, {{ veiculo.km|floatformat:"0g" }} km{% endif %}, {{ preco_fmt }}. Simule o financiamento e agende sua visita na TopCar Veículos.">
+<meta name="description" content="{{ veiculo.nome }} {{ veiculo.ano }}, {{ preco_fmt }}. Simule o financiamento e agende sua visita na TopCar Veículos.">
 <meta name="theme-color" content="#0a0c0f">
 <link rel="icon" href="{% static 'captacao/favicon.png' %}">
 <link rel="preload" href="{% static 'captacao/fonts/sora-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
@@ -12,7 +12,7 @@
 <link rel="canonical" href="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
 <meta property="og:type" content="product">
 <meta property="og:title" content="{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }} · {{ preco_fmt }}">
-<meta property="og:description" content="{% if veiculo.km %}{{ veiculo.km|floatformat:"0g" }} km · {% endif %}Garantia de {{ loja.garantia }} · Revisão minuciosa · Vistoria cautelar · Aceitamos carro ou moto na troca · Financiamento em até 60x · Cartão em até 21x">
+<meta property="og:description" content="Garantia de {{ loja.garantia }} · Revisão minuciosa · Vistoria cautelar · Aceitamos carro ou moto na troca · Financiamento em até 60x · Cartão em até 21x">
 <meta property="og:url" content="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
 {% if destaque %}<meta property="og:image" content="{{ site_url }}{% url 'captacao:foto' destaque.pk 1200 %}">
 <link rel="preload" as="image" href="{% url 'captacao:foto' destaque.pk 800 %}" imagesrcset="{% url 'captacao:foto' destaque.pk 480 %} 480w, {% url 'captacao:foto' destaque.pk 800 %} 800w, {% url 'captacao:foto' destaque.pk 1200 %} 1200w" imagesizes="(min-width:960px) 640px, 100vw" fetchpriority="high">{% endif %}
@@ -34,10 +34,9 @@ header img{height:30px;width:auto;display:block}
 .grid{display:grid;gap:24px;grid-template-areas:"top" "form" "rest";padding-bottom:12px}
 .top{grid-area:top;min-width:0}.formcol{grid-area:form}.rest{grid-area:rest;min-width:0}
 .hero{position:relative;background:var(--sf);aspect-ratio:4/3;overflow:hidden;margin:0 -20px}
-.hero img{width:100%;height:100%;object-fit:cover;display:block}
 .sem-foto{display:grid;place-items:center;height:100%;color:var(--mu);font-size:15px}
 .badge{position:absolute;z-index:2;background:rgba(10,12,15,.82);backdrop-filter:blur(8px);border:1px solid var(--bd2);border-radius:8px;padding:6px 11px;font-size:13px;font-weight:600;color:var(--tx);display:flex;gap:7px;align-items:center}
-button.badge{cursor:pointer;right:14px;bottom:14px}
+.badge.contador{right:14px;bottom:16px;font-variant-numeric:tabular-nums}
 .badge.vend{left:14px;top:14px;background:#2b1213;border-color:#5a2426;color:#ff9d99}
 .thumbs{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}.thumbs::-webkit-scrollbar{display:none}
 .thumbs button{flex:0 0 76px;height:56px;padding:0;border:1px solid var(--bd);border-radius:8px;overflow:hidden;background:var(--sf);cursor:pointer}
@@ -45,11 +44,11 @@ button.badge{cursor:pointer;right:14px;bottom:14px}
 .thumbs .mais{display:grid;place-items:center;font-weight:700;font-size:14px;color:var(--tx);background:var(--sf2)}
 .marca{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gr);font-weight:700;margin:22px 0 6px}
 h1{font:800 34px/1.08 var(--tt);margin:0;letter-spacing:-.025em}h1 .vers{display:inline-block;font-weight:500;font-size:.62em;letter-spacing:0;color:var(--tx2);-webkit-text-fill-color:var(--tx2);margin-left:4px;white-space:nowrap}
-.specs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}
-.specs>div{display:flex;gap:12px;align-items:center;border:1px solid var(--bd2);border-radius:14px;padding:13px 14px;background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.012))}
-.specs .ic{width:24px;height:24px;color:var(--gr);filter:drop-shadow(0 0 7px rgba(46,230,107,.5))}
-.specs small{display:block;color:var(--mu);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px;white-space:nowrap}
-.specs b{display:block;font-size:16.5px;font-weight:600;color:#fff;letter-spacing:-.005em}
+.specs{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px;margin:18px 0}
+.specs>div{display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px;border:1px solid var(--bd2);border-radius:14px;padding:14px 8px 13px;background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.012))}
+.specs .ic{width:25px;height:25px;color:var(--gr);filter:drop-shadow(0 0 7px rgba(46,230,107,.5))}
+.specs small{display:block;color:var(--mu);font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;white-space:nowrap}
+.specs b{display:block;font-size:16px;font-weight:600;color:#fff;letter-spacing:-.005em}
 .preco{border:1px solid var(--bd);border-radius:var(--r);background:var(--sf);padding:18px}
 .preco small{color:var(--mu);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
 .preco .v{font:800 42px/1.08 var(--tt);letter-spacing:-.03em;margin:2px 0 14px}
@@ -116,13 +115,6 @@ footer img{height:24px;opacity:.85;display:block;margin:0 auto 10px}
 .fixo.esc{transform:translateY(110%)}
 .fixo .p{font-weight:700;font-size:18px;line-height:1.15;white-space:nowrap}.fixo .p small{display:block;font-size:11.5px;font-weight:500;color:var(--mu)}
 .fixo .btn{padding:14px;font-size:16px;flex:1}
-dialog{border:0;padding:0;background:transparent;max-width:96vw;max-height:96vh;color:#fff;overflow:visible}dialog::backdrop{background:rgba(0,0,0,.94)}
-dialog img{max-width:96vw;max-height:84vh;display:block;border-radius:8px;margin:0 auto}
-.lbt{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:14px}.lbt form{margin:0}
-.lbt .x{background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer}
-.lbm{position:relative;display:flex;align-items:center;justify-content:center}
-.nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:0;color:#fff;width:40px;height:52px;border-radius:10px;cursor:pointer;display:grid;place-items:center}
-#lbp{left:6px}#lbx{right:6px}
 .fipe{display:inline-flex;gap:8px;align-items:center;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.35);color:#7be8a4;border-radius:999px;padding:5px 12px;font-size:13.5px;font-weight:600;margin:-4px 0 14px}
 .fipe .ic{width:16px;height:16px}
 .prova{display:flex;gap:12px;align-items:center;margin:12px 0 0;padding:12px 14px;border:1px solid var(--bd);border-radius:12px;background:var(--sf2);font-size:14.5px;color:#d3dbe1}.prova .ic{color:var(--gr)}
@@ -169,8 +161,16 @@ h2.s:before{content:"";display:inline-block;width:22px;height:3px;border-radius:
 @keyframes giro{to{--ang:360deg}}
 .hero:after{content:"";position:absolute;left:0;right:0;top:-35%;height:35%;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(37,211,102,.22),transparent);animation:scan 2.8s ease-out .5s 1 both}
 @keyframes scan{from{transform:translateY(0);opacity:1}to{transform:translateY(420%);opacity:0}}
-.hero img{transform:translate3d(0,var(--py,0px),0) scale(1.06);will-change:transform}
-button.badge{animation:flutua 4s ease-in-out infinite}@keyframes flutua{50%{transform:translateY(-4px)}}
+.trilho{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;outline:none}
+.trilho::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;margin:0;scroll-snap-align:center;scroll-snap-stop:always}
+.slide img{width:100%;height:100%;object-fit:cover;display:block;user-select:none;-webkit-user-drag:none}
+.seta{position:absolute;z-index:3;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(6,9,13,.55);backdrop-filter:blur(8px);color:#fff;display:grid;place-items:center;cursor:pointer;transition:background .15s,transform .15s,opacity .2s}
+.seta:hover{background:rgba(46,230,107,.85);color:var(--gt)}.seta:active{transform:translateY(-50%) scale(.94)}
+.seta.ant{left:12px}.seta.prox{right:12px}
+.progresso{position:absolute;z-index:3;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.14)}
+.progresso i{display:block;height:100%;width:0;background:var(--gr);box-shadow:0 0 10px var(--gr);transition:width .25s ease}
+.thumbs button{transition:border-color .15s,transform .15s,opacity .15s;opacity:.62}.thumbs button.on{border-color:var(--gr);opacity:1;transform:translateY(-2px);box-shadow:0 6px 16px -8px rgba(46,230,107,.8)}
 .bene{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px;margin-top:6px}
 .bene div{position:relative;border:1px solid var(--bd2);border-radius:14px;padding:13px 6px 12px;text-align:center;background:linear-gradient(170deg,rgba(37,211,102,.10),rgba(37,211,102,.02));display:flex;flex-direction:column;align-items:center;gap:2px}
 .bene .ic{width:26px;height:26px;color:var(--gr);filter:drop-shadow(0 0 8px rgba(37,211,102,.55));margin-bottom:4px}
@@ -254,14 +254,18 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <main class="w grid">
 <section class="top">
 <div class="hero" id="hero">
-{% if destaque %}<img src="{% url 'captacao:foto' destaque.pk 800 %}" srcset="{% url 'captacao:foto' destaque.pk 480 %} 480w, {% url 'captacao:foto' destaque.pk 800 %} 800w, {% url 'captacao:foto' destaque.pk 1200 %} 1200w" sizes="(min-width:960px) 640px, 100vw" width="800" height="{{ destaque_h }}" fetchpriority="high" alt="{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }}">
+{% if galeria %}<div class="trilho" id="trilho" tabindex="0" role="group" aria-roledescription="carrossel" aria-label="Fotos do {{ veiculo.modelo_fmt }}">
+{% for g in galeria %}<figure class="slide"><img src="{% url 'captacao:foto' g.pk 800 %}" srcset="{% url 'captacao:foto' g.pk 480 %} 480w, {% url 'captacao:foto' g.pk 800 %} 800w, {% url 'captacao:foto' g.pk 1200 %} 1200w" sizes="(min-width:960px) 640px, 100vw" width="800" height="600" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %} decoding="async" alt="{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }}, foto {{ forloop.counter }} de {{ galeria|length }}"></figure>{% endfor %}
+</div>
 {% else %}<div class="sem-foto">Fotos em breve</div>{% endif %}
 {% if not disponivel %}<span class="badge vend">Indisponível</span>{% endif %}
-{% if galeria|length > 1 %}<button type="button" class="badge" data-abrir="0"><svg class="ic" style="width:16px;height:16px"><use href="#i-cam"/></svg>{{ galeria|length }} fotos</button>{% endif %}
+{% if galeria|length > 1 %}<span class="badge contador" id="contador" aria-live="polite">1 / {{ galeria|length }}</span>
+<button type="button" class="seta ant" id="ant" aria-label="Foto anterior"><svg class="ic"><use href="#i-left"/></svg></button>
+<button type="button" class="seta prox" id="prox" aria-label="Próxima foto"><svg class="ic"><use href="#i-right"/></svg></button>
+<div class="progresso" aria-hidden="true"><i id="prog"></i></div>{% endif %}
 </div>
-{% if galeria|length > 1 %}<div class="thumbs">{% for g in galeria|slice:":7" %}
-<button type="button" data-abrir="{{ forloop.counter0 }}" aria-label="Ver foto {{ forloop.counter }}"><img src="{% url 'captacao:foto' g.pk 160 %}" width="160" height="120" loading="lazy" decoding="async" alt=""></button>{% endfor %}
-{% if galeria|length > 7 %}<button type="button" class="mais" data-abrir="7" aria-label="Ver todas as fotos">+{{ galeria|length|add:"-7" }}</button>{% endif %}</div>{% endif %}
+{% if galeria|length > 1 %}<div class="thumbs" id="thumbs">{% for g in galeria %}
+<button type="button" data-foto="{{ forloop.counter0 }}" aria-label="Ver foto {{ forloop.counter }}"{% if forloop.first %} class="on"{% endif %}><img src="{% url 'captacao:foto' g.pk 160 %}" width="160" height="120" loading="lazy" decoding="async" alt=""></button>{% endfor %}</div>{% endif %}
 
 {% if not disponivel %}
 <div class="aviso">{% if veiculo.status == "vendido" %}Este carro foi vendido.{% else %}Este carro não está disponível no momento.{% endif %} Veja opções parecidas abaixo ou deixe seus dados e avisamos quando chegar outro.</div>
@@ -270,7 +274,6 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <p class="marca">{{ veiculo.marca_fmt }}</p>
 <h1>{{ veiculo.modelo_fmt }}{% if veiculo.versao %} <span class="vers">{{ veiculo.versao_fmt }}</span>{% endif %}</h1>
 <div class="specs">
-{% if veiculo.km %}<div><svg class="ic"><use href="#i-gauge"/></svg><span><small>Quilometragem</small><b>{{ veiculo.km|floatformat:"0g" }} km</b></span></div>{% endif %}
 <div><svg class="ic"><use href="#i-cal"/></svg><span><small>Ano</small><b>{{ veiculo.ano }}</b></span></div>
 {% if veiculo.cor %}<div><svg class="ic"><use href="#i-drop"/></svg><span><small>Cor</small><b>{{ veiculo.cor_fmt }}</b></span></div>{% endif %}
 {% if veiculo.cambio_fmt %}<div><svg class="ic"><use href="#i-gear"/></svg><span><small>Câmbio</small><b>{{ veiculo.cambio_fmt }}</b></span></div>{% endif %}
@@ -411,7 +414,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 {% if disponivel and sinais %}{{ sinais|json_script:"sinais" }}
 <div class="pulso" id="pulso" role="status" aria-live="polite" hidden><i aria-hidden="true"></i><span></span></div>{% endif %}
 
-<dialog id="lb"><div class="lbt"><span id="lbn"></span><form method="dialog"><button class="x">Fechar</button></form></div><div class="lbm"><button type="button" class="nav" id="lbp" aria-label="Anterior"><svg class="ic"><use href="#i-left"/></svg></button><img id="lbimg" alt="Foto ampliada"><button type="button" class="nav" id="lbx" aria-label="Próxima"><svg class="ic"><use href="#i-right"/></svg></button></div></dialog>
+
 
 <script>
 (function(){
@@ -469,17 +472,31 @@ function definirIntencao(v){intent.value=v;var vis=v==='visita';ft.textContent=v
 if(intent.value==='visita')definirIntencao('visita');
 d.querySelectorAll('#cta,[data-ir],[data-intencao]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();if(a.dataset.intencao)definirIntencao(a.dataset.intencao);form.scrollIntoView({block:'center'});});});
 
-/* galeria ampliada */
-var fs=[{% for g in galeria %}'{% url 'captacao:foto' g.pk 1200 %}'{% if not forloop.last %},{% endif %}{% endfor %}];
-var lb=d.getElementById('lb'),img=d.getElementById('lbimg'),k=0,x0=null;
-function ver(n){if(!fs.length)return;k=(n+fs.length)%fs.length;img.src=fs[k];d.getElementById('lbn').textContent=(k+1)+' / '+fs.length;new Image().src=fs[(k+1)%fs.length];}
-function abrir(n){ver(Math.min(n,fs.length-1));if(!lb.open)lb.showModal();}
-d.querySelectorAll('[data-abrir]').forEach(function(b){b.addEventListener('click',function(){abrir(+b.dataset.abrir)})});
-d.getElementById('lbp').addEventListener('click',function(){ver(k-1)});d.getElementById('lbx').addEventListener('click',function(){ver(k+1)});
-lb.addEventListener('keydown',function(e){if(e.key==='ArrowLeft')ver(k-1);if(e.key==='ArrowRight')ver(k+1)});
-lb.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
-lb.addEventListener('touchend',function(e){if(x0===null)return;var dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>50)ver(k+(dx<0?1:-1))});
-lb.addEventListener('click',function(e){if(e.target===lb)lb.close();});
+/* carrossel de fotos na própria página */
+var tr=d.getElementById('trilho'),ct=d.getElementById('contador'),pr=d.getElementById('prog'),th=d.getElementById('thumbs');
+if(tr){var slides=tr.children.length,idx=0,parado=false,auto=null,tt=false;
+ var mini=th?[].slice.call(th.children):[];
+ function atual(){return Math.max(0,Math.min(slides-1,Math.round(tr.scrollLeft/tr.clientWidth)));}
+ function marcar(){var i=atual();if(i===idx&&ct&&ct.dataset.ok)return;idx=i;
+  if(ct){ct.textContent=(i+1)+' / '+slides;ct.dataset.ok=1;}
+  if(pr)pr.style.width=((i+1)/slides*100)+'%';
+  mini.forEach(function(m,k){m.classList.toggle('on',k===i);});
+  if(mini[i]&&th){th.scrollTo({left:mini[i].offsetLeft-th.clientWidth/2+mini[i].clientWidth/2,behavior:reduz?'auto':'smooth'});}}
+ function ir(i){i=(i+slides)%slides;tr.scrollTo({left:i*tr.clientWidth,behavior:reduz?'auto':'smooth'});}
+ function pausar(){parado=true;if(auto){clearInterval(auto);auto=null;}}
+ tr.addEventListener('scroll',function(){if(tt)return;tt=true;requestAnimationFrame(function(){marcar();tt=false;});},{passive:true});
+ var a1=d.getElementById('ant'),a2=d.getElementById('prox');
+ if(a1)a1.addEventListener('click',function(){pausar();ir(idx-1);});
+ if(a2)a2.addEventListener('click',function(){pausar();ir(idx+1);});
+ mini.forEach(function(m){m.addEventListener('click',function(){pausar();ir(+m.dataset.foto);});});
+ tr.addEventListener('keydown',function(e){if(e.key==='ArrowLeft'){pausar();ir(idx-1);e.preventDefault();}if(e.key==='ArrowRight'){pausar();ir(idx+1);e.preventDefault();}});
+ ['pointerdown','touchstart','wheel'].forEach(function(ev){tr.addEventListener(ev,pausar,{passive:true});});
+ d.getElementById('hero').addEventListener('mouseenter',pausar);
+ window.addEventListener('resize',function(){tr.scrollLeft=idx*tr.clientWidth;});
+ marcar();
+ /* passa as fotos sozinho até o visitante mexer (desligado com "reduzir movimento") */
+ if(slides>1&&!reduz){setTimeout(function(){if(parado)return;auto=setInterval(function(){if(d.hidden||parado)return;ir(idx+1);},4200);},3500);}
+}
 
 /* ===== movimento: só com preferência normal e sem prejudicar o carregamento ===== */
 var reduz=matchMedia('(prefers-reduced-motion:reduce)').matches,fino=matchMedia('(hover:hover) and (pointer:fine)').matches;
@@ -491,15 +508,11 @@ if('IntersectionObserver' in window){
   el.classList.add('rv');el.style.setProperty('--d',((i%4)*.07)+'s');io.observe(el);});}
 }
 /* inclinação 3D com o mouse (só em telas com ponteiro preciso) */
-if(fino&&!reduz){d.querySelectorAll('.preco,.dif>div,.equip>div,.garantias>div,.bene>div,.sim a,.nums>div,.hero').forEach(function(el){
- var f=el.id==='hero'?.45:1;
+if(fino&&!reduz){d.querySelectorAll('.preco,.dif>div,.equip>div,.garantias>div,.bene>div,.sim a,.nums>div').forEach(function(el){
+ var f=1;
  el.addEventListener('pointermove',function(e){var r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
   el.style.transform='perspective(900px) rotateX('+(-y*7*f)+'deg) rotateY('+(x*9*f)+'deg) translateZ(0)';});
  el.addEventListener('pointerleave',function(){el.style.transform='';});});}
-/* paralaxe da foto principal ao rolar */
-var hero=d.getElementById('hero'),hi=hero&&hero.querySelector('img'),tick=false;
-if(hi&&!reduz){window.addEventListener('scroll',function(){if(tick)return;tick=true;requestAnimationFrame(function(){
- var y=Math.min(window.scrollY,500);hi.style.setProperty('--py',(y*.14)+'px');tick=false;});},{passive:true});}
 /* notificação de pulso: só frases reais (pedidos de simulação e vendas do estoque) */
 var pl=d.getElementById('pulso'),sn=d.getElementById('sinais');
 if(pl&&sn){var frases=[];try{frases=JSON.parse(sn.textContent)||[];}catch(e){}
