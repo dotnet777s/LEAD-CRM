@@ -6,7 +6,7 @@ Cole o texto abaixo no Claude Code, dentro da pasta do projeto ROUTE.
 
 Você vai evoluir o ROUTE, o sistema que gerencia o estoque da TopCar Veículos (Recife e Olinda), para que ele passe a ser
 o **dono do banco de estoque online** e das **fotos na nuvem**. Esse banco será lido por um segundo sistema, o ADCRM
-(CRM de captação de leads, que roda na máquina da empresa e expõe páginas públicas por carro para anúncios).
+(CRM de captação de leads, hospedado num servidor online, com páginas públicas por carro para anúncios). O ROUTE continua rodando no localhost da máquina da empresa.
 
 ## 0. Antes de escrever código
 Leia o ROUTE inteiro e me entregue um relatório curto:
@@ -16,6 +16,8 @@ Leia o ROUTE inteiro e me entregue um relatório curto:
 Só comece a implementar depois de eu aprovar o plano. Não quebre nenhum fluxo existente.
 
 ## 1. Banco de dados online (grátis)
+- O banco **já existe e está vazio**: Neon, projeto `ep-silent-mountain-b6qlbsef`, database `neondb` (região sa-east-1). Crie as tabelas pelo script `docs/estoque_schema.sql` do repositório do ADCRM (https://github.com/dotnet777s/LEAD-CRM) ou pelas suas migrations, desde que o resultado seja idêntico ao contrato da seção 2.
+- O ADCRM usará o **mesmo banco**, mas num esquema separado chamado `crm`. O ROUTE nunca deve ler, criar ou apagar nada no esquema `crm`; suas tabelas ficam no `public`.
 - PostgreSQL gerenciado, plano gratuito: **Neon** (0,5 GB por projeto, mais que suficiente para o estoque; usar a URL com `-pooler`). Alternativa aceitável: Supabase.
 - O ROUTE passa a ser o **único escritor** do estoque. Configure por `DATABASE_URL` no `.env`, nunca no código.
 - Crie no Postgres um papel **somente leitura** (`crm_leitura`, apenas `SELECT` nas tabelas `estoque_*`) e me entregue a URL dele: é a que o ADCRM vai usar. O ADCRM nunca escreve no estoque.
@@ -80,7 +82,8 @@ Efeito esperado no ADCRM: a página pública de um carro só existe enquanto ele
 - O ROUTE não precisa gerar miniaturas: o ADCRM redimensiona sob demanda e guarda em cache.
 - Migração: as fotos que já existem hoje devem ser aproveitadas. Se estiverem em outro lugar, escreva um comando de migração idempotente (que possa rodar de novo sem duplicar) e me dê o relatório do que foi migrado.
 
-## 4. Vídeos: permanecem na máquina da empresa
+## 4. Vídeos: permanecem na máquina do ROUTE
+- Observação: o ADCRM está num servidor e não enxerga o disco desta máquina. Por isso, por ora, o ADCRM só mostra a lista e a quantidade de vídeos de cada carro (nome, duração, tamanho). A reprodução remota fica como decisão futura (ex.: ROUTE publicar os vídeos por um túnel).
 - Os vídeos **não vão para a nuvem**. Ficam numa pasta local configurável (`VIDEOS_DIR`), organizada por carro (`VIDEOS_DIR/<veiculo_id>/arquivo.mp4`).
 - Para o ADCRM saber que existem, o ROUTE registra só os **metadados** na tabela `estoque_videoveiculo`:
   `id`, `veiculo_id`, `nome`, `caminho_local`, `tamanho_bytes`, `duracao_s` (null se desconhecida), `criado_em`, `ativo`.
