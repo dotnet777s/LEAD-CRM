@@ -112,9 +112,27 @@ def _provas(v):
 
 
 def _interesse(pk):
-    """Quantas pessoas pediram simulação deste carro nos últimos 7 dias. Só mostra a partir de 3 (nunca inventado)."""
-    n = Lead.objects.filter(veiculo_id=pk, criado_em__gte=timezone.now() - timedelta(days=7)).count()
-    return n if n >= 3 else 0
+    """Pedidos de simulação REAIS deste carro: (quantidade, janela). 24 h a partir de 2; senão 7 dias a partir de 3.
+    Nunca inventado: sem pedidos suficientes, devolve (0, "")."""
+    agora = timezone.now()
+    base = Lead.objects.filter(veiculo_id=pk)
+    n24 = base.filter(criado_em__gte=agora - timedelta(hours=24)).count()
+    if n24 >= 2:
+        return n24, "nas últimas 24 horas"
+    n7 = base.filter(criado_em__gte=agora - timedelta(days=7)).count()
+    return (n7, "nos últimos 7 dias") if n7 >= 3 else (0, "")
+
+
+def _sinais(v, interesse, janela, provas):
+    """Frases da notificação de pulso. Todas vêm de dados reais (CRM e estoque do ROUTE)."""
+    saida = []
+    if interesse:
+        saida.append(f"{interesse} pessoas pediram simulação deste carro {janela}")
+    if provas["vendidos_modelo"]:
+        saida.append(f"Já vendemos {provas['vendidos_modelo']} {v.modelo_fmt} aqui na TopCar")
+    if provas["vendidos_total"]:
+        saida.append(f"Mais de {provas['vendidos_total']} carros vendidos pela TopCar")
+    return saida
 
 
 def _abaixo_da_fipe(v):
@@ -143,13 +161,15 @@ def _dados_do_veiculo(pk):
     equip = equipamentos(veiculo)
     parcela, entrada = utils.parcela_estimada(veiculo.valor_venda, settings.FINANCIAMENTO_ENTRADA_PCT,
                                               settings.FINANCIAMENTO_PARCELAS, settings.FINANCIAMENTO_TAXA_AM)
+    provas = _provas(veiculo)
+    interesse = _interesse(pk)
     dados = {
-        **_provas(veiculo),
+        **provas,
         "parcela_fmt": utils.preco_brl(parcela) if parcela else "", "entrada_fmt": utils.preco_brl(entrada) if entrada else "",
         "parcelas_n": settings.FINANCIAMENTO_PARCELAS, "entrada_pct": settings.FINANCIAMENTO_ENTRADA_PCT,
         "veiculo": veiculo, "disponivel": disponivel, "fotos": lista, "video": videos[0] if videos else None,
         "similares": [(v, capa.get(v.pk)) for v in similares],
-        "equip": equip[0], "itens_extra": etiquetas(equip[1]), "interesse": _interesse(pk), "fipe_abaixo": _abaixo_da_fipe(veiculo),
+        "equip": equip[0], "itens_extra": etiquetas(equip[1]), "interesse": interesse[0], "interesse_janela": interesse[1], "sinais": _sinais(veiculo, interesse[0], interesse[1], provas), "fipe_abaixo": _abaixo_da_fipe(veiculo),
     }
     cache.set(chave, dados, CACHE_SEGUNDOS)
     return dados

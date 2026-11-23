@@ -192,13 +192,23 @@ class ConversaoTests(Base):
         html = self.abrir(novo_veiculo(fipe=Decimal("65900")))
         self.assertIn("R$ 6.000 abaixo da tabela FIPE", html)
 
-    def test_interesse_so_a_partir_de_3_leads_reais(self):
+    def test_interesse_24h_a_partir_de_2_pedidos_reais(self):
+        from .test_funil import criar_lead
+        v = novo_veiculo()
+        criar_lead(v, telefone="5581999990000")
+        self.assertNotIn("pediram simulação deste carro", self.abrir(v))               # 1 pedido: não mostra
+        criar_lead(v, telefone="5581999990001")
+        self.assertIn("2 pessoas</b> pediram simulação deste carro nas últimas 24 horas", self.abrir(v))
+
+    def test_interesse_7_dias_so_a_partir_de_3(self):
         from .test_funil import criar_lead
         v = novo_veiculo()
         for i in range(2):
-            criar_lead(v, telefone=f"558199999000{i}")
+            l = criar_lead(v, telefone=f"558199999200{i}")
+            Lead.objects.filter(pk=l.pk).update(criado_em=timezone.now() - timedelta(days=3))
         self.assertNotIn("pediram simulação deste carro", self.abrir(v))
-        criar_lead(v, telefone="5581999990009")
+        l = criar_lead(v, telefone="5581999992009")
+        Lead.objects.filter(pk=l.pk).update(criado_em=timezone.now() - timedelta(days=3))
         self.assertIn("3 pessoas</b> pediram simulação deste carro nos últimos 7 dias", self.abrir(v))
 
     def test_interesse_ignora_leads_antigos(self):
@@ -242,6 +252,12 @@ class BotoesParcelaProvasTests(Base):
         self.assertEqual(r.status_code, 200)
         return r.content.decode()
 
+    def sinais(self, html):
+        import json
+        import re
+        m = re.search(r'<script id="sinais" type="application/json">(.*?)</script>', html, re.S)
+        return json.loads(m.group(1)) if m else []
+
     def test_dois_botoes_simular_e_agendar(self):
         html = self.abrir(novo_veiculo())
         self.assertIn('data-intencao="simular"', html)
@@ -265,18 +281,44 @@ class BotoesParcelaProvasTests(Base):
         self.assertEqual(utils.parcela_estimada(Decimal("100000"), 30, 60, 0), (Decimal("1167"), Decimal("30000")))
         self.assertEqual(utils.parcela_estimada(None), (None, None))
 
-    def test_provas_de_vendas_reais(self):
+    def test_destaques_de_vendas_reais(self):
         v = novo_veiculo()
         for i in range(2):
             novo_veiculo(status="vendido", placa=f"VEN{i}A00")           # mesmo modelo (Argo)
         for i in range(20):
             novo_veiculo(status="vendido", placa=f"OUT{i}A00", modelo="Outro")
         html = self.abrir(v)
-        self.assertIn("Já vendemos <b>2 Argo</b>", html)
-        self.assertIn("Mais de 20 carros vendidos", html)
+        self.assertIn('data-conta="2"', html)
+        self.assertIn("Argo já vendidos", html)
+        self.assertIn('data-conta="20" data-prefixo="+">+20</b><span>carros vendidos', html)
 
-    def test_sem_vendas_nao_mostra_prova(self):
-        self.assertNotIn("Já vendemos", self.abrir(novo_veiculo()))
+    def test_sem_vendas_nao_mostra_destaque_de_modelo(self):
+        html = self.abrir(novo_veiculo())
+        self.assertNotIn("já vendidos", html)
+        self.assertNotIn("carros vendidos", html)
+
+    def test_pulso_so_com_dados_reais(self):
+        from .test_funil import criar_lead
+        v = novo_veiculo()
+        self.assertNotIn('id="pulso"', self.abrir(v))                    # sem dados reais: não existe notificação
+        for i in range(2):
+            criar_lead(v, telefone=f"558199998000{i}")
+        html = self.abrir(v)
+        self.assertIn('id="pulso"', html)
+        self.assertIn("2 pessoas pediram simulação deste carro nas últimas 24 horas", self.sinais(html))
+
+    def test_pulso_inclui_vendas_do_estoque(self):
+        v = novo_veiculo()
+        for i in range(3):
+            novo_veiculo(status="vendido", placa=f"VEN{i}A00")
+        html = self.abrir(v)
+        self.assertIn('id="pulso"', html)
+        self.assertIn("Já vendemos 3 Argo aqui na TopCar", self.sinais(html))
+
+    def test_pagina_indisponivel_nao_tem_pulso_nem_destaques(self):
+        html = self.abrir(novo_veiculo(status="vendido"))
+        self.assertNotIn('id="pulso"', html)
+        self.assertNotIn('class="estat"', html)
 
     def test_etiquetas_curtas_nos_demais_equipamentos(self):
         v = novo_veiculo(itens_serie=["Rodas aro 15 com calotas esportivas em dois tons", "Wi-Fi embarcado",
