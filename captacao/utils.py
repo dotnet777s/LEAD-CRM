@@ -118,10 +118,15 @@ def saudacao(agora=None):
     return "Bom dia" if h < 12 else "Boa tarde" if h < 18 else "Boa noite"
 
 
+def simulacao_txt(sim):
+    """'entrada de R$ 20.697 e 60x de R$ 1.386' a partir de {'entrada':..., 'parcelas':..., 'parcela':...}."""
+    if not sim:
+        return ""
+    return f"entrada de {preco_brl(sim.get('entrada'))} e {sim.get('parcelas')}x de {preco_brl(sim.get('parcela'))}"
+
+
 def mensagem_whatsapp(veiculo, respostas, nome="", agora=None):
-    """Mensagem inicial do cliente para a loja (tom profissional, com o resumo das respostas)."""
-    troca = respostas.get("troca")
-    troca_txt = "Não" if troca != "sim" else (f"Sim ({respostas.get('troca_carro')})" if respostas.get("troca_carro") else "Sim")
+    """Mensagem inicial do cliente para a loja (tom profissional). Resume só o que o cliente respondeu."""
     primeiro = (nome or "").split()[0].title() if (nome or "").strip() else ""
     visita = respostas.get("intencao") == "visita"
     pedido = ("gostaria de agendar uma visita para conhecer o veículo." if visita
@@ -130,12 +135,21 @@ def mensagem_whatsapp(veiculo, respostas, nome="", agora=None):
               f"anunciado por {preco_brl(veiculo.valor_venda)}, e {pedido}", ""]
     if primeiro:
         linhas += [f"Meu nome é {primeiro}.", ""]
-    linhas += ["Segue um resumo do meu perfil:",
-               f"• Forma de pagamento: {rotulo(PAGAMENTO, respostas.get('pagamento'))}",
-               f"• Entrada: {rotulo(ENTRADA, respostas.get('entrada'))}",
-               f"• Carro ou moto na troca: {troca_txt}",
-               f"• Previsão de compra: {rotulo(PRAZO, respostas.get('prazo'))}", "",
-               "Aguardo o seu retorno. Obrigado(a)."]
+    perfil = []
+    if respostas.get("pagamento"):
+        perfil.append(f"• Forma de pagamento: {rotulo(PAGAMENTO, respostas.get('pagamento'))}")
+    if respostas.get("entrada"):
+        perfil.append(f"• Entrada: {rotulo(ENTRADA, respostas.get('entrada'))}")
+    if respostas.get("troca"):
+        troca_txt = "Não" if respostas.get("troca") != "sim" else (f"Sim ({respostas.get('troca_carro')})" if respostas.get("troca_carro") else "Sim")
+        perfil.append(f"• Carro ou moto na troca: {troca_txt}")
+    if respostas.get("prazo"):
+        perfil.append(f"• Previsão de compra: {rotulo(PRAZO, respostas.get('prazo'))}")
+    if respostas.get("simulacao"):
+        perfil.append(f"• Simulação que fiz no site: {simulacao_txt(respostas['simulacao'])} (estimativa)")
+    if perfil:
+        linhas += ["Segue um resumo do meu perfil:"] + perfil + [""]
+    linhas.append("Aguardo o seu retorno. Obrigado(a).")
     return "\n".join(linhas)
 
 

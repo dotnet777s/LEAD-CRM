@@ -4,14 +4,28 @@ from . import utils
 from .models import Lead
 
 
-class CapturaForm(forms.Form):
+def _simulacao(d):
+    """{'entrada', 'parcelas', 'parcela'} se o cliente mexeu no simulador; senão None."""
+    ent, n, par = d.get("sim_entrada"), d.get("sim_parcelas"), d.get("sim_parcela")
+    if ent is None or not n or par is None:
+        return None
+    return {"entrada": int(ent), "parcelas": int(n), "parcela": int(par)}
+
+
+class _Simulador(forms.Form):
+    sim_entrada = forms.DecimalField(required=False, min_value=0, max_value=10_000_000, max_digits=12, decimal_places=2, localize=False)
+    sim_parcelas = forms.IntegerField(required=False, min_value=1, max_value=96)
+    sim_parcela = forms.DecimalField(required=False, min_value=0, max_value=10_000_000, max_digits=12, decimal_places=2, localize=False)
+
+
+class CapturaForm(_Simulador):
     nome = forms.CharField(max_length=120, min_length=2, error_messages={"required": "Informe seu nome."})
     telefone = forms.CharField(max_length=20, error_messages={"required": "Informe seu WhatsApp."})
     pagamento = forms.ChoiceField(choices=utils.PAGAMENTO, error_messages={"required": "Escolha uma opção."})
-    entrada = forms.ChoiceField(choices=utils.ENTRADA, error_messages={"required": "Escolha uma opção."})
-    troca = forms.ChoiceField(choices=utils.TROCA, error_messages={"required": "Escolha uma opção."})
-    troca_carro = forms.CharField(max_length=100, required=False)
     prazo = forms.ChoiceField(choices=utils.PRAZO, error_messages={"required": "Escolha uma opção."})
+    entrada = forms.ChoiceField(choices=utils.ENTRADA, required=False)         # opcional: quem não responde fala no WhatsApp
+    troca = forms.ChoiceField(choices=utils.TROCA, required=False)             # opcional
+    troca_carro = forms.CharField(max_length=100, required=False)
     intencao = forms.ChoiceField(choices=utils.INTENCAO, required=False)     # botão que o cliente escolheu na página
     lgpd = forms.BooleanField(error_messages={"required": "É preciso aceitar para continuar."})
     website = forms.CharField(required=False)   # honeypot: humanos não preenchem
@@ -33,17 +47,25 @@ class CapturaForm(forms.Form):
 
     def respostas(self):
         d = self.cleaned_data
-        r = {k: d[k] for k in ("pagamento", "entrada", "troca", "prazo")}
-        if d["troca"] == "sim":
+        r = {k: d[k] for k in ("pagamento", "prazo")}
+        for k in ("entrada", "troca"):
+            if d.get(k):
+                r[k] = d[k]
+        if d.get("troca") == "sim":
             r["troca_carro"] = d["troca_carro"].strip()
         r["intencao"] = d.get("intencao") or "simular"
+        sim = _simulacao(d)
+        if sim:
+            r["simulacao"] = sim
         return r
 
 
-class ContatoInicialForm(forms.Form):
-    """1ª etapa do formulário: só o contato (o lead já fica salvo para a equipe)."""
+class ContatoInicialForm(_Simulador):
+    """Passo do contato: o cliente já respondeu pagamento e prazo. O lead fica salvo para a equipe antes do último passo."""
     nome = forms.CharField(max_length=120, min_length=2)
     telefone = forms.CharField(max_length=20)
+    pagamento = forms.ChoiceField(choices=utils.PAGAMENTO)
+    prazo = forms.ChoiceField(choices=utils.PRAZO)
     lgpd = forms.BooleanField()
     intencao = forms.ChoiceField(choices=utils.INTENCAO, required=False)
     website = forms.CharField(required=False)   # honeypot
@@ -56,6 +78,15 @@ class ContatoInicialForm(forms.Form):
         if not tel:
             raise forms.ValidationError("WhatsApp inválido.")
         return tel
+
+    def respostas_parciais(self, variante):
+        d = self.cleaned_data
+        r = {"parcial": True, "pagamento": d["pagamento"], "prazo": d["prazo"], "intencao": d.get("intencao") or "simular",
+             "variante": variante}
+        sim = _simulacao(d)
+        if sim:
+            r["simulacao"] = sim
+        return r
 
 
 class LeadManualForm(forms.Form):

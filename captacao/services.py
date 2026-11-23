@@ -16,13 +16,24 @@ class RegraErro(ValueError):
 
 
 def resumo_respostas(r):
+    """Resumo só com o que o cliente respondeu (troca e entrada são opcionais)."""
+    partes = []
+    if r.get("pagamento"):
+        partes.append(f"Pagamento: {utils.rotulo(utils.PAGAMENTO, r.get('pagamento'))}")
+    if r.get("entrada"):
+        partes.append(f"Entrada: {utils.rotulo(utils.ENTRADA, r.get('entrada'))}")
+    if r.get("troca"):
+        troca = "não" if r.get("troca") != "sim" else f"sim ({r.get('troca_carro', '')})".replace(" ()", "")
+        partes.append(f"Troca: {troca}")
+    if r.get("prazo"):
+        partes.append(f"Compra: {utils.rotulo(utils.PRAZO, r.get('prazo'))}")
+    if r.get("simulacao"):
+        partes.append(f"Simulação: {utils.simulacao_txt(r['simulacao'])}")
+    if r.get("intencao") == "visita":
+        partes.append("Quer agendar visita")
     if r.get("parcial"):
-        return "Ainda não terminou o formulário (deixou só o contato)"
-    troca = "não" if r.get("troca") != "sim" else f"sim ({r.get('troca_carro', '')})".replace(" ()", "")
-    extra = " · Quer agendar visita" if r.get("intencao") == "visita" else ""
-    return (f"Pagamento: {utils.rotulo(utils.PAGAMENTO, r.get('pagamento'))} · "
-            f"Entrada: {utils.rotulo(utils.ENTRADA, r.get('entrada'))} · Troca: {troca} · "
-            f"Compra: {utils.rotulo(utils.PRAZO, r.get('prazo'))}{extra}")
+        partes.append("Ainda não terminou o formulário" if partes else "Ainda não terminou o formulário (deixou só o contato)")
+    return " · ".join(partes)
 
 
 @transaction.atomic
@@ -32,7 +43,7 @@ def capturar_lead(veiculo, nome, telefone, respostas, tracking, agora=None, parc
     `parcial=True`: o cliente só deixou o contato (1ª etapa do formulário). O lead já existe para a equipe agir;
     quando ele terminar, a mesma chamada sem `parcial` completa o cadastro."""
     agora = agora or timezone.now()
-    classe = "B" if parcial else utils.classificar(respostas)
+    classe = utils.classificar(respostas)
     carro = f"{veiculo.marca_fmt} {veiculo.modelo_fmt} {veiculo.ano} · {utils.preco_brl(veiculo.valor_venda)}"
     campos = {k: tracking.get(k, "") for k in ("utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
                                                 "fbclid", "fbp", "fbc", "user_agent", "url_origem")}

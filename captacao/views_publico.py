@@ -221,14 +221,20 @@ def _contexto_pagina(request, pk, form=None):
     v = dados["veiculo"]
     destaque = dados["fotos"][0] if dados["fotos"] else None
     form = form or CapturaForm()
-    grupos = []
-    for campo, titulo, lista in (("pagamento", "Como pretende pagar?", utils.PAGAMENTO),
-                                 ("entrada", "Quanto tem de entrada?", utils.ENTRADA),
-                                 ("troca", "Tem carro ou moto para dar de entrada?", utils.TROCA),
-                                 ("prazo", "Quando pretende comprar?", utils.PRAZO)):
+    def opcoes(campo, lista):
         atual = form.data.get(campo) if form.is_bound else None
+        return [(val, rot, val == atual) for val, rot in lista]
+
+    grupos = []        # as duas perguntas de um toque; troca e entrada são um passo opcional depois do contato
+    for campo, titulo, lista in (("pagamento", "Como pretende pagar?", utils.PAGAMENTO),
+                                 ("prazo", "Quando pretende comprar?", utils.PRAZO)):
         grupos.append({"campo": campo, "titulo": titulo, "erros": form.errors.get(campo, []) if form.is_bound else [],
-                       "opcoes": [(val, rot, val == atual) for val, rot in lista]})
+                       "opcoes": opcoes(campo, lista)})
+    extras = {"troca": opcoes("troca", utils.TROCA), "entrada": opcoes("entrada", utils.ENTRADA)}
+    simulador = settings.SIMULADOR_ATIVO or request.GET.get("simulador") == "1"
+    sim_cfg = {"previa": simulador and not settings.SIMULADOR_ATIVO, "taxa": settings.FINANCIAMENTO_TAXA_AM,
+               "entrada_pct": settings.FINANCIAMENTO_ENTRADA_PCT, "parcelas": settings.FINANCIAMENTO_PARCELAS,
+               "opcoes": [12, 24, 36, 48, 60]}
     similares = []
     for sv, st in dados["similares"]:
         sv.slug, sv.preco_fmt = utils.slug_veiculo(sv), utils.preco_brl(sv.valor_venda)
@@ -237,7 +243,8 @@ def _contexto_pagina(request, pk, form=None):
             "destaque_h": fotos.altura_para(destaque, 800) if destaque else 600,
             "galeria": [{"pk": t.pk, "h": fotos.altura_para(t, 480)} for t in dados["fotos"]],
             "pixel_id": settings.META_PIXEL_ID, "site_url": settings.SITE_URL, "form": form, "grupos": grupos,
-            "consent": consent, "variante": variante, "ab": settings.AB_VARIANTES[variante],
+            "consent": consent, "variante": variante, "ab": settings.AB_VARIANTES[variante], "extras": extras,
+            "simulador": simulador, "sim": sim_cfg,
             "clarity_id": settings.CLARITY_ID if consent else "",
             "preco_fmt": utils.preco_brl(v.valor_venda)}
 
@@ -325,8 +332,7 @@ class IniciarView(View):
                     "url_origem": request.META.get("HTTP_REFERER", "") or request.build_absolute_uri(request.path),
                     "event_id": "", "consent_meta": consentiu(request)}
         services.capturar_lead(veiculo, form.cleaned_data["nome"], form.cleaned_data["telefone"],
-                               {"parcial": True, "intencao": form.cleaned_data.get("intencao") or "simular",
-                                "variante": variante_ab(request)}, tracking, parcial=True)
+                               form.respostas_parciais(variante_ab(request)), tracking, parcial=True)
         registrar_funil(request, pk, "contato")
         return _gravar_cookies(request, JsonResponse({"ok": True}))
 

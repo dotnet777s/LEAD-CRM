@@ -83,18 +83,18 @@
 
 <section class="grade" aria-label="Resumo">
   <div class="c hero s4">
-    <p class="rot">Conversão da página · visitas que viraram formulário enviado</p>
+    <p class="rot">Conversão da página · visitas que viraram lead (deixaram o contato)</p>
     <div class="big">{% if kpis.conversao is not None %}{{ kpis.conversao|floatformat:1 }}<small>%</small>{% else %}—{% endif %}</div>
     {% if kpis.conversao_d is not None %}<span class="dl {% if kpis.conversao_d > 0 %}up{% elif kpis.conversao_d < 0 %}down{% else %}zero{% endif %}">{% if kpis.conversao_d > 0 %}▲ +{% elif kpis.conversao_d < 0 %}▼ {% else %}— {% endif %}{{ kpis.conversao_d|floatformat:1 }} pontos <span style="color:var(--mudo);font-weight:500">vs. {{ dias }} dias antes</span></span>{% endif %}
-    <p class="det">{{ kpis.enviou|floatformat:"0g" }} formulários enviados em {{ kpis.visitas|floatformat:"0g" }} visitas</p>
+    <p class="det">{{ kpis.leads|floatformat:"0g" }} leads em {{ kpis.visitas|floatformat:"0g" }} visitas</p>
   </div>
   <div class="s8" style="padding:0"><div class="kpis">
     <div class="kpi"><p class="rot">Visitas</p><div class="v">{{ kpis.visitas|floatformat:"0g" }}</div>
       {% if kpis.visitas_d is not None %}<span class="dl {% if kpis.visitas_d > 0 %}up{% elif kpis.visitas_d < 0 %}down{% else %}zero{% endif %}">{% if kpis.visitas_d > 0 %}▲ +{% elif kpis.visitas_d < 0 %}▼ {% else %}— {% endif %}{{ kpis.visitas_d|floatformat:1 }}%</span>{% endif %}
       <p class="sub2">pessoas que abriram a página</p></div>
-    <div class="kpi"><p class="rot">Deixaram o contato</p><div class="v">{% if kpis.contato is not None %}{{ kpis.contato|floatformat:1 }}%{% else %}—{% endif %}</div>
-      {% if kpis.contato_d is not None %}<span class="dl {% if kpis.contato_d > 0 %}up{% elif kpis.contato_d < 0 %}down{% else %}zero{% endif %}">{% if kpis.contato_d > 0 %}▲ +{% elif kpis.contato_d < 0 %}▼ {% else %}— {% endif %}{{ kpis.contato_d|floatformat:1 }} pontos</span>{% endif %}
-      <p class="sub2">{{ kpis.contato_n|floatformat:"0g" }} pessoas (nome + WhatsApp)</p></div>
+    <div class="kpi"><p class="rot">Terminaram o formulário</p><div class="v">{% if kpis.termino is not None %}{{ kpis.termino|floatformat:0 }}%{% else %}—{% endif %}</div>
+      {% if kpis.termino_d is not None %}<span class="dl {% if kpis.termino_d > 0 %}up{% elif kpis.termino_d < 0 %}down{% else %}zero{% endif %}">{% if kpis.termino_d > 0 %}▲ +{% elif kpis.termino_d < 0 %}▼ {% else %}— {% endif %}{{ kpis.termino_d|floatformat:1 }} pontos</span>{% endif %}
+      <p class="sub2">{{ kpis.enviou|floatformat:"0g" }} de {{ kpis.leads|floatformat:"0g" }} leads fizeram o último passo</p></div>
     <div class="kpi"><p class="rot">Aguardando requalificação</p><div class="v">{{ incompletos|floatformat:"0g" }}</div>
       <p class="sub2">{{ recuperados|floatformat:"0g" }} terminaram depois do contato</p></div>
   </div></div>
@@ -111,42 +111,41 @@
 
 <section class="c s12" style="margin-bottom:12px" aria-label="Funil">
   <h2>Funil do formulário</h2>
-  <p class="leg">Quantas pessoas chegam a cada etapa. A barra é a parte das visitas; o número à direita é quanto se perdeu desde a etapa anterior.</p>
+  <p class="leg">Quantas pessoas chegam a cada etapa. A barra é a parte das visitas; o número à direita é quanto se perdeu desde a etapa anterior. O lead já existe a partir de “Deixou nome e WhatsApp”.</p>
   {% for l in linhas %}
   <div class="fr" tabindex="0" data-tip="{{ l.nome }}|{{ l.n|floatformat:'0g' }} pessoas|{% if l.pct is not None %}{{ l.pct|floatformat:1 }}% das visitas{% endif %}{% if l.perdeu_n %}|Perdeu {{ l.perdeu_n|floatformat:'0g' }} ({{ l.perdeu_pct|floatformat:0 }}%) desde a etapa anterior{% endif %}">
     <div class="fn">{{ l.nome }}</div>
     <div class="ft" style="--w:{{ l.largura|stringformat:'.1f' }};--cor:var(--r{{ forloop.counter }})"><i></i><span><b>{{ l.n|floatformat:"0g" }}</b><em>{% if l.pct is not None %}{{ l.pct|floatformat:1 }}%{% endif %}</em></span></div>
     <div class="fd{% if l.vazamento %} leak{% endif %}">{% if l.perdeu_n %}−{{ l.perdeu_pct|floatformat:0 }}%{% if l.vazamento %}<br><span class="tag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v9M12 19h.01"/></svg>maior perda</span>{% endif %}{% else %}—{% endif %}</div>
   </div>
-  {% if l.chave == "q_pagamento" %}
-  <div class="fr lateral" tabindex="0" data-tip="{{ entrada.nome }}|{{ entrada.n|floatformat:'0g' }} pessoas|Só aparece para quem não paga à vista">
-    <div class="fn">↳ {{ entrada.nome }} <span style="font-size:12px">(só quem não paga à vista)</span></div>
-    <div class="ft" style="--w:{% if entrada.pct is not None %}{{ entrada.pct|stringformat:'.1f' }}{% else %}0{% endif %};--cor:var(--r4)"><i></i><span><b>{{ entrada.n|floatformat:"0g" }}</b></span></div>
-    <div class="fd">fora da conta</div>
-  </div>
-  {% endif %}
+  {% if l.chave == "contato" %}{% for x in laterais %}
+  <div class="fr lateral" tabindex="0" data-tip="{{ x.nome }}|{{ x.n|floatformat:'0g' }} pessoas|{% if x.pct is not None %}{{ x.pct|floatformat:0 }}% dos leads{% endif %}">
+    <div class="fn">↳ {{ x.nome }}</div>
+    <div class="ft" style="--w:{% if x.pct is not None %}{{ x.pct|stringformat:'.1f' }}{% else %}0{% endif %};--cor:var(--r4)"><i></i><span><b>{{ x.n|floatformat:"0g" }}</b><em>{% if x.pct is not None %}{{ x.pct|floatformat:0 }}% dos leads{% endif %}</em></span></div>
+    <div class="fd">opcional</div>
+  </div>{% endfor %}{% endif %}
   {% endfor %}
   <p class="nota">Cada visitante conta uma vez por etapa. Sem aceitar cookies não dá para identificar quem volta, então essas pessoas contam por visita.</p>
   <details><summary>Ver como tabela</summary>
     <table style="margin-top:8px"><tr><th>Etapa</th><th class="n">Pessoas</th><th class="n">% das visitas</th><th class="n">Perdeu</th></tr>
     {% for l in linhas %}<tr><td>{{ l.nome }}</td><td class="n">{{ l.n|floatformat:"0g" }}</td><td class="n">{% if l.pct is not None %}{{ l.pct|floatformat:1 }}%{% else %}—{% endif %}</td><td class="n">{% if l.perdeu_n %}{{ l.perdeu_n|floatformat:"0g" }} ({{ l.perdeu_pct|floatformat:0 }}%){% else %}—{% endif %}</td></tr>{% endfor %}
-    <tr><td>{{ entrada.nome }} (só quem não paga à vista)</td><td class="n">{{ entrada.n|floatformat:"0g" }}</td><td class="n">{% if entrada.pct is not None %}{{ entrada.pct|floatformat:1 }}%{% else %}—{% endif %}</td><td class="n">—</td></tr></table>
+    {% for x in laterais %}<tr><td>{{ x.nome }}</td><td class="n">{{ x.n|floatformat:"0g" }}</td><td class="n">{% if x.pct is not None %}{{ x.pct|floatformat:0 }}% dos leads{% else %}—{% endif %}</td><td class="n">—</td></tr>{% endfor %}</table>
   </details>
 </section>
 
 <section class="grade" aria-label="Evolução por dia">
   <div class="c s6"><h2>Visitas por dia</h2><p class="leg">Pessoas que abriram a página</p><svg class="graf" id="g-visitas" viewBox="0 0 560 190" role="img" aria-label="Visitas por dia"></svg></div>
-  <div class="c s6"><h2>Formulários enviados por dia</h2><p class="leg">Leads completos</p><svg class="graf" id="g-enviados" viewBox="0 0 560 190" role="img" aria-label="Formulários enviados por dia"></svg></div>
+  <div class="c s6"><h2>Leads por dia</h2><p class="leg">Pessoas que deixaram nome e WhatsApp</p><svg class="graf" id="g-enviados" viewBox="0 0 560 190" role="img" aria-label="Formulários enviados por dia"></svg></div>
 </section>
 
 <section class="c s12" style="margin-bottom:12px" aria-label="Teste A/B">
   <h2>Teste A/B dos botões</h2>
-  <p class="leg">Só entram visitantes que aceitaram os cookies (é o que permite saber quem viu qual versão).</p>
+  <p class="leg">Compara quantas visitas viraram lead em cada versão. Só entram visitantes que aceitaram os cookies (é o que permite saber quem viu qual versão).</p>
   <div class="ab">
     <div class="abl"><div class="fn"><span class="chave" style="background:var(--s1)"></span>A · Simular / Agendar visita<br><span style="color:var(--mudo);font-size:12.5px">{{ ab.A.visitas|floatformat:"0g" }} visitas</span></div>
-      <div class="ft" style="--w:{{ ab.A.largura|stringformat:'.1f' }};--cor:var(--s1)" data-tip="Variante A|{% if ab.A.taxa is not None %}{{ ab.A.taxa|floatformat:1 }}% de conversão{% else %}sem visitas{% endif %}|{{ ab.A.enviou }} enviados em {{ ab.A.visitas }} visitas"><i></i><span><b>{% if ab.A.taxa is not None %}{{ ab.A.taxa|floatformat:1 }}%{% else %}—{% endif %}</b><em>{{ ab.A.enviou }} enviados</em></span></div></div>
+      <div class="ft" style="--w:{{ ab.A.largura|stringformat:'.1f' }};--cor:var(--s1)" data-tip="Variante A|{% if ab.A.taxa is not None %}{{ ab.A.taxa|floatformat:1 }}% de conversão{% else %}sem visitas{% endif %}|{{ ab.A.leads }} leads em {{ ab.A.visitas }} visitas"><i></i><span><b>{% if ab.A.taxa is not None %}{{ ab.A.taxa|floatformat:1 }}%{% else %}—{% endif %}</b><em>{{ ab.A.leads }} leads</em></span></div></div>
     <div class="abl"><div class="fn"><span class="chave" style="background:var(--s2)"></span>B · Falar com consultor / Ver na loja<br><span style="color:var(--mudo);font-size:12.5px">{{ ab.B.visitas|floatformat:"0g" }} visitas</span></div>
-      <div class="ft" style="--w:{{ ab.B.largura|stringformat:'.1f' }};--cor:var(--s2)" data-tip="Variante B|{% if ab.B.taxa is not None %}{{ ab.B.taxa|floatformat:1 }}% de conversão{% else %}sem visitas{% endif %}|{{ ab.B.enviou }} enviados em {{ ab.B.visitas }} visitas"><i></i><span><b>{% if ab.B.taxa is not None %}{{ ab.B.taxa|floatformat:1 }}%{% else %}—{% endif %}</b><em>{{ ab.B.enviou }} enviados</em></span></div></div>
+      <div class="ft" style="--w:{{ ab.B.largura|stringformat:'.1f' }};--cor:var(--s2)" data-tip="Variante B|{% if ab.B.taxa is not None %}{{ ab.B.taxa|floatformat:1 }}% de conversão{% else %}sem visitas{% endif %}|{{ ab.B.leads }} leads em {{ ab.B.visitas }} visitas"><i></i><span><b>{% if ab.B.taxa is not None %}{{ ab.B.taxa|floatformat:1 }}%{% else %}—{% endif %}</b><em>{{ ab.B.leads }} leads</em></span></div></div>
   </div>
   <div class="veredito {{ veredito_tom }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{% if veredito_tom == "bom" %}<circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>{% else %}<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/>{% endif %}</svg><span>{{ veredito }}</span></div>
   <details><summary>Quanto de cada etapa cada versão mantém</summary>
@@ -167,9 +166,9 @@
 </section>
 
 <section class="c s12" aria-label="Por carro">
-  <h2>Por carro</h2><p class="leg">Os 10 carros com mais visitas no período. “Tráfego sem conversão” indica 20 ou mais visitas e nenhum formulário enviado.</p>
-  <div class="rolar"><table><tr><th>Carro</th><th class="n">Visitas</th><th class="n">Contato</th><th class="n">Enviaram</th><th class="n">Conversão</th><th class="n">Incompletos</th><th></th></tr>
-  {% for c in carros %}<tr><td>{{ c.nome }}</td><td class="n">{{ c.visitas|floatformat:"0g" }}</td><td class="n">{{ c.contato|floatformat:"0g" }}</td><td class="n">{{ c.enviou|floatformat:"0g" }}</td><td class="n">{% if c.conv is not None %}{{ c.conv|floatformat:1 }}%{% else %}—{% endif %}</td><td class="n">{{ c.incompletos }}</td><td class="n">{% if c.alerta %}<span class="badge alerta"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v9M12 19h.01"/></svg>Tráfego sem conversão</span>{% endif %}</td></tr>
+  <h2>Por carro</h2><p class="leg">Os 10 carros com mais visitas no período. “Tráfego sem conversão” indica 20 ou mais visitas e nenhum lead.</p>
+  <div class="rolar"><table><tr><th>Carro</th><th class="n">Visitas</th><th class="n">Leads</th><th class="n">Terminaram</th><th class="n">Conversão</th><th class="n">Incompletos</th><th></th></tr>
+  {% for c in carros %}<tr><td>{{ c.nome }}</td><td class="n">{{ c.visitas|floatformat:"0g" }}</td><td class="n">{{ c.leads|floatformat:"0g" }}</td><td class="n">{{ c.enviou|floatformat:"0g" }}</td><td class="n">{% if c.conv is not None %}{{ c.conv|floatformat:1 }}%{% else %}—{% endif %}</td><td class="n">{{ c.incompletos }}</td><td class="n">{% if c.alerta %}<span class="badge alerta"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v9M12 19h.01"/></svg>Tráfego sem conversão</span>{% endif %}</td></tr>
   {% empty %}<tr><td colspan="7" class="vazio">Sem visitas por carro neste período.</td></tr>{% endfor %}</table></div>
 </section>
 {% endif %}

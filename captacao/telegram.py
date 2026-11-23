@@ -118,15 +118,28 @@ def texto_lead(lead, titulo):
     linhas = [cab, "", f"👤 <b>{esc(lead.nome)}</b>", f"📱 {esc(lead.telefone_formatado)}",
               f"🕒 {_quando(lead.criado_em)}", "", f"🚗 {_carro(lead)}", ""]
     resumo = ""
-    if r.get("parcial"):
-        linhas += [f"⏳ <i>Deixou o contato e não terminou o formulário. {esc('Quer: ' + quer)}</i>", ""]
-    elif r:
+    perfil, partes = [], []
+    if r.get("pagamento"):
+        pag = utils.rotulo(utils.PAGAMENTO, r.get("pagamento"))
+        perfil.append(f"• Pagamento: {esc(pag)}"); partes.append(pag)
+    if r.get("entrada"):
+        ent = utils.rotulo(utils.ENTRADA, r.get("entrada"))
+        perfil.append(f"• Entrada: {esc(ent)}"); partes.append(f"entrada {ent.lower()}")
+    if r.get("troca"):
         troca = "Não" if r.get("troca") != "sim" else (f"Sim ({r['troca_carro']})" if r.get("troca_carro") else "Sim")
-        pag, ent = utils.rotulo(utils.PAGAMENTO, r.get("pagamento")), utils.rotulo(utils.ENTRADA, r.get("entrada"))
+        perfil.append(f"• Carro/moto na troca: {esc(troca)}"); partes.append(f"troca: {troca.lower()}")
+    if r.get("prazo"):
         prazo = utils.rotulo(utils.PRAZO, r.get("prazo"))
-        linhas += ["💬 <b>Perfil do cliente</b>", f"• Quer: {quer}", f"• Pagamento: {esc(pag)}", f"• Entrada: {esc(ent)}",
-                   f"• Carro/moto na troca: {esc(troca)}", f"• Compra: {esc(prazo)}", ""]
-        resumo = f"{pag} · entrada {ent.lower()} · troca: {troca.lower()} · compra: {prazo.lower()}"
+        perfil.append(f"• Compra: {esc(prazo)}"); partes.append(f"compra: {prazo.lower()}")
+    if r.get("simulacao"):
+        perfil.append(f"• Simulação no site: {esc(utils.simulacao_txt(r['simulacao']))}")
+        partes.append(f"simulou {utils.simulacao_txt(r['simulacao'])}")
+    if r.get("parcial"):
+        linhas += [f"⏳ <i>Não terminou o formulário (falta troca e entrada). {esc('Quer: ' + quer)}</i>" if perfil
+                   else f"⏳ <i>Deixou o contato e não terminou o formulário. {esc('Quer: ' + quer)}</i>", ""]
+    if perfil:
+        linhas += ["💬 <b>Perfil do cliente</b>", f"• Quer: {quer}"] + perfil + [""]
+        resumo = " · ".join(partes)
     origem = lead.get_origem_display() + (f" · {lead.utm_campaign}" if lead.utm_campaign else "")
     linhas.append(f"📣 {esc(origem)}")
     if lead.utm_content:

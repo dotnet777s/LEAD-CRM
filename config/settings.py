@@ -155,6 +155,8 @@ AB_VARIANTES = {    # o que muda no teste: o texto dos dois botões principais
 }
 CLARITY_ID = env("CLARITY_ID")     # Microsoft Clarity (mapa de calor). Só carrega com o consentimento do visitante.
 
+SIMULADOR_ATIVO = env_bool("SIMULADOR_ATIVO", False)     # simulador interativo de parcela; sem isso só aparece com ?simulador=1 (prévia)
+
 # --- Parcela estimada exibida na página (ilustrativa: a aprovação e a taxa reais dependem do banco) ---
 FINANCIAMENTO_TAXA_AM = float(env("FINANCIAMENTO_TAXA_AM", "1.99") or 1.99)     # % ao mês
 FINANCIAMENTO_ENTRADA_PCT = int(env("FINANCIAMENTO_ENTRADA_PCT", "30") or 30)

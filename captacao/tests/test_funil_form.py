@@ -10,7 +10,7 @@ from captacao.models import EventoFunil, EventoMeta, Historico, Lead, Notificaca
 from .helpers import FORM_OK, Base, novo_veiculo
 
 UA = {"HTTP_USER_AGENT": "Mozilla/5.0"}
-CONTATO = {"nome": "Maria Silva", "telefone": "(81) 99999-8888", "lgpd": "1"}
+CONTATO = {"nome": "Maria Silva", "telefone": "(81) 99999-8888", "lgpd": "1", "pagamento": "financiado", "prazo": "semana"}
 BOT = override_settings(TELEGRAM_BOT_TOKEN="123:abc", TELEGRAM_REQUALIFICAR_MINUTOS=10)
 
 
@@ -61,7 +61,9 @@ class LeadIncompletoTests(Base):
         self.assertEqual(telegram.alertas_requalificar(agora), 0)                       # uma vez só
         n = NotificacaoTelegram.objects.get(tipo="requalificar")
         self.assertIn("REQUALIFICAR", n.texto)
-        self.assertIn("não terminou o formulário", n.texto)
+        self.assertIn("Não terminou o formulário (falta troca e entrada)", n.texto)
+        self.assertIn("Pagamento: Financiado", n.texto)                              # o que ele já respondeu aparece
+        self.assertIn("Compra: Esta semana", n.texto)
         botoes = n.botoes[0]
         self.assertEqual(botoes[0]["text"], "Requalificar no WhatsApp")
         self.assertIn("wa.me/5581999998888", botoes[0]["url"])
@@ -251,14 +253,14 @@ class MedicaoDoFunilTests(Base):
             for i in range(n_view):
                 EventoFunil.objects.create(veiculo_id=self.v.pk, etapa="view", variante=var, sid=f"{var}{i:031d}", consent=True)
             for i in range(n_env):
-                EventoFunil.objects.create(veiculo_id=self.v.pk, etapa="enviou", variante=var, sid=f"{var}{i:031d}", consent=True)
+                EventoFunil.objects.create(veiculo_id=self.v.pk, etapa="contato", variante=var, sid=f"{var}{i:031d}", consent=True)
         EventoFunil.objects.create(veiculo_id=self.v.pk, etapa="view", variante="A", sid="", consent=False)
         self.client.force_login(get_user_model().objects.create_user("g", password="x12345678", is_staff=True))
         r = self.client.get("/painel/formulario/")
         self.assertEqual(r.status_code, 200)
         ab = r.context["ab"]
-        self.assertEqual((ab["A"]["visitas"], ab["A"]["enviou"], ab["A"]["taxa"]), (120, 10, 8.3))
-        self.assertEqual((ab["B"]["visitas"], ab["B"]["enviou"], ab["B"]["taxa"]), (120, 25, 20.8))
+        self.assertEqual((ab["A"]["visitas"], ab["A"]["leads"], ab["A"]["taxa"]), (120, 10, 8.3))
+        self.assertEqual((ab["B"]["visitas"], ab["B"]["leads"], ab["B"]["taxa"]), (120, 25, 20.8))
         self.assertIn("A variante B converte mais", r.context["veredito"])
         self.assertEqual(r.context["veredito_tom"], "bom")
         self.assertEqual(r.context["kpis"]["visitas"], 241)              # 240 com cookies + 1 anônimo
@@ -282,12 +284,35 @@ class PaginaDoFormularioTests(Base):
         v = novo_veiculo(fotos=5)
         return self.client.get(f"/v/{v.pk}-fiat-argo-2022/", **UA).content.decode()
 
-    def test_contato_vem_primeiro_e_o_botao_de_enviar_fica_na_ultima_pergunta(self):
+    def test_ordem_pagamento_prazo_contato_e_passo_opcional(self):
         html = self.abrir()
-        self.assertLess(html.index("data-contato"), html.index('data-campo="pagamento"'))
-        self.assertGreater(html.index('id="enviar"'), html.index('data-campo="prazo"'))
+        ordem = [html.index(m) for m in ('data-campo="pagamento"', 'data-campo="prazo"', '<fieldset class="passo" data-contato>', '<fieldset class="passo" data-extras>')]
+        self.assertEqual(ordem, sorted(ordem))
+        self.assertGreater(html.index('id="enviar"'), html.index('<fieldset class="passo" data-extras>'))        # enviar só no último passo
         self.assertEqual(html.count('id="enviar"'), 1)
         self.assertIn('id="contato-ok"', html)
+        self.assertIn("Responda 2 perguntas rápidas", html)
+
+    def test_linha_de_confianca_junto_ao_botao_do_contato(self):
+        html = self.abrir()
+        self.assertIn("Garantia de 90 dias · Revisado · Vistoria cautelar", html)
+        i = html.index('class="confianca"')
+        self.assertLess(i, html.index('id="contato-ok"'))                               # logo acima do botão
+        self.assertGreater(i, html.index('<fieldset class="passo" data-contato>'))
+
+    def test_troca_e_entrada_no_passo_opcional(self):
+        html = self.abrir()
+        extras = html[html.index('<fieldset class="passo" data-extras>'):]
+        self.assertIn("Opcional. Se preferir, conversamos isso no WhatsApp.", extras)
+        self.assertIn('name="troca"', extras)
+        self.assertIn('name="entrada"', extras)
+        self.assertIn('id="entrada-bloco"', extras)
+
+    def test_selo_online_sempre_ligado_sem_horario_de_retorno(self):
+        html = self.abrir()
+        self.assertIn('class="aberto on"', html)
+        self.assertIn("Atendimento online pelo WhatsApp", html)
+        self.assertNotIn("Respondemos a partir", html)
 
     def test_garantias_ficam_depois_do_formulario(self):
         html = self.abrir()
@@ -320,7 +345,7 @@ class DashboardTests(Base):
             EventoFunil.objects.filter(pk=e.pk).update(criado_em=quando)
 
     def funil_padrao(self, **kw):
-        for etapa, n in (("view", 200), ("comecou", 80), ("contato", 60), ("q_pagamento", 20), ("q_troca", 18), ("q_prazo", 15), ("enviou", 14)):
+        for etapa, n in (("view", 200), ("comecou", 80), ("q_pagamento", 60), ("q_prazo", 50), ("contato", 20), ("enviou", 14)):
             self.eventos(etapa, n, etapa[:2], **kw)
 
     def test_funil_com_perdas_e_maior_vazamento(self):
@@ -330,17 +355,24 @@ class DashboardTests(Base):
         self.assertEqual(linhas["view"]["n"], 200)
         self.assertEqual(linhas["comecou"]["perdeu_n"], 120)
         self.assertEqual(linhas["comecou"]["perdeu_pct"], 60.0)
-        self.assertEqual(linhas["q_pagamento"]["perdeu_n"], 40)
+        self.assertEqual(linhas["contato"]["perdeu_n"], 30)
         v = ctx["vazamento"]
         self.assertEqual((v["de"], v["para"], v["n"]), ("Abriu a página", "Começou o formulário", 120))       # maior perda em número de pessoas
         self.assertIn("nem toca no formulário", v["dica"])
 
-    def test_vazamento_nos_leads_incompletos_recomenda_requalificar(self):
-        for etapa, n in (("view", 100), ("comecou", 95), ("contato", 90), ("q_pagamento", 20), ("q_troca", 18), ("q_prazo", 16), ("enviou", 15)):
+    def test_vazamento_no_contato_recomenda_reforcar_a_confianca(self):
+        for etapa, n in (("view", 100), ("comecou", 95), ("q_pagamento", 90), ("q_prazo", 85), ("contato", 20), ("enviou", 15)):
             self.eventos(etapa, n, etapa[:2])
         v = self.client.get("/painel/formulario/").context["vazamento"]
-        self.assertEqual(v["para"], "Respondeu o pagamento")
-        self.assertIn("requalificar pelo WhatsApp", v["dica"])
+        self.assertEqual((v["para"], v["n"]), ("Deixou nome e WhatsApp (virou lead)", 65))
+        self.assertIn("nome e WhatsApp", v["dica"])
+
+    def test_leads_que_nao_fizeram_o_ultimo_passo_vao_para_requalificar(self):
+        for etapa, n in (("view", 100), ("comecou", 95), ("q_pagamento", 90), ("q_prazo", 85), ("contato", 80), ("enviou", 10)):
+            self.eventos(etapa, n, etapa[:2])
+        v = self.client.get("/painel/formulario/").context["vazamento"]
+        self.assertEqual(v["para"], "Terminou o formulário")
+        self.assertIn("coluna Requalificar", v["dica"])
 
     def test_poucas_visitas_nao_apontam_vazamento(self):
         self.eventos("view", 5, "vv")
@@ -348,18 +380,21 @@ class DashboardTests(Base):
         self.assertIsNone(ctx["vazamento"])
         self.assertTrue(ctx["poucos_dados"])
 
-    def test_pergunta_de_entrada_fica_fora_da_conta_de_perdas(self):
+    def test_troca_e_entrada_sao_opcionais_e_ficam_fora_da_conta_de_perdas(self):
         self.funil_padrao()
+        self.eventos("q_troca", 8, "tr")
         self.eventos("q_entrada", 5, "en")
         ctx = self.client.get("/painel/formulario/").context
-        self.assertNotIn("q_entrada", [l["chave"] for l in ctx["linhas"]])
-        self.assertEqual(ctx["entrada"]["n"], 5)
+        self.assertEqual([l["chave"] for l in ctx["linhas"]], ["view", "comecou", "q_pagamento", "q_prazo", "contato", "enviou"])
+        lat = {x["nome"]: x for x in ctx["laterais"]}
+        self.assertEqual(lat["Respondeu a troca (opcional)"]["n"], 8)
+        self.assertEqual(lat["Respondeu a entrada (opcional)"]["pct"], 25.0)          # 5 de 20 leads
 
     def test_comparacao_com_o_periodo_anterior(self):
         self.eventos("view", 100, "at")
-        self.eventos("enviou", 10, "at")
+        self.eventos("contato", 10, "at")
         self.eventos("view", 50, "an", dias_atras=40)
-        self.eventos("enviou", 10, "an", dias_atras=40)
+        self.eventos("contato", 10, "an", dias_atras=40)
         k = self.client.get("/painel/formulario/?dias=30").context["kpis"]
         self.assertEqual((k["visitas"], k["conversao"]), (100, 10.0))
         self.assertEqual(k["visitas_d"], 100.0)                           # de 50 para 100 visitas
@@ -385,7 +420,7 @@ class DashboardTests(Base):
 
     def test_lista_de_incompletos_e_por_anuncio(self):
         for i in range(3):
-            self.client.post(f"/v/{self.v.pk}/inicio/", {"nome": f"Pessoa {i}", "telefone": f"(81) 99999-60{i:02d}", "lgpd": "1"},
+            self.client.post(f"/v/{self.v.pk}/inicio/", {"nome": f"Pessoa {i}", "telefone": f"(81) 99999-60{i:02d}", "lgpd": "1", "pagamento": "a_vista", "prazo": "semana"},
                              HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR=f"200.7.7.{i}", **{"HTTP_REFERER": "x"})
         Lead.objects.update(utm_content="anuncio-teste")
         ctx = self.client.get("/painel/formulario/").context
@@ -406,3 +441,116 @@ class DashboardTests(Base):
         self.assertIn('id="g-visitas"', html)
         self.assertIn("Ver como tabela", html)                          # versão em tabela de cada gráfico
         self.assertNotIn("None", html.split("<style>")[0] + html.split("</style>")[1])
+
+
+class FormularioOpcionalTests(Base):
+    """Troca e entrada são opcionais: o lead completa só com pagamento, prazo e contato."""
+
+    def setUp(self):
+        super().setUp()
+        self.v = novo_veiculo()
+
+    def post(self, **extra):
+        dados = {"nome": "Maria Silva", "telefone": "(81) 99999-8888", "lgpd": "1", "pagamento": "financiado", "prazo": "semana",
+                 "event_id": "a" * 32, **extra}
+        return self.client.post(f"/v/{self.v.pk}-fiat-argo-2022/", dados, HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.8.8.8")
+
+    def test_envio_sem_troca_e_sem_entrada(self):
+        self.assertEqual(self.post().status_code, 302)
+        lead = Lead.objects.get()
+        self.assertNotIn("troca", lead.respostas)
+        self.assertNotIn("entrada", lead.respostas)
+        self.assertEqual(lead.respostas["pagamento"], "financiado")
+
+    def test_mensagem_do_whatsapp_so_resume_o_que_foi_respondido(self):
+        import urllib.parse
+        r = self.post()
+        texto = urllib.parse.unquote(self.client.get(r["Location"]).context["wa_url"].split("text=")[1])
+        self.assertIn("Forma de pagamento: Financiado", texto)
+        self.assertIn("Previsão de compra: Esta semana", texto)
+        self.assertNotIn("Entrada:", texto)
+        self.assertNotIn("na troca", texto)
+
+    def test_troca_sim_exige_o_modelo(self):
+        r = self.post(troca="sim", troca_carro="")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(Lead.objects.count(), 0)
+        self.assertEqual(self.post(troca="sim", troca_carro="CG 160 2020").status_code, 302)
+
+    def test_pagamento_e_prazo_continuam_obrigatorios(self):
+        self.assertEqual(self.post(pagamento="").status_code, 400)
+        self.assertEqual(self.post(prazo="").status_code, 400)
+
+    def test_contato_parcial_ja_leva_pagamento_e_prazo_e_classifica(self):
+        r = self.client.post(f"/v/{self.v.pk}/inicio/", {"nome": "Maria Silva", "telefone": "(81) 99999-8888", "lgpd": "1",
+                                                         "pagamento": "a_vista", "prazo": "semana"},
+                             HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.8.8.9")
+        self.assertEqual(r.status_code, 200)
+        lead = Lead.objects.get()
+        self.assertEqual((lead.respostas["pagamento"], lead.respostas["prazo"], lead.classe), ("a_vista", "semana", "A"))
+        self.assertTrue(lead.incompleto)
+
+    def test_contato_parcial_sem_as_duas_respostas_nao_cria_lead(self):
+        r = self.client.post(f"/v/{self.v.pk}/inicio/", {"nome": "Maria Silva", "telefone": "(81) 99999-8888", "lgpd": "1"},
+                             HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.8.8.10")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(Lead.objects.count(), 0)
+
+
+class SimuladorTests(Base):
+    def setUp(self):
+        super().setUp()
+        self.v = novo_veiculo(valor_venda="68990")
+
+    def abrir(self, query=""):
+        from django.core.cache import cache
+        cache.clear()
+        return self.client.get(f"/v/{self.v.pk}-fiat-argo-2022/{query}", HTTP_USER_AGENT="Mozilla/5.0").content.decode()
+
+    def test_desligado_por_padrao_mostra_a_parcela_estatica(self):
+        html = self.abrir()
+        self.assertNotIn('id="simbox"', html)
+        self.assertIn("Parcelas a partir de", html)
+
+    def test_previa_com_parametro_na_url(self):
+        html = self.abrir("?simulador=1")
+        self.assertIn('id="simbox"', html)
+        self.assertIn("Prévia", html)
+        self.assertIn('id="sim-ent"', html)
+        self.assertEqual(html.count('data-n="'), 5)
+        self.assertIn("Estimativa ilustrativa", html)
+        self.assertNotIn("Parcelas a partir de", html)                                   # o simulador substitui o bloco estático
+
+    @override_settings(SIMULADOR_ATIVO=True)
+    def test_ligado_para_todos_sem_etiqueta_de_previa(self):
+        html = self.abrir()
+        self.assertIn('id="simbox"', html)
+        self.assertNotIn("Prévia", html)
+
+    def test_simulacao_vai_para_o_lead_para_a_mensagem_e_para_o_telegram(self):
+        import urllib.parse
+        r = self.client.post(f"/v/{self.v.pk}-fiat-argo-2022/", {
+            "nome": "Maria Silva", "telefone": "(81) 99999-8888", "lgpd": "1", "pagamento": "financiado", "prazo": "semana",
+            "event_id": "b" * 32, "sim_entrada": "20697", "sim_parcelas": "60", "sim_parcela": "1386"},
+            HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.9.1.1")
+        self.assertEqual(r.status_code, 302)
+        lead = Lead.objects.get()
+        self.assertEqual(lead.respostas["simulacao"], {"entrada": 20697, "parcelas": 60, "parcela": 1386})
+        texto = urllib.parse.unquote(self.client.get(r["Location"]).context["wa_url"].split("text=")[1])
+        self.assertIn("Simulação que fiz no site: entrada de R$ 20.697 e 60x de R$ 1.386 (estimativa)", texto)
+        self.assertIn("Simulação no site: entrada de R$ 20.697 e 60x de R$ 1.386", telegram.texto_lead(lead, "Novo lead"))
+
+    def test_valores_invalidos_do_simulador_sao_recusados(self):
+        r = self.client.post(f"/v/{self.v.pk}-fiat-argo-2022/", {
+            "nome": "Maria Silva", "telefone": "(81) 99999-8888", "lgpd": "1", "pagamento": "financiado", "prazo": "semana",
+            "event_id": "c" * 32, "sim_entrada": "-5", "sim_parcelas": "1000", "sim_parcela": "abc"},
+            HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.9.1.2")
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(Lead.objects.count(), 0)
+
+    def test_sem_mexer_no_simulador_nao_grava_simulacao(self):
+        self.client.post(f"/v/{self.v.pk}-fiat-argo-2022/", {
+            "nome": "Maria Silva", "telefone": "(81) 99999-8888", "lgpd": "1", "pagamento": "a_vista", "prazo": "semana",
+            "event_id": "d" * 32, "sim_entrada": "", "sim_parcelas": "", "sim_parcela": ""},
+            HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.9.1.3")
+        self.assertNotIn("simulacao", Lead.objects.get().respostas)

@@ -199,18 +199,19 @@ class MidiasView(LoginRequiredMixin, TemplateView):
         return ctx
 
 
-ROTULO_ETAPA = {"view": "Abriu a página", "comecou": "Começou o formulário", "contato": "Deixou nome e WhatsApp",
-                "q_pagamento": "Respondeu o pagamento", "q_entrada": "Respondeu a entrada", "q_troca": "Respondeu a troca",
-                "q_prazo": "Respondeu o prazo", "enviou": "Enviou o formulário"}
-# A pergunta de entrada some para quem paga à vista: fica fora da conta de perdas.
-ETAPAS_PRINCIPAIS = ["view", "comecou", "contato", "q_pagamento", "q_troca", "q_prazo", "enviou"]
+ROTULO_ETAPA = {"view": "Abriu a página", "comecou": "Começou o formulário", "q_pagamento": "Respondeu o pagamento",
+                "q_prazo": "Respondeu o prazo", "contato": "Deixou nome e WhatsApp (virou lead)",
+                "q_troca": "Respondeu a troca (opcional)", "q_entrada": "Respondeu a entrada (opcional)",
+                "enviou": "Terminou o formulário"}
+# Ordem atual: pagamento -> prazo -> contato (o lead já existe) -> passo opcional (troca e entrada) -> enviar.
+ETAPAS_PRINCIPAIS = ["view", "comecou", "q_pagamento", "q_prazo", "contato", "enviou"]
+OPCIONAIS = ["q_troca", "q_entrada"]
 DICA_VAZAMENTO = {
     "comecou": "A maioria vê a página e nem toca no formulário. Revise o que vem antes dele: foto principal, preço, botões e o quanto o formulário aparece sem rolar.",
-    "contato": "Começam a preencher e param antes de deixar o contato. Pedir nome e WhatsApp pesa: reforce o benefício (simulação sem compromisso) e confira o texto do aceite.",
-    "q_pagamento": "Deixam o contato e não respondem nenhuma pergunta. São leads incompletos: o SDR deve requalificar pelo WhatsApp (lista abaixo).",
-    "q_troca": "Respondem o pagamento e param antes da pergunta de troca. Veja se a pergunta de entrada está confusa ou lenta.",
-    "q_prazo": "Param na pergunta de troca. Considere deixá-la opcional ou mais simples.",
-    "enviou": "Respondem tudo e não enviam. Confira o botão de enviar e o carregamento da página seguinte.",
+    "q_pagamento": "Começam o formulário e não respondem a primeira pergunta. Veja se as opções estão claras e se a pergunta aparece logo ao abrir.",
+    "q_prazo": "Respondem o pagamento e param na pergunta de prazo. Considere deixar essa pergunta mais simples.",
+    "contato": "Respondem as duas perguntas e travam ao pedir nome e WhatsApp. Reforce a promessa de simulação sem compromisso e a garantia junto ao botão, e confira se o campo de WhatsApp funciona bem no celular.",
+    "enviou": "Deixam o contato (já são leads) e não terminam o último passo, que é opcional. Eles ficam na coluna Requalificar: o SDR deve chamar no WhatsApp.",
 }
 
 
@@ -288,12 +289,12 @@ class FunilFormView(LoginRequiredMixin, TemplateView):
             vazamento = {"chave": pior["chave"], "de": de["nome"], "para": pior["nome"], "n": pior["perdeu_n"],
                          "pct": pior["perdeu_pct"], "dica": DICA_VAZAMENTO.get(pior["chave"], "")}
             pior["vazamento"] = True
-        entrada = {"nome": ROTULO_ETAPA["q_entrada"], "n": cont["q_entrada"], "pct": _pct(cont["q_entrada"], visitas)}
+        laterais = [{"nome": ROTULO_ETAPA[e], "n": cont[e], "pct": _pct(cont[e], cont["contato"])} for e in OPCIONAIS]
 
         # ---- período anterior (para as setas de comparação)
         cont_ant = _contar([(e[0], e[1], e[2]) for e in anteriores])
-        conv, conv_ant = _pct(cont["enviou"], visitas), _pct(cont_ant["enviou"], cont_ant["view"])
-        contato, contato_ant = _pct(cont["contato"], visitas), _pct(cont_ant["contato"], cont_ant["view"])
+        conv, conv_ant = _pct(cont["contato"], visitas), _pct(cont_ant["contato"], cont_ant["view"])        # conversão = virou lead
+        termino, termino_ant = _pct(cont["enviou"], cont["contato"]), _pct(cont_ant["enviou"], cont_ant["contato"])
 
         def delta(atual, ant, pontos=False):
             if atual is None or ant is None:
@@ -303,8 +304,8 @@ class FunilFormView(LoginRequiredMixin, TemplateView):
             return round(100 * (atual - ant) / ant, 1) if ant else None
 
         kpis = {"visitas": visitas, "visitas_d": delta(visitas, cont_ant["view"]),
-                "contato": contato, "contato_d": delta(contato, contato_ant, True), "contato_n": cont["contato"],
-                "conversao": conv, "conversao_d": delta(conv, conv_ant, True), "enviou": cont["enviou"]}
+                "conversao": conv, "conversao_d": delta(conv, conv_ant, True), "leads": cont["contato"],
+                "termino": termino, "termino_d": delta(termino, termino_ant, True), "enviou": cont["enviou"]}
 
         # ---- série por dia (duas séries, duas escalas: dois gráficos)
         dia_view, dia_env = Counter(), Counter()
@@ -312,7 +313,7 @@ class FunilFormView(LoginRequiredMixin, TemplateView):
             d = timezone.localtime(criado).date()
             if etapa == "view":
                 dia_view[d] += 1
-            elif etapa == "enviou":
+            elif etapa == "contato":
                 dia_env[d] += 1
         hoje = timezone.localdate()
         dias_lista = [hoje - timedelta(days=i) for i in range(dias - 1, -1, -1)]
@@ -324,14 +325,14 @@ class FunilFormView(LoginRequiredMixin, TemplateView):
         for var in ("A", "B"):
             ev = [(e[0], e[1], e[2]) for e in atuais if e[3] == var and e[2] and e[1]]
             c = _contar(ev)
-            ab[var] = {"visitas": c["view"], "contato": c["contato"], "enviou": c["enviou"], "c": c,
-                       "taxa_contato": _pct(c["contato"], c["view"]), "taxa": _pct(c["enviou"], c["view"])}
+            ab[var] = {"visitas": c["view"], "leads": c["contato"], "enviou": c["enviou"], "c": c,
+                       "taxa": _pct(c["contato"], c["view"])}        # o teste compara quem virou lead
         veredito, tom, p = "", "neutro", None
         a, b = ab["A"], ab["B"]
         if min(a["visitas"], b["visitas"]) < 100:
             veredito = "Amostra pequena (menos de 100 visitas por variante): ainda não dá para concluir qual é melhor."
         else:
-            z, p = _p_valor(a["visitas"], a["enviou"], b["visitas"], b["enviou"])
+            z, p = _p_valor(a["visitas"], a["leads"], b["visitas"], b["leads"])
             if p is None:
                 veredito = "Sem dados suficientes para comparar."
             elif p < 0.05:
@@ -354,9 +355,9 @@ class FunilFormView(LoginRequiredMixin, TemplateView):
         carros = []
         for vid, evs in por.items():
             c = _contar(evs)
-            carros.append({"nome": nomes.get(vid, f"Carro {vid}"), "pk": vid, "visitas": c["view"], "contato": c["contato"],
-                           "enviou": c["enviou"], "conv": _pct(c["enviou"], c["view"]), "incompletos": incompletos_carro.get(vid, 0),
-                           "alerta": c["view"] >= 20 and c["enviou"] == 0})
+            carros.append({"nome": nomes.get(vid, f"Carro {vid}"), "pk": vid, "visitas": c["view"], "leads": c["contato"],
+                           "enviou": c["enviou"], "conv": _pct(c["contato"], c["view"]), "incompletos": incompletos_carro.get(vid, 0),
+                           "alerta": c["view"] >= 20 and c["contato"] == 0})
         carros.sort(key=lambda x: -x["visitas"])
 
         # ---- leads incompletos agora e por anúncio
@@ -374,7 +375,7 @@ class FunilFormView(LoginRequiredMixin, TemplateView):
         ctx.update(
             dias=dias, carro=carro, opcoes_dias=[(7, "7 dias"), (14, "14 dias"), (30, "30 dias"), (90, "90 dias")],
             lista_carros=sorted(({"pk": k, "nome": v} for k, v in nomes.items()), key=lambda x: x["nome"]),
-            kpis=kpis, linhas=linhas, entrada=entrada, vazamento=vazamento, poucos_dados=visitas < 30, serie=serie,
+            kpis=kpis, linhas=linhas, laterais=laterais, vazamento=vazamento, poucos_dados=visitas < 30, serie=serie,
             ab=ab, veredito=veredito, veredito_tom=tom, carros=carros[:10], incompletos=incompletos_qs.count(),
             lista_incompletos=lista, por_anuncio=por_anuncio, recuperados=recuperados,
             sem_dados=not todos)
