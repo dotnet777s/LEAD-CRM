@@ -303,8 +303,9 @@ class BotoesParcelaProvasTests(Base):
         self.assertIn("até 21x", html)
         self.assertIn("Aceitamos carro ou moto como entrada", html)
         self.assertIn('class="garantias"', html)
-        for texto in ("Garantia", "Revisado", "Laudo cautelar"):
-            self.assertIn(f"<b>{texto}</b>", html)
+        for rotulo, valor in (("Garantia", "90 dias"), ("Revisado", "Revisão minuciosa"),
+                              ("Vistoria cautelar", "Laudo cautelar 100% aprovado")):
+            self.assertIn(f"<small>{rotulo}</small><b>{valor}</b>", html)
 
     def test_sem_vendas_nao_mostra_destaque_de_modelo(self):
         html = self.abrir(novo_veiculo())
@@ -365,7 +366,7 @@ class SobreEmpresaTests(Base):
         self.assertIn("Sobre a TopCar", html)
         self.assertIn("há mais de 10 anos no mercado de seminovos", html)
         self.assertIn("mais de 60 opções disponíveis", html)
-        self.assertIn("todo o estoque conta com garantia, revisão e laudo cautelar", html)
+        self.assertIn("todo o estoque conta com garantia de 90 dias, revisão minuciosa e vistoria cautelar", html)
         self.assertIn("<b>+10</b>", html)
         self.assertIn("<b>+60</b>", html)
 
@@ -378,9 +379,47 @@ class SobreEmpresaTests(Base):
         self.assertIn('href="https://www.instagram.com/topcarveiculos.pe/"', html)
         self.assertIn("@topcarveiculos.pe", html)
 
-    def test_garantia_e_laudo_cautelar_em_toda_a_pagina(self):
+    def test_garantia_90_dias_revisao_e_vistoria_em_toda_a_pagina(self):
         html = self.abrir()
+        self.assertIn("Garantia de 90 dias", html)
         self.assertIn("Todo o estoque conta com garantia.", html)
         self.assertIn("Os carros têm garantia?", html)
-        self.assertIn("Laudo cautelar", html)
-        self.assertNotIn("Vistoria cautelar", html)       # termo padronizado como "laudo cautelar"
+        self.assertIn("Revisão minuciosa", html)
+        self.assertIn("Laudo cautelar 100% aprovado", html)
+        self.assertIn("Vistoria cautelar", html)
+
+
+class ApresentacaoTests(Base):
+    def abrir(self, **kw):
+        from django.core.cache import cache
+        cache.clear()
+        v = novo_veiculo(**kw)
+        return self.client.get(f"/v/{v.pk}-fiat-argo-2022/", HTTP_USER_AGENT="Mozilla/5.0").content.decode()
+
+    def test_versao_ao_lado_do_modelo_sem_ano_no_titulo(self):
+        html = self.abrir(versao="1.0 LT")
+        self.assertIn('<h1>Argo <span class="vers">1.0 LT</span></h1>', html)
+
+    def test_quatro_blocos_km_ano_cor_cambio_nessa_ordem(self):
+        html = self.abrir(cor="VERMELHO", cambio="AUTOMATICO")
+        ordem = [html.index(f"<small>{t}</small>") for t in ("Quilometragem", "Ano", "Cor", "Câmbio")]
+        self.assertEqual(ordem, sorted(ordem))
+        self.assertIn("<small>Câmbio</small><b>Automático</b>", html)
+        self.assertIn("<small>Ano</small><b>2022</b>", html)
+
+    def test_cambio_some_quando_o_estoque_nao_informa(self):
+        html = self.abrir(cambio=None)
+        self.assertNotIn("<small>Câmbio</small>", html)
+
+    def test_normaliza_nome_do_cambio(self):
+        from catalogo.models import Veiculo
+        for bruto, esperado in (("manual de 6 marchas", "Manual"), ("AUTOMATICO", "Automático"), ("automático", "Automático"),
+                                ("CVT", "CVT"), ("Automatizado", "Automatizado"), ("", ""), (None, "")):
+            self.assertEqual(Veiculo(cambio=bruto).cambio_fmt, esperado, bruto)
+
+    def test_fundo_decorativo_e_fontes_proprias(self):
+        html = self.abrir()
+        self.assertIn('class="fundo"', html)
+        self.assertIn("fonts/sora-latin.woff2", html)
+        self.assertIn("fonts/inter-latin.woff2", html)
+        self.assertNotIn("fonts.googleapis.com", html)      # fontes hospedadas no próprio site (sem terceiros)

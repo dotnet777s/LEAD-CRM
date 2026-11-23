@@ -7,21 +7,25 @@
 <meta name="description" content="{{ veiculo.nome }} {{ veiculo.ano }}{% if veiculo.km %}, {{ veiculo.km|floatformat:"0g" }} km{% endif %}, {{ preco_fmt }}. Simule o financiamento e agende sua visita na TopCar Veículos.">
 <meta name="theme-color" content="#0a0c0f">
 <link rel="icon" href="{% static 'captacao/favicon.png' %}">
+<link rel="preload" href="{% static 'captacao/fonts/sora-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{% static 'captacao/fonts/inter-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
 <link rel="canonical" href="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
 <meta property="og:type" content="product">
 <meta property="og:title" content="{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }} · {{ preco_fmt }}">
-<meta property="og:description" content="{% if veiculo.km %}{{ veiculo.km|floatformat:"0g" }} km · {% endif %}Garantia · Revisado · Laudo cautelar · Aceitamos carro ou moto na troca · Financiamento em até 60x · Cartão em até 21x">
+<meta property="og:description" content="{% if veiculo.km %}{{ veiculo.km|floatformat:"0g" }} km · {% endif %}Garantia de {{ loja.garantia }} · Revisão minuciosa · Vistoria cautelar · Aceitamos carro ou moto na troca · Financiamento em até 60x · Cartão em até 21x">
 <meta property="og:url" content="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
 {% if destaque %}<meta property="og:image" content="{{ site_url }}{% url 'captacao:foto' destaque.pk 1200 %}">
 <link rel="preload" as="image" href="{% url 'captacao:foto' destaque.pk 800 %}" imagesrcset="{% url 'captacao:foto' destaque.pk 480 %} 480w, {% url 'captacao:foto' destaque.pk 800 %} 800w, {% url 'captacao:foto' destaque.pk 1200 %} 1200w" imagesizes="(min-width:960px) 640px, 100vw" fetchpriority="high">{% endif %}
 {% if not disponivel %}<meta name="robots" content="noindex,follow">{% endif %}
 <style>
-:root{--bg:#0a0c0f;--sf:#11151a;--sf2:#151b21;--bd:#1f272f;--bd2:#2a343e;--tx:#f4f6f8;--mu:#8d99a4;--gr:#25d366;--gd:#1fb958;--gt:#05230f;--am:#f5b942;--rd:#ff6b66;--r:14px}
+@font-face{font-family:Inter;font-style:normal;font-weight:400 700;font-display:swap;src:url({% static 'captacao/fonts/inter-latin.woff2' %}) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215}
+@font-face{font-family:Sora;font-style:normal;font-weight:500 800;font-display:swap;src:url({% static 'captacao/fonts/sora-latin.woff2' %}) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215}
+:root{--bg:#06090d;--sf:#0e141b;--sf2:#131b24;--bd:#1b2631;--bd2:#2a3845;--tx:#f3f7fa;--tx2:#c6d1da;--mu:#97a7b5;--gr:#2ee66b;--gd:#22c458;--gt:#04210d;--ci:#5db4ff;--am:#f5b942;--rd:#ff6b66;--r:16px;--tt:Sora,Inter,system-ui,sans-serif}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;padding-bottom:84px;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.6 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:84px;-webkit-font-smoothing:antialiased}
 a{color:inherit}.ic{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .w{max-width:1120px;margin:0 auto;padding:0 20px}
-header{border-bottom:1px solid var(--bd);background:rgba(10,12,15,.9)}
+header{position:sticky!important;top:0;z-index:8!important;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(6,9,13,.7);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 header .w{display:flex;align-items:center;justify-content:space-between;height:60px}
 header img{height:30px;width:auto;display:block}
 .aberto{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mu)}
@@ -39,15 +43,16 @@ button.badge{cursor:pointer;right:14px;bottom:14px}
 .thumbs button{flex:0 0 76px;height:56px;padding:0;border:1px solid var(--bd);border-radius:8px;overflow:hidden;background:var(--sf);cursor:pointer}
 .thumbs img{width:100%;height:100%;object-fit:cover;display:block}
 .thumbs .mais{display:grid;place-items:center;font-weight:700;font-size:14px;color:var(--tx);background:var(--sf2)}
-.marca{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);font-weight:600;margin:20px 0 4px}
-h1{font-size:30px;line-height:1.1;margin:0;letter-spacing:-.02em;font-weight:700}
-.ver{color:var(--mu);margin:6px 0 0;font-size:15px}
-.specs{display:grid;grid-template-columns:repeat(3,1fr);margin:18px 0;border:1px solid var(--bd);border-radius:var(--r);background:var(--sf)}
-.specs div{padding:12px 14px}.specs div+div{border-left:1px solid var(--bd)}
-.specs small{display:block;color:var(--mu);font-size:12px;letter-spacing:.04em;text-transform:uppercase}.specs b{font-size:16px;font-weight:600}
+.marca{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gr);font-weight:700;margin:22px 0 6px}
+h1{font:800 34px/1.08 var(--tt);margin:0;letter-spacing:-.025em}h1 .vers{display:inline-block;font-weight:500;font-size:.62em;letter-spacing:0;color:var(--tx2);-webkit-text-fill-color:var(--tx2);margin-left:4px;white-space:nowrap}
+.specs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}
+.specs>div{display:flex;gap:12px;align-items:center;border:1px solid var(--bd2);border-radius:14px;padding:13px 14px;background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.012))}
+.specs .ic{width:24px;height:24px;color:var(--gr);filter:drop-shadow(0 0 7px rgba(46,230,107,.5))}
+.specs small{display:block;color:var(--mu);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px;white-space:nowrap}
+.specs b{display:block;font-size:16.5px;font-weight:600;color:#fff;letter-spacing:-.005em}
 .preco{border:1px solid var(--bd);border-radius:var(--r);background:var(--sf);padding:18px}
 .preco small{color:var(--mu);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
-.preco .v{font-size:38px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:2px 0 14px}
+.preco .v{font:800 42px/1.08 var(--tt);letter-spacing:-.03em;margin:2px 0 14px}
 .preco ul{list-style:none;margin:0;padding:14px 0 0;border-top:1px solid var(--bd);display:grid;gap:10px;font-size:15px}
 .preco li{display:flex;gap:10px;align-items:center;color:#d3dbe1}.preco li .ic{color:var(--gr)}
 .aviso{background:#241b09;border:1px solid #5a4415;color:var(--am);border-radius:12px;padding:12px 14px;margin:16px 0 0;font-weight:600;font-size:15px}
@@ -56,7 +61,7 @@ h1{font-size:30px;line-height:1.1;margin:0;letter-spacing:-.02em;font-weight:700
 .btn.ghost{background:transparent;color:var(--tx);border:1px solid var(--bd2)}.btn.ghost:hover{background:var(--sf2)}
 .btn.peq{font-size:15px;padding:13px 16px}
 .quiz{background:var(--sf);border:1px solid var(--bd2);border-radius:18px;padding:22px;box-shadow:0 24px 60px -30px #000}
-.quiz h2{font-size:22px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em;font-weight:700}
+.quiz h2{font:700 22px/1.2 var(--tt);margin:0 0 6px;letter-spacing:-.015em}
 .quiz .sub{color:var(--mu);font-size:14.5px;margin:0 0 18px}
 .qtop{display:none;align-items:center;gap:12px;margin:0 0 18px;font-size:12.5px;color:var(--mu);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 .stepper .qtop{display:flex}
@@ -84,7 +89,7 @@ input:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{o
 .stepper .voltar.ok{display:inline-flex;align-items:center;gap:4px}
 .seguro{display:flex;gap:7px;align-items:center;justify-content:center;font-size:12.5px;color:var(--mu);margin-top:14px}.seguro .ic{width:14px;height:14px}
 .hp{position:absolute;left:-9999px;height:0;overflow:hidden}
-h2.s{font-size:20px;margin:36px 0 14px;letter-spacing:-.01em;font-weight:700}
+h2.s{font:700 21px/1.2 var(--tt);margin:40px 0 16px;letter-spacing:-.015em}
 .dif{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .dif div{border:1px solid var(--bd);background:var(--sf);border-radius:var(--r);padding:16px}
 .dif .ic{width:24px;height:24px;color:var(--gr);margin-bottom:10px}.dif b{display:block;font-size:15px;margin-bottom:2px}.dif span{color:var(--mu);font-size:13.5px;line-height:1.4;display:block}
@@ -135,18 +140,28 @@ dialog img{max-width:96vw;max-height:84vh;display:block;border-radius:8px;margin
 .fixo .btns{display:flex;gap:8px;flex:1}.fixo .btns .btn{padding:13px 8px;font-size:15px;white-space:nowrap}
 .sobre{border:1px solid var(--bd);background:var(--sf);border-radius:var(--r);padding:20px}
 .sobre p{margin:0 0 16px;color:#d3dbe1;font-size:15.5px;line-height:1.6}
-.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:18px}
 .nums div{border:1px solid var(--bd);background:var(--bg);border-radius:12px;padding:14px 10px;text-align:center}
-.nums b{display:block;font-size:26px;line-height:1.1;color:var(--gr);letter-spacing:-.02em}.nums span{display:block;font-size:12.5px;color:var(--mu);margin-top:4px;line-height:1.3}
+.nums b{display:block;font-family:var(--tt);font-weight:800;font-size:26px;line-height:1.1;color:var(--gr);letter-spacing:-.02em}.nums span{display:block;overflow-wrap:anywhere;hyphens:auto;font-size:12.5px;color:var(--mu);margin-top:4px;line-height:1.3}
 .contatos{display:grid;gap:10px}
 .contatos a{display:flex;align-items:center;gap:12px;text-decoration:none;border:1px solid var(--bd2);background:var(--bg);border-radius:12px;padding:13px 14px;font-size:15px}
 .contatos a:hover{background:var(--sf2)}.contatos .ic{color:var(--gr)}.contatos small{display:block;color:var(--mu);font-size:12.5px}
 /* ===== camada futurista: profundidade, brilho e movimento (tudo em transform/opacity) ===== */
 @property --ang{syntax:"<angle>";initial-value:0deg;inherits:false}
-body{background:radial-gradient(900px 520px at 85% -8%,rgba(37,211,102,.12),transparent 62%),radial-gradient(800px 480px at -12% 28%,rgba(70,130,255,.09),transparent 62%),var(--bg)}
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);background-size:46px 46px;-webkit-mask-image:radial-gradient(ellipse 80% 55% at 50% 0%,#000,transparent 75%);mask-image:radial-gradient(ellipse 80% 55% at 50% 0%,#000,transparent 75%)}
+body{background:var(--bg)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.035;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.fundo{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.fundo i{position:absolute;border-radius:50%;will-change:transform}
+.fundo .a1{width:74vmax;height:74vmax;left:-30vmax;top:-34vmax;background:radial-gradient(closest-side,rgba(46,230,107,.24),transparent);animation:d1 28s ease-in-out infinite alternate}
+.fundo .a2{width:64vmax;height:64vmax;right:-30vmax;top:18vh;background:radial-gradient(closest-side,rgba(70,140,255,.22),transparent);animation:d2 34s ease-in-out infinite alternate}
+.fundo .a3{width:56vmax;height:56vmax;left:6vmax;bottom:-32vmax;background:radial-gradient(closest-side,rgba(150,90,255,.16),transparent);animation:d3 40s ease-in-out infinite alternate}
+@keyframes d1{to{transform:translate3d(16vmax,12vmax,0) scale(1.18)}}@keyframes d2{to{transform:translate3d(-14vmax,-10vmax,0) scale(1.12)}}@keyframes d3{to{transform:translate3d(12vmax,-8vmax,0) scale(1.2)}}
+.fundo .piso{position:absolute;left:-60%;right:-60%;bottom:-6%;height:50vh;overflow:hidden;opacity:.42;transform:perspective(460px) rotateX(63deg);transform-origin:50% 100%;-webkit-mask-image:linear-gradient(to top,#000 0%,transparent 80%);mask-image:linear-gradient(to top,#000 0%,transparent 80%)}
+.fundo .piso:before{content:"";position:absolute;inset:-60px 0 0 0;background-image:linear-gradient(rgba(46,230,107,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(46,230,107,.5) 1px,transparent 1px);background-size:60px 60px;animation:piso 5s linear infinite}
+@keyframes piso{to{transform:translateY(60px)}}
 header,main,footer{position:relative;z-index:1}
 h1{background:linear-gradient(90deg,#fff 30%,#9ff5c3);-webkit-background-clip:text;background-clip:text;color:transparent}
+h2.s:after{content:"";display:block;height:1px;margin-top:12px;background:linear-gradient(90deg,rgba(46,230,107,.5),transparent 72%)}
 h2.s:before{content:"";display:inline-block;width:22px;height:3px;border-radius:2px;background:var(--gr);box-shadow:0 0 12px var(--gr);margin-right:10px;vertical-align:middle}
 .preco,.quiz,.specs,.dif div,.equip div,.sobre,.loja,.final,.provas div,.etapas li{background-image:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.012))}
 .glow{position:relative;isolation:isolate}
@@ -159,14 +174,14 @@ button.badge{animation:flutua 4s ease-in-out infinite}@keyframes flutua{50%{tran
 .bene{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px;margin-top:6px}
 .bene div{position:relative;border:1px solid var(--bd2);border-radius:14px;padding:13px 6px 12px;text-align:center;background:linear-gradient(170deg,rgba(37,211,102,.10),rgba(37,211,102,.02));display:flex;flex-direction:column;align-items:center;gap:2px}
 .bene .ic{width:26px;height:26px;color:var(--gr);filter:drop-shadow(0 0 8px rgba(37,211,102,.55));margin-bottom:4px}
-.bene b{font-size:17px;line-height:1.1;letter-spacing:-.01em;color:#fff;white-space:nowrap}
+.bene b{font:700 17px/1.1 var(--tt);letter-spacing:-.01em;color:#fff;white-space:nowrap}
 .bene span{font-size:12.5px;line-height:1.3;color:#b4c0c8}
-.garantias{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 0;perspective:900px}
-.garantias div{border:1px solid rgba(37,211,102,.38);border-radius:16px;padding:16px 8px 14px;text-align:center;background:linear-gradient(170deg,rgba(37,211,102,.13),rgba(37,211,102,.02) 70%),var(--sf);box-shadow:0 14px 34px -18px rgba(37,211,102,.55)}
-.garantias i{display:grid;place-items:center;width:46px;height:46px;margin:0 auto 10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(37,211,102,.38),rgba(37,211,102,.08));border:1px solid rgba(37,211,102,.55);box-shadow:0 0 22px rgba(37,211,102,.35)}
-.garantias .ic{width:24px;height:24px;color:#7bf0a8}
-.garantias b{display:block;font-size:15.5px;line-height:1.2;color:#fff}
-.garantias span{display:block;font-size:12px;color:#aab6bf;margin-top:3px;line-height:1.25}
+.garantias{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin:14px 0 0;perspective:900px}
+.garantias div{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"i s" "i b";column-gap:16px;align-items:center;text-align:left;border:1px solid rgba(46,230,107,.4);border-radius:18px;padding:14px 18px;background:linear-gradient(100deg,rgba(46,230,107,.16),rgba(46,230,107,.02) 75%),var(--sf);box-shadow:0 16px 36px -20px rgba(46,230,107,.6)}
+.garantias i{grid-area:i;display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(46,230,107,.42),rgba(46,230,107,.08));border:1px solid rgba(46,230,107,.55);box-shadow:0 0 22px rgba(46,230,107,.35)}
+.garantias .ic{width:25px;height:25px;color:#86f5ae}
+.garantias small{grid-area:s;align-self:end;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#86f5ae;line-height:1.3}
+.garantias b{grid-area:b;align-self:start;font:700 17px/1.25 var(--tt);color:#fff;margin-top:2px}
 .acoes .btn:not(.ghost),.fixo .btn:not(.ghost){animation:pulsar 2.8s ease-in-out infinite}
 @keyframes pulsar{0%,100%{box-shadow:0 0 0 0 rgba(37,211,102,.5)}50%{box-shadow:0 0 0 11px rgba(37,211,102,0)}}
 .bar i{box-shadow:0 0 12px var(--gr)}
@@ -183,8 +198,9 @@ button.badge{animation:flutua 4s ease-in-out infinite}@keyframes flutua{50%{tran
 @keyframes ping{to{box-shadow:0 0 0 14px rgba(37,211,102,0)}}
 @media(max-width:350px){
  .bene{gap:6px}.bene div{padding:12px 3px 10px}.bene b{font-size:14.5px}.bene span{font-size:11.5px}.bene .ic{width:22px;height:22px}
- .garantias{gap:6px}.garantias b{font-size:14px}.garantias span{font-size:11px}.garantias i{width:40px;height:40px}
- .fixo{gap:8px;padding-left:12px;padding-right:12px}.fixo .p{font-size:15px;white-space:normal;max-width:92px}.fixo .p small{font-size:10px}.fixo .btns{gap:6px}.fixo .btns .btn{padding:12px 4px;font-size:14px}
+ .garantias b{font-size:15px}.garantias small{font-size:10px;letter-spacing:.1em}.garantias i{width:40px;height:40px}.garantias div{padding:12px 14px;column-gap:12px}
+ .specs b{font-size:15px}.specs>div{padding:11px 10px;gap:9px}h1{font-size:30px}
+ .fixo{gap:8px;padding-left:12px;padding-right:12px}.fixo .p{font-size:15px;white-space:normal;max-width:84px;flex:0 1 auto}.fixo .p small{font-size:9.5px;line-height:1.2}.fixo .btns{gap:6px;min-width:0}.fixo .btns .btn{padding:12px 2px;font-size:13.5px;min-width:0}
 }
 @media(min-width:960px){
  body{padding-bottom:0}.pulso{left:24px;right:auto;bottom:24px}.fixo{display:none}
@@ -202,6 +218,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id={{ pixel_id }}&ev=PageView&noscript=1"></noscript>{% endif %}
 </head>
 <body>
+<div class="fundo" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i><div class="piso"></div></div>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
 <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0 5 5L21 12.6 12.6 21a2.1 2.1 0 0 1-3-3L18 9.6"/><path d="M14.7 6.3 11 10 8 7 4 9.5 3 6l3-3 3.5 1L12 8"/></symbol>
 <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.4 3.1 8 7.5 9.5 4.4-1.5 7.5-5.1 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></symbol>
@@ -226,6 +243,10 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/></symbol>
 <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2Z"/></symbol>
 <symbol id="i-insta" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r=".8"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4.5 17.5a8.5 8.5 0 1 1 15 0"/><path d="m12 13 4-4.5"/><circle cx="12" cy="13.5" r="1.2"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+<symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3.5c3.5 4 6 7 6 10.2a6 6 0 0 1-12 0C6 10.5 8.5 7.500 12 3.500Z"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v3M12 18.200v3M2.800 12h3M18.200 12h3M5.500 5.500l2.100 2.100M16.400 16.400l2.100 2.100M18.500 5.500l-2.100 2.100M7.600 16.400l-2.100 2.100"/></symbol>
 </defs></svg>
 
 <header><div class="w"><img src="{% static 'captacao/logo.png' %}" alt="TopCar Veículos" width="auto" height="30"><span class="aberto" id="aberto"><i></i><span>Atendimento pelo WhatsApp</span></span></div></header>
@@ -247,9 +268,13 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 {% endif %}
 
 <p class="marca">{{ veiculo.marca_fmt }}</p>
-<h1>{{ veiculo.modelo_fmt }} {{ veiculo.ano }}</h1>
-{% if veiculo.versao %}<p class="ver">{{ veiculo.versao_fmt }}</p>{% endif %}
-<div class="specs"><div><small>Ano</small><b>{{ veiculo.ano }}</b></div>{% if veiculo.km %}<div><small>Quilometragem</small><b>{{ veiculo.km|floatformat:"0g" }} km</b></div>{% endif %}{% if veiculo.cor %}<div><small>Cor</small><b>{{ veiculo.cor_fmt }}</b></div>{% endif %}</div>
+<h1>{{ veiculo.modelo_fmt }}{% if veiculo.versao %} <span class="vers">{{ veiculo.versao_fmt }}</span>{% endif %}</h1>
+<div class="specs">
+{% if veiculo.km %}<div><svg class="ic"><use href="#i-gauge"/></svg><span><small>Quilometragem</small><b>{{ veiculo.km|floatformat:"0g" }} km</b></span></div>{% endif %}
+<div><svg class="ic"><use href="#i-cal"/></svg><span><small>Ano</small><b>{{ veiculo.ano }}</b></span></div>
+{% if veiculo.cor %}<div><svg class="ic"><use href="#i-drop"/></svg><span><small>Cor</small><b>{{ veiculo.cor_fmt }}</b></span></div>{% endif %}
+{% if veiculo.cambio_fmt %}<div><svg class="ic"><use href="#i-gear"/></svg><span><small>Câmbio</small><b>{{ veiculo.cambio_fmt }}</b></span></div>{% endif %}
+</div>
 <div class="preco glow"><small>Preço à vista</small><div class="v">{{ preco_fmt }}</div>
 {% if fipe_abaixo %}<div class="fipe"><svg class="ic"><use href="#i-tag"/></svg>{{ fipe_abaixo }} abaixo da tabela FIPE</div>{% endif %}
 {% if parcela_fmt and disponivel %}<div class="parc">Parcelas a partir de <b>{{ parcela_fmt }}/mês</b> em {{ parcelas_n }}x, com entrada de {{ entrada_pct }}% ({{ entrada_fmt }})<small>Estimativa ilustrativa. Taxa e aprovação dependem da análise de crédito.</small></div>{% endif %}
@@ -260,9 +285,9 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 </div>{% if disponivel %}<div class="acoes"><a class="btn" href="#form" data-intencao="simular">Simular</a><a class="btn ghost" href="#form" data-intencao="visita">Agendar visita</a></div>{% endif %}</div>
 {% if disponivel and interesse %}<div class="provas"><div><svg class="ic"><use href="#i-users"/></svg><span><b>{{ interesse }} pessoas</b> pediram simulação deste carro {{ interesse_janela }}.</span></div></div>{% endif %}
 <div class="garantias">
-<div><i><svg class="ic"><use href="#i-check"/></svg></i><b>Garantia</b><span>em todo o estoque</span></div>
-<div><i><svg class="ic"><use href="#i-wrench"/></svg></i><b>Revisado</b><span>antes da venda</span></div>
-<div><i><svg class="ic"><use href="#i-shield"/></svg></i><b>Laudo cautelar</b><span>em todos os carros</span></div>
+<div><i><svg class="ic"><use href="#i-check"/></svg></i><small>Garantia</small><b>{{ loja.garantia }}</b></div>
+<div><i><svg class="ic"><use href="#i-wrench"/></svg></i><small>Revisado</small><b>Revisão minuciosa</b></div>
+<div><i><svg class="ic"><use href="#i-shield"/></svg></i><small>Vistoria cautelar</small><b>Laudo cautelar 100% aprovado</b></div>
 </div>
 </section>
 
@@ -317,9 +342,9 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <section class="rest">
 <h2 class="s">Por que comprar na TopCar</h2>
 <div class="dif">
-<div><svg class="ic"><use href="#i-wrench"/></svg><b>Veículo revisado</b><span>Todos os carros passam por revisão antes da venda.</span></div>
-<div><svg class="ic"><use href="#i-check"/></svg><b>Garantia</b><span>Todo o estoque conta com garantia.</span></div>
-<div><svg class="ic"><use href="#i-shield"/></svg><b>Laudo cautelar</b><span>Todos os veículos têm laudo cautelar.</span></div>
+<div><svg class="ic"><use href="#i-wrench"/></svg><b>Revisão minuciosa</b><span>Todos os carros passam por revisão antes da venda.</span></div>
+<div><svg class="ic"><use href="#i-check"/></svg><b>Garantia de {{ loja.garantia }}</b><span>Todo o estoque conta com garantia.</span></div>
+<div><svg class="ic"><use href="#i-shield"/></svg><b>Vistoria cautelar</b><span>Laudo cautelar 100% aprovado em todos os veículos.</span></div>
 <div><svg class="ic"><use href="#i-bank"/></svg><b>Financiamento</b><span>Em até 60x, com simulação sem compromisso.</span></div>
 <div><svg class="ic"><use href="#i-card"/></svg><b>Cartão de crédito</b><span>Parcelamento em até 21x.</span></div>
 <div><svg class="ic"><use href="#i-swap"/></svg><b>Carro ou moto na entrada</b><span>Aceitamos o seu carro ou moto como parte do pagamento. A avaliação é feita na loja.</span></div>
@@ -349,8 +374,8 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 
 <h2 class="s">Dúvidas frequentes</h2>
 <div class="faq">
-<details><summary>O carro é revisado e tem laudo cautelar?</summary><p>Sim. Todos os carros da TopCar passam por revisão e têm laudo cautelar.</p></details>
-<details><summary>Os carros têm garantia?</summary><p>Sim, todo o estoque conta com garantia, além de revisão e laudo cautelar.</p></details>
+<details><summary>O carro é revisado e tem vistoria cautelar?</summary><p>Sim. Todos os carros da TopCar passam por revisão minuciosa e têm vistoria cautelar, com laudo 100% aprovado.</p></details>
+<details><summary>Os carros têm garantia?</summary><p>Sim, todo o estoque conta com {{ loja.garantia }} de garantia, além de revisão minuciosa e vistoria cautelar.</p></details>
 <details><summary>Aceitam carro ou moto como entrada?</summary><p>Sim, aceitamos carro ou moto como parte da entrada. A avaliação é feita na loja.</p></details>
 <details><summary>Dá para financiar?</summary><p>Sim, em até 60x. A simulação sai no WhatsApp, sem compromisso.</p></details>
 <details><summary>Posso parcelar no cartão?</summary><p>Sim, em até 21x no cartão de crédito.</p></details>
@@ -359,8 +384,8 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 
 <h2 class="s">Sobre a TopCar</h2>
 <div class="sobre">
-<p>A {{ loja.nome }} está há mais de {{ loja.anos }} anos no mercado de seminovos. Hoje são mais de {{ loja.opcoes }} opções disponíveis, e todo o estoque conta com garantia, revisão e laudo cautelar.</p>
-<div class="nums"><div><b>+{{ loja.anos }}</b><span>anos de mercado</span></div><div><b>+{{ loja.opcoes }}</b><span>opções disponíveis</span></div><div><b>100%</b><span>com garantia, revisão e laudo</span></div></div>
+<p>A {{ loja.nome }} está há mais de {{ loja.anos }} anos no mercado de seminovos. Hoje são mais de {{ loja.opcoes }} opções disponíveis, e todo o estoque conta com garantia de {{ loja.garantia }}, revisão minuciosa e vistoria cautelar.</p>
+<div class="nums"><div><b>+{{ loja.anos }}</b><span>anos de mercado</span></div><div><b>+{{ loja.opcoes }}</b><span>opções disponíveis</span></div><div><b>100%</b><span>do estoque com garantia, revisão e vistoria</span></div></div>
 <div class="contatos">
 <a href="https://wa.me/{{ loja.whatsapp }}" target="_blank" rel="noopener"><svg class="ic"><use href="#i-wa"/></svg><span>{{ loja.whatsapp_fmt }}<small>WhatsApp</small></span></a>
 <a href="tel:{{ loja.telefone_tel }}"><svg class="ic"><use href="#i-phone"/></svg><span>{{ loja.telefone }}<small>Telefone fixo</small></span></a>

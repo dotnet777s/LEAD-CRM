@@ -133,6 +133,7 @@ LOJA = {
     "telefone_tel": "+558121370011",
     "instagram": "@topcarveiculos.pe",
     "instagram_url": "https://www.instagram.com/topcarveiculos.pe/",
+    "garantia": "90 dias",
     "anos": "10",            # "mais de 10 anos de mercado"
     "opcoes": "60",          # "mais de 60 opções disponíveis"
 }

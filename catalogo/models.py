@@ -73,6 +73,17 @@ class Veiculo(models.Model):
     cor_fmt = property(lambda self: nome_proprio(self.cor))
 
     @property
+    def cambio_fmt(self):
+        """'AUTOMATICO' -> 'Automático'; 'manual de 6 marchas' -> 'Manual'; vazio se o ROUTE não informou."""
+        c = (self.cambio or "").strip().lower()
+        if not c:
+            return ""
+        for chave, nome in (("automatizad", "Automatizado"), ("autom", "Automático"), ("cvt", "CVT"), ("manual", "Manual")):
+            if chave in c:
+                return nome
+        return nome_proprio(self.cambio)
+
+    @property
     def possui_fotos(self):
         return (self.total_fotos or 0) > 0
 
