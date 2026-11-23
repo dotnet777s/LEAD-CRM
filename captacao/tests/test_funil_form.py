@@ -518,3 +518,24 @@ class SemSimuladorTests(Base):
             HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.9.1.1")
         self.assertEqual(r.status_code, 302)
         self.assertNotIn("simulacao", Lead.objects.get().respostas)
+
+
+class IpDoVisitanteTests(Base):
+    def test_ip_vem_do_cabecalho_da_cloudflare(self):
+        from django.test import RequestFactory
+        from captacao.views_publico import ip_do_cliente
+        rf = RequestFactory()
+        self.assertEqual(ip_do_cliente(rf.get("/", HTTP_CF_CONNECTING_IP="177.1.2.3", HTTP_X_FORWARDED_FOR="172.67.0.1")), "177.1.2.3")
+        self.assertEqual(ip_do_cliente(rf.get("/", HTTP_X_FORWARDED_FOR="200.5.5.5, 10.0.0.1")), "200.5.5.5")
+        self.assertEqual(ip_do_cliente(rf.get("/", REMOTE_ADDR="1.2.3.4")), "1.2.3.4")
+
+    def test_limite_de_envios_e_por_visitante_e_nao_pelo_ip_da_cloudflare(self):
+        v = novo_veiculo()
+        def contato(n, ip_visitante):
+            return self.client.post(f"/v/{v.pk}/inicio/", {"nome": "Maria", "telefone": f"(81) 99999-70{n:02d}", "lgpd": "1",
+                                                          "pagamento": "a_vista", "prazo": "semana"},
+                                    HTTP_USER_AGENT="Mozilla/5.0", HTTP_CF_CONNECTING_IP=ip_visitante, HTTP_X_FORWARDED_FOR="172.67.0.1")
+        for i in range(10):
+            self.assertEqual(contato(i, "177.9.9.9").status_code, 200)
+        self.assertEqual(contato(10, "177.9.9.9").status_code, 429)              # o 11º do mesmo visitante é barrado
+        self.assertEqual(contato(11, "177.8.8.8").status_code, 200)              # outro visitante, mesma borda da Cloudflare: passa

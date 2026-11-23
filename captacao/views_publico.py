@@ -28,6 +28,11 @@ BOTS = re.compile(r"bot|crawl|spider|slurp|facebookexternalhit|whatsapp|preview|
 
 
 def ip_do_cliente(request):
+    """IP do visitante. Atrás da Cloudflare o IP que o servidor enxerga é o dela; o do visitante vem em CF-Connecting-IP
+    (o servidor só aceita conexões da Cloudflare, então o cabeçalho não pode ser forjado de fora)."""
+    cf = request.META.get("HTTP_CF_CONNECTING_IP", "").strip()
+    if cf:
+        return cf
     xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
     return (xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "")) or ""
 

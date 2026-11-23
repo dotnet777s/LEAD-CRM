@@ -1,4 +1,7 @@
-__DOMINIO__ {
+# A Cloudflare fica na frente: ela entrega o HTTPS ao visitante e fala com este servidor em HTTP (modo "Flexible").
+# Por isso o site é "http://" aqui (sem pedir certificado). Para criptografar também o trecho Cloudflare -> servidor,
+# gere um "Origin Certificate" na Cloudflare, use `tls cert.pem chave.pem` neste bloco e troque o modo para "Full (strict)".
+http://__DOMINIO__ {
 	encode zstd gzip
 
 	# o app serve os próprios arquivos estáticos (WhiteNoise)
@@ -7,21 +10,8 @@ __DOMINIO__ {
 	}
 
 	header {
-		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
 		-Server
 	}
-
-	log {
-		output file /var/log/caddy/adcrm.log {
-			roll_size 10mb
-			roll_keep 5
-		}
-	}
-}
-
-# TEMPORÁRIO: acesso por http://IP para testar antes de apontar o DNS. Remova este bloco depois.
-:80 {
-	reverse_proxy 127.0.0.1:8000
 }
