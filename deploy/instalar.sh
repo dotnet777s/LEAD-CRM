@@ -32,8 +32,9 @@ if [ ! -f "$APP_DIR/manage.py" ]; then
   shopt -s dotglob
   mv "$APP_DIR"/app_tmp/* "$APP_DIR"/
   rmdir "$APP_DIR/app_tmp"
-  chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
 fi
+chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
+[ -f "$APP_DIR/.env" ] && chmod 600 "$APP_DIR/.env"
 
 echo "==> Ambiente Python"
 sudo -u "$APP_USER" python3 -m venv "$APP_DIR/.venv"
