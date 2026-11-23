@@ -1,0 +1,17 @@
+[Unit]
+Description=ADCRM - site (gunicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=adcrm
+Group=adcrm
+WorkingDirectory=/opt/adcrm
+ExecStart=/opt/adcrm/.venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2 --threads 2 --timeout 30 --access-logfile - --error-logfile -
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

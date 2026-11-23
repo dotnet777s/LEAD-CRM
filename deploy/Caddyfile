@@ -1,0 +1,22 @@
+__DOMINIO__ {
+	encode zstd gzip
+
+	# o app serve os próprios arquivos estáticos (WhiteNoise)
+	reverse_proxy 127.0.0.1:8000 {
+		header_up X-Forwarded-Proto https
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/adcrm.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+}

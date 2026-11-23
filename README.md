@@ -68,3 +68,6 @@ Consentimento (data/IP) gravado no lead. Exclusão: botão no detalhe do lead (g
 - [ ] "Testar eventos": PageView, ViewContent, Lead e Contact do navegador e do servidor, deduplicados
 - [ ] Mover para Qualificado, Visita agendada e Vendido envia QualifiedLead, Schedule e Purchase uma vez cada
 - [ ] `sqlmigrate catalogo 0001` não gera SQL; nenhum segredo no repositório
+
+## Deploy
+Veja `deploy/LEIA-ME.md` (Hostinger KVM 1, Ubuntu: site, workers do Telegram e da Meta, HTTPS pelo Caddy).

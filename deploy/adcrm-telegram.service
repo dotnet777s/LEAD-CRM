@@ -1,0 +1,17 @@
+[Unit]
+Description=ADCRM - worker do Telegram (avisos de lead, lembretes, comandos)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=adcrm
+Group=adcrm
+WorkingDirectory=/opt/adcrm
+ExecStart=/opt/adcrm/.venv/bin/python manage.py telegram_bot
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
