@@ -43,7 +43,7 @@ class PaginaTests(Base):
         self.client.get(f"/v/{v.pk}-fiat-argo-2022/", HTTP_USER_AGENT="facebookexternalhit/1.1")
         self.assertEqual(EventoMeta.objects.count(), 0)
 
-    def test_vendido_mostra_aviso_e_3_similares_na_faixa(self):
+    def test_vendido_mostra_aviso_e_4_sugeridos_mais_proximos(self):
         vendido = novo_veiculo(status="vendido")
         for i, preco in enumerate(["55000", "62000", "64000", "50000", "90000"]):
             novo_veiculo(placa=f"XYZ{i}A00", valor_venda=preco, modelo=f"Sim{i}")
@@ -52,9 +52,9 @@ class PaginaTests(Base):
         html = r.content.decode()
         self.assertIn("Este carro foi vendido", html)
         sim = [v.modelo for v, _ in r.context["similares"]]
-        self.assertEqual(len(sim), 3)
-        self.assertNotIn("Sim4", sim)    # 90 mil: fora de ±15%
-        self.assertNotIn("Prep", sim)    # não está em loja
+        self.assertEqual(len(sim), 4)                       # máximo de 4, os mais próximos em preço
+        self.assertEqual(sim, ["Sim1", "Sim2", "Sim0", "Sim3"])   # por proximidade de preço; o de 90 mil fica de fora
+        self.assertNotIn("Prep", sim)                       # não está em loja
         self.assertIn('id="form"', html)  # o formulário continua capturando
 
 
@@ -179,10 +179,11 @@ class ConversaoTests(Base):
 
     def test_aceitamos_troca_em_varios_pontos(self):
         html = self.abrir(novo_veiculo())
-        self.assertIn("Aceitamos seu carro na troca", html)
-        self.assertIn("Aceitamos troca", html)
-        self.assertIn("Aceitam meu carro na troca?", html)
-        self.assertIn("Aceitamos o seu carro como parte do pagamento", html)
+        self.assertIn("Aceitamos carro ou moto como entrada", html)
+        self.assertIn("Carro ou moto na entrada", html)
+        self.assertIn("Aceitam carro ou moto como entrada?", html)
+        self.assertIn("Aceitamos carro ou moto como parte do pagamento", html)
+        self.assertIn("Tem carro ou moto para dar de entrada?", html)
 
     def test_selo_abaixo_da_fipe_so_com_dado_real(self):
         from decimal import Decimal
@@ -231,3 +232,75 @@ class ConversaoTests(Base):
         r = self.client.get(f"/v/{v.pk}-fiat-argo-2022/", HTTP_USER_AGENT="Mozilla/5.0")
         self.assertEqual(r.status_code, 200)
         self.assertIn("Sob consulta", r.content.decode())
+
+
+class BotoesParcelaProvasTests(Base):
+    def abrir(self, v):
+        from django.core.cache import cache
+        cache.clear()
+        r = self.client.get(f"/v/{v.pk}-fiat-argo-2022/", HTTP_USER_AGENT="Mozilla/5.0")
+        self.assertEqual(r.status_code, 200)
+        return r.content.decode()
+
+    def test_dois_botoes_simular_e_agendar(self):
+        html = self.abrir(novo_veiculo())
+        self.assertIn('data-intencao="simular"', html)
+        self.assertIn('data-intencao="visita"', html)
+        self.assertNotIn("Receber simulação", html)           # o botão único foi trocado pelos dois
+
+    def test_carro_indisponivel_mantem_so_o_aviso(self):
+        html = self.abrir(novo_veiculo(status="vendido"))
+        self.assertNotIn('data-intencao="visita"', html)
+        self.assertIn("Quero ser avisado", html)
+
+    def test_parcela_estimada_com_aviso(self):
+        from decimal import Decimal
+        html = self.abrir(novo_veiculo(valor_venda=Decimal("68990")))
+        self.assertIn("Parcelas a partir de <b>R$ 1.386/mês</b> em 60x, com entrada de 30% (R$ 20.697)", html)
+        self.assertIn("Estimativa ilustrativa", html)
+
+    def test_calculo_da_parcela(self):
+        from decimal import Decimal
+        from captacao import utils
+        self.assertEqual(utils.parcela_estimada(Decimal("100000"), 30, 60, 0), (Decimal("1167"), Decimal("30000")))
+        self.assertEqual(utils.parcela_estimada(None), (None, None))
+
+    def test_provas_de_vendas_reais(self):
+        v = novo_veiculo()
+        for i in range(2):
+            novo_veiculo(status="vendido", placa=f"VEN{i}A00")           # mesmo modelo (Argo)
+        for i in range(20):
+            novo_veiculo(status="vendido", placa=f"OUT{i}A00", modelo="Outro")
+        html = self.abrir(v)
+        self.assertIn("Já vendemos <b>2 Argo</b>", html)
+        self.assertIn("Mais de 20 carros vendidos", html)
+
+    def test_sem_vendas_nao_mostra_prova(self):
+        self.assertNotIn("Já vendemos", self.abrir(novo_veiculo()))
+
+    def test_etiquetas_curtas_nos_demais_equipamentos(self):
+        v = novo_veiculo(itens_serie=["Rodas aro 15 com calotas esportivas em dois tons", "Wi-Fi embarcado",
+                                      "Retrovisores externos elétricos na cor da carroceria com luz de seta"], opcionais=[])
+        html = self.abrir(v)
+        self.assertIn('<div class="tags">', html)
+        self.assertIn("<span>Rodas aro 15</span>", html)
+        self.assertIn("<span>Wi-Fi</span>", html)
+        self.assertNotIn("calotas esportivas", html)
+
+    def test_intencao_visita_vai_para_o_lead_e_para_a_mensagem(self):
+        import urllib.parse
+        v = novo_veiculo()
+        r = self.client.post(f"/v/{v.pk}-fiat-argo-2022/", {**FORM_OK, "event_id": "b" * 32, "intencao": "visita"},
+                             HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.1.1.9")
+        self.assertEqual(r.status_code, 302)
+        lead = Lead.objects.get()
+        self.assertEqual(lead.respostas.get("intencao"), "visita")
+        self.assertIn("Quer agendar visita", lead.historico.first().texto)
+        texto = urllib.parse.unquote(self.client.get(r["Location"]).context["wa_url"].split("text=")[1])
+        self.assertIn("gostaria de agendar uma visita", texto)
+
+    def test_sem_intencao_vira_simular(self):
+        v = novo_veiculo()
+        self.client.post(f"/v/{v.pk}-fiat-argo-2022/", {**FORM_OK, "event_id": "c" * 32},
+                         HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.1.1.8")
+        self.assertEqual(Lead.objects.get().respostas.get("intencao"), "simular")

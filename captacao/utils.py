@@ -72,6 +72,7 @@ def montar_fbc(fbc_cookie="", fbclid="", agora_ms=None):
 PAGAMENTO = [("a_vista", "À vista"), ("financiado", "Financiado"), ("consorcio", "Consórcio contemplado")]
 ENTRADA = [("sem", "Sem entrada"), ("ate_10", "Até R$ 10 mil"), ("10_30", "R$ 10–30 mil"), ("acima_30", "Acima de R$ 30 mil")]
 TROCA = [("nao", "Não"), ("sim", "Sim")]
+INTENCAO = [("simular", "Simular"), ("visita", "Agendar visita")]
 PRAZO = [("semana", "Esta semana"), ("30_dias", "Em até 30 dias"), ("pesquisando", "Só pesquisando")]
 
 
@@ -97,6 +98,20 @@ def preco_brl(valor):
     return "R$ " + f"{Decimal(valor):,.0f}".replace(",", ".")
 
 
+def parcela_estimada(preco, entrada_pct=30, parcelas=60, taxa_am=1.99):
+    """(parcela, valor da entrada) pela Tabela Price, ou (None, None). É uma ESTIMATIVA: sem IOF, tarifas nem análise de crédito."""
+    if preco is None or Decimal(preco) <= 0:
+        return None, None
+    preco = Decimal(preco)
+    entrada = (preco * Decimal(entrada_pct) / 100).quantize(Decimal("1"))
+    financiado = preco - entrada
+    i = Decimal(str(taxa_am)) / 100
+    if i == 0:
+        return (financiado / parcelas).quantize(Decimal("1")), entrada
+    fator = (1 - (1 + i) ** (-parcelas))
+    return (financiado * i / fator).quantize(Decimal("1")), entrada
+
+
 def saudacao(agora=None):
     from django.utils import timezone
     h = timezone.localtime(agora or timezone.now()).hour
@@ -108,14 +123,17 @@ def mensagem_whatsapp(veiculo, respostas, nome="", agora=None):
     troca = respostas.get("troca")
     troca_txt = "Não" if troca != "sim" else (f"Sim ({respostas.get('troca_carro')})" if respostas.get("troca_carro") else "Sim")
     primeiro = (nome or "").split()[0].title() if (nome or "").strip() else ""
+    visita = respostas.get("intencao") == "visita"
+    pedido = ("gostaria de agendar uma visita para conhecer o veículo." if visita
+              else "gostaria de receber mais informações.")
     linhas = [f"{saudacao(agora)}! Tenho interesse no {veiculo.marca_fmt} {veiculo.modelo_fmt} {veiculo.ano}, "
-              f"anunciado por {preco_brl(veiculo.valor_venda)}, e gostaria de receber mais informações.", ""]
+              f"anunciado por {preco_brl(veiculo.valor_venda)}, e {pedido}", ""]
     if primeiro:
         linhas += [f"Meu nome é {primeiro}.", ""]
     linhas += ["Segue um resumo do meu perfil:",
                f"• Forma de pagamento: {rotulo(PAGAMENTO, respostas.get('pagamento'))}",
                f"• Entrada: {rotulo(ENTRADA, respostas.get('entrada'))}",
-               f"• Veículo na troca: {troca_txt}",
+               f"• Carro ou moto na troca: {troca_txt}",
                f"• Previsão de compra: {rotulo(PRAZO, respostas.get('prazo'))}", "",
                "Aguardo o seu retorno. Obrigado(a)."]
     return "\n".join(linhas)

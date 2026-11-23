@@ -17,9 +17,10 @@ class RegraErro(ValueError):
 
 def resumo_respostas(r):
     troca = "não" if r.get("troca") != "sim" else f"sim ({r.get('troca_carro', '')})".replace(" ()", "")
+    extra = " · Quer agendar visita" if r.get("intencao") == "visita" else ""
     return (f"Pagamento: {utils.rotulo(utils.PAGAMENTO, r.get('pagamento'))} · "
             f"Entrada: {utils.rotulo(utils.ENTRADA, r.get('entrada'))} · Troca: {troca} · "
-            f"Compra: {utils.rotulo(utils.PRAZO, r.get('prazo'))}")
+            f"Compra: {utils.rotulo(utils.PRAZO, r.get('prazo'))}{extra}")
 
 
 @transaction.atomic

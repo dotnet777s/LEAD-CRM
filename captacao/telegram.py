@@ -114,6 +114,7 @@ def texto_lead(lead, titulo):
     r = lead.respostas or {}
     emoji, temp = CLASSES.get(lead.classe, ("", ""))
     cab = f"{emoji} <b>{esc(titulo.upper())}</b>" + (f" · Classe {lead.classe} ({temp})" if temp else "")
+    quer = "Agendar visita" if r.get("intencao") == "visita" else "Simular"
     linhas = [cab, "", f"👤 <b>{esc(lead.nome)}</b>", f"📱 {esc(lead.telefone_formatado)}",
               f"🕒 {_quando(lead.criado_em)}", "", f"🚗 {_carro(lead)}", ""]
     resumo = ""
@@ -121,8 +122,8 @@ def texto_lead(lead, titulo):
         troca = "Não" if r.get("troca") != "sim" else (f"Sim ({r['troca_carro']})" if r.get("troca_carro") else "Sim")
         pag, ent = utils.rotulo(utils.PAGAMENTO, r.get("pagamento")), utils.rotulo(utils.ENTRADA, r.get("entrada"))
         prazo = utils.rotulo(utils.PRAZO, r.get("prazo"))
-        linhas += ["💬 <b>Perfil do cliente</b>", f"• Pagamento: {esc(pag)}", f"• Entrada: {esc(ent)}",
-                   f"• Troca: {esc(troca)}", f"• Compra: {esc(prazo)}", ""]
+        linhas += ["💬 <b>Perfil do cliente</b>", f"• Quer: {quer}", f"• Pagamento: {esc(pag)}", f"• Entrada: {esc(ent)}",
+                   f"• Carro/moto na troca: {esc(troca)}", f"• Compra: {esc(prazo)}", ""]
         resumo = f"{pag} · entrada {ent.lower()} · troca: {troca.lower()} · compra: {prazo.lower()}"
     origem = lead.get_origem_display() + (f" · {lead.utm_campaign}" if lead.utm_campaign else "")
     linhas.append(f"📣 {esc(origem)}")

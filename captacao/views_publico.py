@@ -83,6 +83,34 @@ def equipamentos(veiculo):
     return cartoes, resto[:MAX_RESTO]
 
 
+ETIQUETA_CORTE = re.compile(r"\s+(com|para|de série|em dois|na cor|nativo|embarcado)\b.*$|[,(;:].*$", re.I)
+
+
+def etiqueta_curta(t):
+    """Texto curto para etiqueta: corta no primeiro 'com/para/...' ou pontuação. Vazio se ainda ficar longo demais."""
+    c = ETIQUETA_CORTE.sub("", t).strip()
+    c = c if len(c) >= 4 else t.strip()
+    return c if len(c) <= 32 else ""
+
+
+def etiquetas(itens):
+    saida, vistos = [], set()
+    for t in itens:
+        c = etiqueta_curta(t)
+        if c and _chave(c) not in vistos:
+            vistos.add(_chave(c))
+            saida.append(c)
+    return saida[:12]
+
+
+def _provas(v):
+    """Números reais do estoque do ROUTE: quantos deste modelo e no total já foram vendidos."""
+    base = Veiculo.objects.filter(status="vendido")
+    modelo = base.filter(marca__iexact=v.marca, modelo__iexact=v.modelo).count()
+    total = base.count()
+    return {"vendidos_modelo": modelo, "vendidos_total": (total // 10) * 10 if total >= 20 else 0}
+
+
 def _interesse(pk):
     """Quantas pessoas pediram simulação deste carro nos últimos 7 dias. Só mostra a partir de 3 (nunca inventado)."""
     n = Lead.objects.filter(veiculo_id=pk, criado_em__gte=timezone.now() - timedelta(days=7)).count()
@@ -107,16 +135,21 @@ def _dados_do_veiculo(pk):
     similares = []
     if veiculo.valor_venda is not None:
         preco = veiculo.valor_venda
-        qs = (Veiculo.objects.filter(status__in=Veiculo.EM_LOJA, total_fotos__gt=0,
-                                     valor_venda__gte=preco * Decimal("0.85"), valor_venda__lte=preco * Decimal("1.15"))
+        qs = (Veiculo.objects.filter(status__in=Veiculo.EM_LOJA, total_fotos__gt=0, valor_venda__isnull=False)
               .exclude(pk=pk))
-        similares = sorted(qs, key=lambda v: (abs(v.ano - veiculo.ano), abs(v.valor_venda - preco)))[:3]
+        # os mais próximos em preço e ano; se não houver parecidos, completa com outros carros da loja
+        similares = sorted(qs, key=lambda v: (abs(v.valor_venda - preco) / preco, abs(v.ano - veiculo.ano)))[:4]
     capa = fotos.capas([v.pk for v in similares])
     equip = equipamentos(veiculo)
+    parcela, entrada = utils.parcela_estimada(veiculo.valor_venda, settings.FINANCIAMENTO_ENTRADA_PCT,
+                                              settings.FINANCIAMENTO_PARCELAS, settings.FINANCIAMENTO_TAXA_AM)
     dados = {
+        **_provas(veiculo),
+        "parcela_fmt": utils.preco_brl(parcela) if parcela else "", "entrada_fmt": utils.preco_brl(entrada) if entrada else "",
+        "parcelas_n": settings.FINANCIAMENTO_PARCELAS, "entrada_pct": settings.FINANCIAMENTO_ENTRADA_PCT,
         "veiculo": veiculo, "disponivel": disponivel, "fotos": lista, "video": videos[0] if videos else None,
         "similares": [(v, capa.get(v.pk)) for v in similares],
-        "equip": equip[0], "itens_extra": equip[1], "interesse": _interesse(pk), "fipe_abaixo": _abaixo_da_fipe(veiculo),
+        "equip": equip[0], "itens_extra": etiquetas(equip[1]), "interesse": _interesse(pk), "fipe_abaixo": _abaixo_da_fipe(veiculo),
     }
     cache.set(chave, dados, CACHE_SEGUNDOS)
     return dados
@@ -130,7 +163,7 @@ def _contexto_pagina(request, pk, form=None):
     grupos = []
     for campo, titulo, lista in (("pagamento", "Como pretende pagar?", utils.PAGAMENTO),
                                  ("entrada", "Quanto tem de entrada?", utils.ENTRADA),
-                                 ("troca", "Tem carro na troca?", utils.TROCA),
+                                 ("troca", "Tem carro ou moto para dar de entrada?", utils.TROCA),
                                  ("prazo", "Quando pretende comprar?", utils.PRAZO)):
         atual = form.data.get(campo) if form.is_bound else None
         grupos.append({"campo": campo, "titulo": titulo, "erros": form.errors.get(campo, []) if form.is_bound else [],

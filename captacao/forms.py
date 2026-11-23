@@ -12,6 +12,7 @@ class CapturaForm(forms.Form):
     troca = forms.ChoiceField(choices=utils.TROCA, error_messages={"required": "Escolha uma opção."})
     troca_carro = forms.CharField(max_length=100, required=False)
     prazo = forms.ChoiceField(choices=utils.PRAZO, error_messages={"required": "Escolha uma opção."})
+    intencao = forms.ChoiceField(choices=utils.INTENCAO, required=False)     # botão que o cliente escolheu na página
     lgpd = forms.BooleanField(error_messages={"required": "É preciso aceitar para continuar."})
     website = forms.CharField(required=False)   # honeypot: humanos não preenchem
 
@@ -27,7 +28,7 @@ class CapturaForm(forms.Form):
     def clean(self):
         d = super().clean()
         if d.get("troca") == "sim" and not (d.get("troca_carro") or "").strip():
-            self.add_error("troca_carro", "Informe o modelo e o ano do carro.")
+            self.add_error("troca_carro", "Informe o modelo e o ano do carro ou da moto.")
         return d
 
     def respostas(self):
@@ -35,6 +36,7 @@ class CapturaForm(forms.Form):
         r = {k: d[k] for k in ("pagamento", "entrada", "troca", "prazo")}
         if d["troca"] == "sim":
             r["troca_carro"] = d["troca_carro"].strip()
+        r["intencao"] = d.get("intencao") or "simular"
         return r
 
 

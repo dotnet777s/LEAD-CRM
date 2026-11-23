@@ -10,7 +10,7 @@
 <link rel="canonical" href="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
 <meta property="og:type" content="product">
 <meta property="og:title" content="{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }} · {{ preco_fmt }}">
-<meta property="og:description" content="{% if veiculo.km %}{{ veiculo.km|floatformat:"0g" }} km · {% endif %}Revisado · Vistoria cautelar · Aceitamos troca · Financiamento em até 60x · Cartão em até 21x">
+<meta property="og:description" content="{% if veiculo.km %}{{ veiculo.km|floatformat:"0g" }} km · {% endif %}Revisado · Vistoria cautelar · Aceitamos carro ou moto na troca · Financiamento em até 60x · Cartão em até 21x">
 <meta property="og:url" content="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
 {% if destaque %}<meta property="og:image" content="{{ site_url }}{% url 'captacao:foto' destaque.pk 1200 %}">
 <link rel="preload" as="image" href="{% url 'captacao:foto' destaque.pk 800 %}" imagesrcset="{% url 'captacao:foto' destaque.pk 480 %} 480w, {% url 'captacao:foto' destaque.pk 800 %} 800w, {% url 'captacao:foto' destaque.pk 1200 %} 1200w" imagesizes="(min-width:960px) 640px, 100vw" fetchpriority="high">{% endif %}
@@ -102,7 +102,8 @@ ul.itens li:before{content:"";position:absolute;left:2px;top:.45em;width:10px;he
 .loja div{display:flex;gap:12px;align-items:flex-start;font-size:15px}.loja .ic{color:var(--gr);margin-top:2px}.loja small{color:var(--mu);display:block}
 .final{margin-top:36px;text-align:center;border:1px solid var(--bd2);background:var(--sf);border-radius:18px;padding:28px 20px}
 .final h2{margin:0 0 6px;font-size:22px}.final p{margin:0 0 18px;color:var(--mu)}
-.sim{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.sim a{text-decoration:none;background:var(--sf);border:1px solid var(--bd);border-radius:12px;overflow:hidden;font-size:13px}
+.sim{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;scrollbar-width:none}.sim::-webkit-scrollbar{display:none}
+.sim a{flex:0 0 62%;max-width:260px;scroll-snap-align:start;text-decoration:none;background:var(--sf);border:1px solid var(--bd);border-radius:12px;overflow:hidden;font-size:13px}
 .sim img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}.sim div{padding:10px}.sim b{color:var(--gr)}
 footer{border-top:1px solid var(--bd);margin-top:44px;padding:24px 0 30px;color:var(--mu);font-size:13px;text-align:center}
 footer img{height:24px;opacity:.85;display:block;margin:0 auto 10px}
@@ -125,6 +126,13 @@ dialog img{max-width:96vw;max-height:84vh;display:block;border-radius:8px;margin
 .equip .ic{width:24px;height:24px;color:var(--gr);margin-top:2px}.equip b{display:block;font-size:14.5px;line-height:1.3;font-weight:600}.equip small{color:var(--mu);font-size:12.5px}
 .dica{color:var(--mu);font-size:13.5px;margin:-8px 0 12px}
 .visita{margin-top:14px;text-align:center;font-size:13.5px;color:var(--mu)}.visita a{color:var(--tx);font-weight:600}
+.parc{background:rgba(37,211,102,.07);border:1px solid rgba(37,211,102,.28);border-radius:12px;padding:12px 14px;margin:0 0 14px;font-size:15px;line-height:1.4;color:#d3dbe1}
+.parc b{color:#fff;font-size:19px;letter-spacing:-.01em}.parc small{display:block;color:var(--mu);font-size:12px;margin-top:4px;text-transform:none;letter-spacing:0}
+.acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.acoes .btn{padding:15px 10px;font-size:16px}
+.provas{display:grid;gap:8px;margin:12px 0 0}.provas div{display:flex;gap:12px;align-items:center;padding:11px 14px;border:1px solid var(--bd);border-radius:12px;background:var(--sf2);font-size:14.5px;color:#d3dbe1}.provas .ic{color:var(--gr)}
+.micro{display:flex;gap:7px;align-items:center;font-size:13px;color:var(--mu);margin:-8px 0 16px}.micro .ic{width:15px;height:15px;color:var(--gr)}
+.tags{display:flex;flex-wrap:wrap;gap:8px}.tags span{border:1px solid var(--bd2);background:var(--sf);border-radius:999px;padding:6px 13px;font-size:13.5px;color:#c9d3da}
+.fixo .btns{display:flex;gap:8px;flex:1}.fixo .btns .btn{padding:13px 8px;font-size:15px;white-space:nowrap}
 @media(min-width:960px){
  body{padding-bottom:0}.fixo{display:none}
  .grid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-areas:"top form" "rest form";align-items:start;column-gap:40px;row-gap:0;padding-top:28px}
@@ -189,8 +197,13 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <div class="specs"><div><small>Ano</small><b>{{ veiculo.ano }}</b></div>{% if veiculo.km %}<div><small>Quilometragem</small><b>{{ veiculo.km|floatformat:"0g" }} km</b></div>{% endif %}{% if veiculo.cor %}<div><small>Cor</small><b>{{ veiculo.cor_fmt }}</b></div>{% endif %}</div>
 <div class="preco"><small>Preço à vista</small><div class="v">{{ preco_fmt }}</div>
 {% if fipe_abaixo %}<div class="fipe"><svg class="ic"><use href="#i-tag"/></svg>{{ fipe_abaixo }} abaixo da tabela FIPE</div>{% endif %}
-<ul><li><svg class="ic"><use href="#i-bank"/></svg>Financiamento em até 60x</li><li><svg class="ic"><use href="#i-card"/></svg>Cartão de crédito em até 21x</li><li><svg class="ic"><use href="#i-swap"/></svg>Aceitamos seu carro na troca</li></ul></div>
-{% if interesse and disponivel %}<div class="prova"><svg class="ic"><use href="#i-users"/></svg><span><b>{{ interesse }} pessoas</b> pediram simulação deste carro nos últimos 7 dias.</span></div>{% endif %}
+{% if parcela_fmt and disponivel %}<div class="parc">Parcelas a partir de <b>{{ parcela_fmt }}/mês</b> em {{ parcelas_n }}x, com entrada de {{ entrada_pct }}% ({{ entrada_fmt }})<small>Estimativa ilustrativa. Taxa e aprovação dependem da análise de crédito.</small></div>{% endif %}
+<ul><li><svg class="ic"><use href="#i-bank"/></svg>Financiamento em até 60x</li><li><svg class="ic"><use href="#i-card"/></svg>Cartão de crédito em até 21x</li><li><svg class="ic"><use href="#i-swap"/></svg>Aceitamos carro ou moto como entrada</li></ul>{% if disponivel %}<div class="acoes"><a class="btn" href="#form" data-intencao="simular">Simular</a><a class="btn ghost" href="#form" data-intencao="visita">Agendar visita</a></div>{% endif %}</div>
+{% if disponivel and interesse or disponivel and vendidos_modelo or disponivel and vendidos_total %}<div class="provas">
+{% if interesse %}<div><svg class="ic"><use href="#i-users"/></svg><span><b>{{ interesse }} pessoas</b> pediram simulação deste carro nos últimos 7 dias.</span></div>{% endif %}
+{% if vendidos_modelo %}<div><svg class="ic"><use href="#i-check"/></svg><span>Já vendemos <b>{{ vendidos_modelo }} {{ veiculo.modelo_fmt }}</b> aqui na TopCar.</span></div>{% endif %}
+{% if vendidos_total %}<div><svg class="ic"><use href="#i-store"/></svg><span><b>Mais de {{ vendidos_total }} carros vendidos</b> pela TopCar.</span></div>{% endif %}
+</div>{% endif %}
 <div class="selos"><span><svg class="ic"><use href="#i-wrench"/></svg>Revisado</span><span><svg class="ic"><use href="#i-shield"/></svg>Vistoria cautelar</span></div>
 </section>
 
@@ -198,20 +211,22 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <form id="form" class="quiz" method="post" action="{% url 'captacao:captura' veiculo.pk slug %}" novalidate{% if reabrir_form %} data-erro{% endif %}>
 {% csrf_token %}
 <input type="hidden" name="event_id" value="{{ event_id }}">
+<input type="hidden" name="intencao" id="intencao" value="{{ form.data.intencao|default:'simular' }}">
 {% for k, v in utm.items %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
 <div class="hp" aria-hidden="true"><label>Não preencha <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
 
-<h2>{% if disponivel %}Receba a simulação e agende sua visita{% else %}Avisamos quando chegar um parecido{% endif %}</h2>
+<h2 id="ftitulo">{% if disponivel %}Simule ou agende sua visita{% else %}Avisamos quando chegar um parecido{% endif %}</h2>
 <p class="sub">{% if disponivel %}Responda 4 perguntas rápidas e um consultor envia as condições do {{ veiculo.modelo_fmt }}.{% else %}Responda 4 perguntas rápidas e um consultor indica as melhores opções.{% endif %}</p>
+{% if disponivel %}<p class="micro"><svg class="ic"><use href="#i-clock"/></svg>Leva menos de 1 minuto · sem compromisso · sem custo</p>{% endif %}
 <div class="qtop"><span id="qpasso">Etapa 1 de 5</span><div class="bar"><i id="qbar"></i></div></div>
 
 {% for g in grupos %}{% with campo=g.campo %}
-<fieldset class="passo" data-campo="{{ campo }}"><legend>{{ g.titulo }}</legend>{% if campo == 'troca' %}<p class="dica">Aceitamos o seu carro como parte do pagamento.</p>{% endif %}
+<fieldset class="passo" data-campo="{{ campo }}"><legend>{{ g.titulo }}</legend>{% if campo == 'troca' %}<p class="dica">Aceitamos carro ou moto como parte do pagamento.</p>{% endif %}
 <div class="op">{% for val, rot, marcado in g.opcoes %}<label><input type="radio" name="{{ campo }}" value="{{ val }}" {% if marcado %}checked{% endif %}><span>{{ rot }}</span></label>{% endfor %}</div>
 {% for e in g.erros %}<div class="err">{{ e }}</div>{% endfor %}
 {% if campo == 'troca' %}
-<div id="troca-box" hidden style="margin-top:14px"><label class="t" for="id_troca_carro">Qual carro (modelo e ano)?</label>
-<input type="text" id="id_troca_carro" name="troca_carro" value="{{ form.troca_carro.value|default:'' }}" maxlength="100" placeholder="Ex.: Gol 2015">
+<div id="troca-box" hidden style="margin-top:14px"><label class="t" for="id_troca_carro">Qual carro ou moto (modelo e ano)?</label>
+<input type="text" id="id_troca_carro" name="troca_carro" value="{{ form.troca_carro.value|default:'' }}" maxlength="100" placeholder="Ex.: Gol 2015 ou CG 160 2020">
 {% for e in form.troca_carro.errors %}<div class="err">{{ e }}</div>{% endfor %}
 <button type="button" class="btn peq" id="troca-ok" style="margin-top:12px">Continuar</button></div>
 {% endif %}
@@ -247,7 +262,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <div><svg class="ic"><use href="#i-shield"/></svg><b>Vistoria cautelar</b><span>Todos os veículos têm vistoria cautelar.</span></div>
 <div><svg class="ic"><use href="#i-bank"/></svg><b>Financiamento</b><span>Em até 60x, com simulação sem compromisso.</span></div>
 <div><svg class="ic"><use href="#i-card"/></svg><b>Cartão de crédito</b><span>Parcelamento em até 21x.</span></div>
-<div><svg class="ic"><use href="#i-swap"/></svg><b>Aceitamos troca</b><span>Seu carro pode entrar como parte do pagamento. A avaliação é feita na loja.</span></div>
+<div><svg class="ic"><use href="#i-swap"/></svg><b>Carro ou moto na entrada</b><span>Aceitamos o seu carro ou moto como parte do pagamento. A avaliação é feita na loja.</span></div>
 <div><svg class="ic"><use href="#i-store"/></svg><b>Loja física</b><span>Shopping do Automóvel, em Olinda. Venha ver o carro de perto.</span></div>
 </div>
 
@@ -261,7 +276,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 {% if equip or itens_extra %}
 <h2 class="s">Equipamentos</h2>
 {% if equip %}<div class="equip">{% for e in equip %}<div><svg class="ic"><use href="#i-{{ e.icone }}"/></svg><span><b>{{ e.texto }}</b><small>{{ e.categoria }}</small></span></div>{% endfor %}</div>{% endif %}
-{% if itens_extra %}<ul class="itens">{% for i in itens_extra %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
+{% if itens_extra %}<div class="tags">{% for i in itens_extra %}<span>{{ i }}</span>{% endfor %}</div>{% endif %}
 {% endif %}
 
 <h2 class="s">Como funciona</h2>
@@ -274,7 +289,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <h2 class="s">Dúvidas frequentes</h2>
 <div class="faq">
 <details><summary>O carro é revisado e tem vistoria?</summary><p>Sim. Todos os carros da TopCar passam por revisão e têm vistoria cautelar.</p></details>
-<details><summary>Aceitam meu carro na troca?</summary><p>Sim, aceitamos o seu carro como parte do pagamento. A avaliação é feita na loja.</p></details>
+<details><summary>Aceitam carro ou moto como entrada?</summary><p>Sim, aceitamos carro ou moto como parte da entrada. A avaliação é feita na loja.</p></details>
 <details><summary>Dá para financiar?</summary><p>Sim, em até 60x. A simulação sai no WhatsApp, sem compromisso.</p></details>
 <details><summary>Posso parcelar no cartão?</summary><p>Sim, em até 21x no cartão de crédito.</p></details>
 <details><summary>Preciso pagar algo para simular?</summary><p>Não. A simulação e a visita são gratuitas.</p></details>
@@ -287,13 +302,13 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <a class="btn ghost peq" href="{{ loja.mapa_url }}" target="_blank" rel="noopener">Como chegar</a>
 </div>
 
-<div class="final"><h2>Gostou do {{ veiculo.modelo_fmt }}?</h2><p>Receba as condições no WhatsApp.</p><a class="btn" href="#form" data-ir>{% if disponivel %}Receber simulação{% else %}Quero ser avisado{% endif %}</a></div>
+<div class="final"><h2>Gostou do {{ veiculo.modelo_fmt }}?</h2><p>Simule agora ou agende a sua visita.</p>{% if disponivel %}<div class="acoes"><a class="btn" href="#form" data-intencao="simular">Simular</a><a class="btn ghost" href="#form" data-intencao="visita">Agendar visita</a></div>{% else %}<a class="btn" href="#form" data-ir>Quero ser avisado</a>{% endif %}</div>
 </section>
 </main>
 
 <footer><div class="w"><img src="{% static 'captacao/logo.png' %}" alt="TopCar Veículos" width="auto" height="24">© TopCar Veículos · <a href="{% url 'captacao:privacidade' %}">Política de privacidade</a></div></footer>
 
-<div class="fixo" id="fixo"><div class="p">{{ preco_fmt }}<small>{{ veiculo.modelo_fmt }} {{ veiculo.ano }}</small></div><a class="btn" href="#form" id="cta">{% if disponivel %}Receber simulação{% else %}Quero ser avisado{% endif %}</a></div>
+<div class="fixo" id="fixo"><div class="p">{{ preco_fmt }}<small>{% if parcela_fmt and disponivel %}{{ parcela_fmt }}/mês em {{ parcelas_n }}x{% else %}{{ veiculo.modelo_fmt }} {{ veiculo.ano }}{% endif %}</small></div>{% if disponivel %}<div class="btns"><a class="btn" href="#form" id="cta" data-intencao="simular">Simular</a><a class="btn ghost" href="#form" data-intencao="visita">Agendar</a></div>{% else %}<a class="btn" href="#form" id="cta">Quero ser avisado</a>{% endif %}</div>
 
 <dialog id="lb"><div class="lbt"><span id="lbn"></span><form method="dialog"><button class="x">Fechar</button></form></div><div class="lbm"><button type="button" class="nav" id="lbp" aria-label="Anterior"><svg class="ic"><use href="#i-left"/></svg></button><img id="lbimg" alt="Foto ampliada"><button type="button" class="nav" id="lbx" aria-label="Próxima"><svg class="ic"><use href="#i-right"/></svg></button></div></dialog>
 
@@ -348,7 +363,10 @@ form.addEventListener('submit',function(ev){
 /* barra fixa some quando o formulário está visível */
 var fx=d.getElementById('fixo');
 if('IntersectionObserver' in window){new IntersectionObserver(function(es){fx.classList.toggle('esc',es[0].isIntersecting)},{threshold:.25}).observe(form);}
-d.querySelectorAll('#cta,[data-ir]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();form.scrollIntoView({block:'center'});});});
+var intent=d.getElementById('intencao'),ft=d.getElementById('ftitulo'),bt=d.getElementById('enviar').querySelector('span');
+function definirIntencao(v){intent.value=v;var vis=v==='visita';ft.textContent=vis?'Agende a sua visita':'Receba a simulação no WhatsApp';bt.textContent=vis?'Agendar pelo WhatsApp':'Receber no WhatsApp';}
+if(intent.value==='visita')definirIntencao('visita');
+d.querySelectorAll('#cta,[data-ir],[data-intencao]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();if(a.dataset.intencao)definirIntencao(a.dataset.intencao);form.scrollIntoView({block:'center'});});});
 
 /* galeria ampliada */
 var fs=[{% for g in galeria %}'{% url 'captacao:foto' g.pk 1200 %}'{% if not forloop.last %},{% endif %}{% endfor %}];

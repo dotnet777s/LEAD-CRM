@@ -137,6 +137,11 @@ META_GRAPH_API_VERSION = env("META_GRAPH_API_VERSION", "v23.0")
 META_TEST_EVENT_CODE = env("META_TEST_EVENT_CODE")
 META_CAPI_ENABLED = env_bool("META_CAPI_ENABLED", False)
 
+# --- Parcela estimada exibida na página (ilustrativa: a aprovação e a taxa reais dependem do banco) ---
+FINANCIAMENTO_TAXA_AM = float(env("FINANCIAMENTO_TAXA_AM", "1.99") or 1.99)     # % ao mês
+FINANCIAMENTO_ENTRADA_PCT = int(env("FINANCIAMENTO_ENTRADA_PCT", "30") or 30)
+FINANCIAMENTO_PARCELAS = int(env("FINANCIAMENTO_PARCELAS", "60") or 60)
+
 # --- Telegram (avisos aos consultores) ---
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN")
 TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", "leadsreceiverbot")
