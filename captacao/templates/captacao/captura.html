@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }} · {{ preco_fmt }} | TopCar Veículos</title>
-<meta name="description" content="{{ veiculo.nome }} {{ veiculo.ano }}, {{ veiculo.km }} km, {{ preco_fmt }}. Simule o financiamento e agende sua visita na TopCar Veículos.">
+<meta name="description" content="{{ veiculo.nome }} {{ veiculo.ano }}{% if veiculo.km %}, {{ veiculo.km|floatformat:"0g" }} km{% endif %}, {{ preco_fmt }}. Simule o financiamento e agende sua visita na TopCar Veículos.">
 <meta name="theme-color" content="#0a0c0f">
 <link rel="icon" href="{% static 'captacao/favicon.png' %}">
 <link rel="canonical" href="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
 <meta property="og:type" content="product">
 <meta property="og:title" content="{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }} · {{ preco_fmt }}">
-<meta property="og:description" content="{{ veiculo.km }} km · Revisado · Vistoria cautelar · Financiamento em até 60x · Cartão em até 21x">
+<meta property="og:description" content="{% if veiculo.km %}{{ veiculo.km|floatformat:"0g" }} km · {% endif %}Revisado · Vistoria cautelar · Financiamento em até 60x · Cartão em até 21x">
 <meta property="og:url" content="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
 {% if destaque %}<meta property="og:image" content="{{ site_url }}{% url 'captacao:foto' destaque.pk 1200 %}">
 <link rel="preload" as="image" href="{% url 'captacao:foto' destaque.pk 800 %}" imagesrcset="{% url 'captacao:foto' destaque.pk 480 %} 480w, {% url 'captacao:foto' destaque.pk 800 %} 800w, {% url 'captacao:foto' destaque.pk 1200 %} 1200w" imagesizes="(min-width:960px) 640px, 100vw" fetchpriority="high">{% endif %}
@@ -168,7 +168,7 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <p class="marca">{{ veiculo.marca_fmt }}</p>
 <h1>{{ veiculo.modelo_fmt }} {{ veiculo.ano }}</h1>
 {% if veiculo.versao %}<p class="ver">{{ veiculo.versao_fmt }}</p>{% endif %}
-<div class="specs"><div><small>Ano</small><b>{{ veiculo.ano }}</b></div><div><small>Quilometragem</small><b>{{ veiculo.km }} km</b></div>{% if veiculo.cor %}<div><small>Cor</small><b>{{ veiculo.cor_fmt }}</b></div>{% endif %}</div>
+<div class="specs"><div><small>Ano</small><b>{{ veiculo.ano }}</b></div>{% if veiculo.km %}<div><small>Quilometragem</small><b>{{ veiculo.km|floatformat:"0g" }} km</b></div>{% endif %}{% if veiculo.cor %}<div><small>Cor</small><b>{{ veiculo.cor_fmt }}</b></div>{% endif %}</div>
 <div class="preco"><small>Preço à vista</small><div class="v">{{ preco_fmt }}</div>
 <ul><li><svg class="ic"><use href="#i-bank"/></svg>Financiamento em até 60x</li><li><svg class="ic"><use href="#i-card"/></svg>Cartão de crédito em até 21x</li></ul></div>
 </section>
