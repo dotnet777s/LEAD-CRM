@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Instalação do ADCRM num VPS Ubuntu 22.04/24.04 (Hostinger KVM 1). Rode como root:
-#   REPO_URL="https://github.com/dotnet777s/LEAD-CRM.git" DOMINIO="leads.topcarpe.site" bash instalar.sh
+#   REPO_URL="https://github.com/dotnet777s/LEAD-CRM.git" DOMINIO="contato.topcarpe.com.br" bash instalar.sh
 # Repositório privado: use REPO_URL="https://USUARIO:TOKEN@github.com/dotnet777s/LEAD-CRM.git" (token só com leitura).
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-}"
-DOMINIO="${DOMINIO:-leads.topcarpe.site}"
+DOMINIO="${DOMINIO:-contato.topcarpe.com.br}"
 APP_DIR=/opt/adcrm
 APP_USER=adcrm
 

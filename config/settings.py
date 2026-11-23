@@ -1,5 +1,5 @@
 """
-CRM de captação TopCar (leads.topcarpe.site). Tudo vem de variáveis de ambiente (ou do .env, que NÃO vai pro git).
+CRM de captação TopCar (contato.topcarpe.com.br). Tudo vem de variáveis de ambiente (ou do .env, que NÃO vai pro git).
 
 O banco é o mesmo Postgres do estoque (Neon). As tabelas estoque_* são só LEITURA (app `catalogo`, managed=False).
 Tudo que é novo mora em tabelas captacao_*.
@@ -38,8 +38,8 @@ SECRET_KEY = env("DJANGO_SECRET_KEY") or ("dev-inseguro-nao-usar-em-producao" if
 if not SECRET_KEY:
     raise RuntimeError("Defina DJANGO_SECRET_KEY em produção.")
 
-SITE_URL = env("SITE_URL", "https://leads.topcarpe.site").rstrip("/")
-ALLOWED_HOSTS = [h.strip() for h in env("DJANGO_ALLOWED_HOSTS", "leads.topcarpe.site").split(",") if h.strip()]
+SITE_URL = env("SITE_URL", "https://contato.topcarpe.com.br").rstrip("/")
+ALLOWED_HOSTS = [h.strip() for h in env("DJANGO_ALLOWED_HOSTS", "contato.topcarpe.com.br").split(",") if h.strip()]
 if env("RENDER_EXTERNAL_HOSTNAME"):
     ALLOWED_HOSTS.append(env("RENDER_EXTERNAL_HOSTNAME"))
 if DEBUG:
