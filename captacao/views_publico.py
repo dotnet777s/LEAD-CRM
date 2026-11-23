@@ -103,14 +103,6 @@ def etiquetas(itens):
     return saida[:12]
 
 
-def _provas(v):
-    """Números reais do estoque do ROUTE: quantos deste modelo e no total já foram vendidos."""
-    base = Veiculo.objects.filter(status="vendido")
-    modelo = base.filter(marca__iexact=v.marca, modelo__iexact=v.modelo).count()
-    total = base.count()
-    return {"vendidos_modelo": modelo, "vendidos_total": (total // 10) * 10 if total >= 20 else 0}
-
-
 def _interesse(pk):
     """Pedidos de simulação REAIS deste carro: (quantidade, janela). 24 h a partir de 2; senão 7 dias a partir de 3.
     Nunca inventado: sem pedidos suficientes, devolve (0, "")."""
@@ -123,16 +115,10 @@ def _interesse(pk):
     return (n7, "nos últimos 7 dias") if n7 >= 3 else (0, "")
 
 
-def _sinais(v, interesse, janela, provas):
-    """Frases da notificação de pulso. Todas vêm de dados reais (CRM e estoque do ROUTE)."""
-    saida = []
-    if interesse:
-        saida.append(f"{interesse} pessoas pediram simulação deste carro {janela}")
-    if provas["vendidos_modelo"]:
-        saida.append(f"Já vendemos {provas['vendidos_modelo']} {v.modelo_fmt} aqui na TopCar")
-    if provas["vendidos_total"]:
-        saida.append(f"Mais de {provas['vendidos_total']} carros vendidos pela TopCar")
-    return saida
+def _sinais(interesse, janela):
+    """Frases da notificação de pulso: só pedidos de simulação REAIS. Sem pedidos suficientes, não há notificação.
+    (A loja decidiu não exibir números de vendas na página.)"""
+    return [f"{interesse} pessoas pediram simulação deste carro {janela}"] if interesse else []
 
 
 def _abaixo_da_fipe(v):
@@ -161,15 +147,13 @@ def _dados_do_veiculo(pk):
     equip = equipamentos(veiculo)
     parcela, entrada = utils.parcela_estimada(veiculo.valor_venda, settings.FINANCIAMENTO_ENTRADA_PCT,
                                               settings.FINANCIAMENTO_PARCELAS, settings.FINANCIAMENTO_TAXA_AM)
-    provas = _provas(veiculo)
     interesse = _interesse(pk)
     dados = {
-        **provas,
         "parcela_fmt": utils.preco_brl(parcela) if parcela else "", "entrada_fmt": utils.preco_brl(entrada) if entrada else "",
         "parcelas_n": settings.FINANCIAMENTO_PARCELAS, "entrada_pct": settings.FINANCIAMENTO_ENTRADA_PCT,
         "veiculo": veiculo, "disponivel": disponivel, "fotos": lista, "video": videos[0] if videos else None,
         "similares": [(v, capa.get(v.pk)) for v in similares],
-        "equip": equip[0], "itens_extra": etiquetas(equip[1]), "interesse": interesse[0], "interesse_janela": interesse[1], "sinais": _sinais(veiculo, interesse[0], interesse[1], provas), "fipe_abaixo": _abaixo_da_fipe(veiculo),
+        "equip": equip[0], "itens_extra": etiquetas(equip[1]), "interesse": interesse[0], "interesse_janela": interesse[1], "sinais": _sinais(interesse[0], interesse[1]), "fipe_abaixo": _abaixo_da_fipe(veiculo),
     }
     cache.set(chave, dados, CACHE_SEGUNDOS)
     return dados

@@ -85,7 +85,7 @@ input:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{o
 .seguro{display:flex;gap:7px;align-items:center;justify-content:center;font-size:12.5px;color:var(--mu);margin-top:14px}.seguro .ic{width:14px;height:14px}
 .hp{position:absolute;left:-9999px;height:0;overflow:hidden}
 h2.s{font-size:20px;margin:36px 0 14px;letter-spacing:-.01em;font-weight:700}
-.dif{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dif{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .dif div{border:1px solid var(--bd);background:var(--sf);border-radius:var(--r);padding:16px}
 .dif .ic{width:24px;height:24px;color:var(--gr);margin-bottom:10px}.dif b{display:block;font-size:15px;margin-bottom:2px}.dif span{color:var(--mu);font-size:13.5px;line-height:1.4;display:block}
 ul.itens{columns:2;column-gap:20px;list-style:none;padding:0;margin:0;font-size:15px}
@@ -122,7 +122,7 @@ dialog img{max-width:96vw;max-height:84vh;display:block;border-radius:8px;margin
 .fipe .ic{width:16px;height:16px}
 .prova{display:flex;gap:12px;align-items:center;margin:12px 0 0;padding:12px 14px;border:1px solid var(--bd);border-radius:12px;background:var(--sf2);font-size:14.5px;color:#d3dbe1}.prova .ic{color:var(--gr)}
 .selos{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}.selos span{display:inline-flex;gap:7px;align-items:center;border:1px solid var(--bd);border-radius:999px;padding:6px 12px;font-size:13px;color:#c4ced6}.selos .ic{width:16px;height:16px;color:var(--gr)}
-.equip{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}.equip div{border:1px solid var(--bd);background:var(--sf);border-radius:var(--r);padding:14px;display:flex;gap:12px;align-items:flex-start}
+.equip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:16px}.equip div{border:1px solid var(--bd);background:var(--sf);border-radius:var(--r);padding:14px;display:flex;gap:12px;align-items:flex-start}
 .equip .ic{width:24px;height:24px;color:var(--gr);margin-top:2px}.equip b{display:block;font-size:14.5px;line-height:1.3;font-weight:600}.equip small{color:var(--mu);font-size:12.5px}
 .dica{color:var(--mu);font-size:13.5px;margin:-8px 0 12px}
 .visita{margin-top:14px;text-align:center;font-size:13.5px;color:var(--mu)}.visita a{color:var(--tx);font-weight:600}
@@ -148,7 +148,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
 header,main,footer{position:relative;z-index:1}
 h1{background:linear-gradient(90deg,#fff 30%,#9ff5c3);-webkit-background-clip:text;background-clip:text;color:transparent}
 h2.s:before{content:"";display:inline-block;width:22px;height:3px;border-radius:2px;background:var(--gr);box-shadow:0 0 12px var(--gr);margin-right:10px;vertical-align:middle}
-.preco,.quiz,.specs,.dif div,.equip div,.sobre,.loja,.final,.provas div,.etapas li,.estat div{background-image:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.012))}
+.preco,.quiz,.specs,.dif div,.equip div,.sobre,.loja,.final,.provas div,.etapas li{background-image:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.012))}
 .glow{position:relative;isolation:isolate}
 .glow:before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;pointer-events:none;z-index:2;background:conic-gradient(from var(--ang),transparent 0 62%,rgba(37,211,102,.95) 82%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);animation:giro 7s linear infinite}
 @keyframes giro{to{--ang:360deg}}
@@ -156,11 +156,17 @@ h2.s:before{content:"";display:inline-block;width:22px;height:3px;border-radius:
 @keyframes scan{from{transform:translateY(0);opacity:1}to{transform:translateY(420%);opacity:0}}
 .hero img{transform:translate3d(0,var(--py,0px),0) scale(1.06);will-change:transform}
 button.badge{animation:flutua 4s ease-in-out infinite}@keyframes flutua{50%{transform:translateY(-4px)}}
-.estat{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 0;perspective:900px}
-.estat div{border:1px solid var(--bd2);border-radius:14px;padding:14px 8px;text-align:center;background-color:var(--sf);transform-style:preserve-3d}
-.estat b{display:block;font-size:30px;line-height:1.05;color:var(--gr);letter-spacing:-.02em;text-shadow:0 0 18px rgba(37,211,102,.45);font-variant-numeric:tabular-nums}
-.estat span{display:block;font-size:12.5px;color:#aab6bf;margin-top:5px;line-height:1.25}
-.estat .dest{border-color:rgba(37,211,102,.55);box-shadow:0 0 0 1px rgba(37,211,102,.15),0 10px 34px -12px rgba(37,211,102,.5)}
+.bene{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px;margin-top:6px}
+.bene div{position:relative;border:1px solid var(--bd2);border-radius:14px;padding:13px 6px 12px;text-align:center;background:linear-gradient(170deg,rgba(37,211,102,.10),rgba(37,211,102,.02));display:flex;flex-direction:column;align-items:center;gap:2px}
+.bene .ic{width:26px;height:26px;color:var(--gr);filter:drop-shadow(0 0 8px rgba(37,211,102,.55));margin-bottom:4px}
+.bene b{font-size:17px;line-height:1.1;letter-spacing:-.01em;color:#fff;white-space:nowrap}
+.bene span{font-size:12.5px;line-height:1.3;color:#b4c0c8}
+.garantias{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 0;perspective:900px}
+.garantias div{border:1px solid rgba(37,211,102,.38);border-radius:16px;padding:16px 8px 14px;text-align:center;background:linear-gradient(170deg,rgba(37,211,102,.13),rgba(37,211,102,.02) 70%),var(--sf);box-shadow:0 14px 34px -18px rgba(37,211,102,.55)}
+.garantias i{display:grid;place-items:center;width:46px;height:46px;margin:0 auto 10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(37,211,102,.38),rgba(37,211,102,.08));border:1px solid rgba(37,211,102,.55);box-shadow:0 0 22px rgba(37,211,102,.35)}
+.garantias .ic{width:24px;height:24px;color:#7bf0a8}
+.garantias b{display:block;font-size:15.5px;line-height:1.2;color:#fff}
+.garantias span{display:block;font-size:12px;color:#aab6bf;margin-top:3px;line-height:1.25}
 .acoes .btn:not(.ghost),.fixo .btn:not(.ghost){animation:pulsar 2.8s ease-in-out infinite}
 @keyframes pulsar{0%,100%{box-shadow:0 0 0 0 rgba(37,211,102,.5)}50%{box-shadow:0 0 0 11px rgba(37,211,102,0)}}
 .bar i{box-shadow:0 0 12px var(--gr)}
@@ -175,6 +181,11 @@ button.badge{animation:flutua 4s ease-in-out infinite}@keyframes flutua{50%{tran
 .pulso.on{opacity:1;transform:none}.pulso[hidden]{display:none}
 .pulso i{flex:none;width:11px;height:11px;border-radius:50%;background:var(--gr);box-shadow:0 0 0 0 rgba(37,211,102,.6);animation:ping 1.6s ease-out infinite}
 @keyframes ping{to{box-shadow:0 0 0 14px rgba(37,211,102,0)}}
+@media(max-width:350px){
+ .bene{gap:6px}.bene div{padding:12px 3px 10px}.bene b{font-size:14.5px}.bene span{font-size:11.5px}.bene .ic{width:22px;height:22px}
+ .garantias{gap:6px}.garantias b{font-size:14px}.garantias span{font-size:11px}.garantias i{width:40px;height:40px}
+ .fixo{gap:8px;padding-left:12px;padding-right:12px}.fixo .p{font-size:15px;white-space:normal;max-width:92px}.fixo .p small{font-size:10px}.fixo .btns{gap:6px}.fixo .btns .btn{padding:12px 4px;font-size:14px}
+}
 @media(min-width:960px){
  body{padding-bottom:0}.pulso{left:24px;right:auto;bottom:24px}.fixo{display:none}
  .grid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-areas:"top form" "rest form";align-items:start;column-gap:40px;row-gap:0;padding-top:28px}
@@ -242,13 +253,17 @@ fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicl
 <div class="preco glow"><small>Preço à vista</small><div class="v">{{ preco_fmt }}</div>
 {% if fipe_abaixo %}<div class="fipe"><svg class="ic"><use href="#i-tag"/></svg>{{ fipe_abaixo }} abaixo da tabela FIPE</div>{% endif %}
 {% if parcela_fmt and disponivel %}<div class="parc">Parcelas a partir de <b>{{ parcela_fmt }}/mês</b> em {{ parcelas_n }}x, com entrada de {{ entrada_pct }}% ({{ entrada_fmt }})<small>Estimativa ilustrativa. Taxa e aprovação dependem da análise de crédito.</small></div>{% endif %}
-<ul><li><svg class="ic"><use href="#i-bank"/></svg>Financiamento em até 60x</li><li><svg class="ic"><use href="#i-card"/></svg>Cartão de crédito em até 21x</li><li><svg class="ic"><use href="#i-swap"/></svg>Aceitamos carro ou moto como entrada</li></ul>{% if disponivel %}<div class="acoes"><a class="btn" href="#form" data-intencao="simular">Simular</a><a class="btn ghost" href="#form" data-intencao="visita">Agendar visita</a></div>{% endif %}</div>
-{% if disponivel %}<div class="estat" aria-label="Números da TopCar">
-{% if vendidos_total %}<div><b data-conta="{{ vendidos_total }}" data-prefixo="+">+{{ vendidos_total }}</b><span>carros vendidos</span></div>{% endif %}
-{% if vendidos_modelo %}<div class="dest"><b data-conta="{{ vendidos_modelo }}">{{ vendidos_modelo }}</b><span>{{ veiculo.modelo_fmt }} já vendidos</span></div>{% endif %}
-<div><b data-conta="{{ loja.anos }}" data-prefixo="+">+{{ loja.anos }}</b><span>anos de mercado</span></div>
-</div>{% if interesse %}<div class="provas"><div><svg class="ic"><use href="#i-users"/></svg><span><b>{{ interesse }} pessoas</b> pediram simulação deste carro {{ interesse_janela }}.</span></div></div>{% endif %}{% endif %}
-<div class="selos"><span><svg class="ic"><use href="#i-check"/></svg>Garantia</span><span><svg class="ic"><use href="#i-wrench"/></svg>Revisado</span><span><svg class="ic"><use href="#i-shield"/></svg>Laudo cautelar</span></div>
+<div class="bene">
+<div><svg class="ic"><use href="#i-bank"/></svg><b>até 60x</b><span>Financiamento</span></div>
+<div><svg class="ic"><use href="#i-card"/></svg><b>até 21x</b><span>Cartão de crédito</span></div>
+<div><svg class="ic"><use href="#i-swap"/></svg><b>Entrada</b><span>Aceitamos carro ou moto como entrada</span></div>
+</div>{% if disponivel %}<div class="acoes"><a class="btn" href="#form" data-intencao="simular">Simular</a><a class="btn ghost" href="#form" data-intencao="visita">Agendar visita</a></div>{% endif %}</div>
+{% if disponivel and interesse %}<div class="provas"><div><svg class="ic"><use href="#i-users"/></svg><span><b>{{ interesse }} pessoas</b> pediram simulação deste carro {{ interesse_janela }}.</span></div></div>{% endif %}
+<div class="garantias">
+<div><i><svg class="ic"><use href="#i-check"/></svg></i><b>Garantia</b><span>em todo o estoque</span></div>
+<div><i><svg class="ic"><use href="#i-wrench"/></svg></i><b>Revisado</b><span>antes da venda</span></div>
+<div><i><svg class="ic"><use href="#i-shield"/></svg></i><b>Laudo cautelar</b><span>em todos os carros</span></div>
+</div>
 </section>
 
 <section class="formcol">
@@ -443,19 +458,15 @@ lb.addEventListener('click',function(e){if(e.target===lb)lb.close();});
 
 /* ===== movimento: só com preferência normal e sem prejudicar o carregamento ===== */
 var reduz=matchMedia('(prefers-reduced-motion:reduce)').matches,fino=matchMedia('(hover:hover) and (pointer:fine)').matches;
-function contar(el){var alvo=+el.dataset.conta,pre=el.dataset.prefixo||'';if(reduz||!alvo){el.textContent=pre+alvo;return;}
- var t0=null;function passo(t){if(t0===null)t0=t;var p=Math.min((t-t0)/1300,1),v=Math.round(alvo*(1-Math.pow(1-p,3)));el.textContent=pre+v;if(p<1)requestAnimationFrame(passo);}
- el.textContent=pre+'0';requestAnimationFrame(passo);}
 var io=null;
 if('IntersectionObserver' in window){
  io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;var el=e.target;io.unobserve(el);
-  if(el.dataset.conta!==undefined)contar(el);else{el.classList.add('in');setTimeout(function(){el.classList.add('pronto')},900);}});},{threshold:.15,rootMargin:'0px 0px -6% 0px'});
- d.querySelectorAll('[data-conta]').forEach(function(el){io.observe(el)});
- if(!reduz){d.querySelectorAll('h2.s,.dif>div,.equip>div,.sobre,.loja,.final,.etapas li,.sim a,.faq details,.provas>div,.tags,.estat>div,.nums>div,.contatos a').forEach(function(el,i){
+  el.classList.add('in');setTimeout(function(){el.classList.add('pronto')},900);});},{threshold:.15,rootMargin:'0px 0px -6% 0px'});
+ if(!reduz){d.querySelectorAll('h2.s,.dif>div,.equip>div,.sobre,.loja,.final,.etapas li,.sim a,.faq details,.provas>div,.tags,.garantias>div,.bene>div,.nums>div,.contatos a').forEach(function(el,i){
   el.classList.add('rv');el.style.setProperty('--d',((i%4)*.07)+'s');io.observe(el);});}
 }
 /* inclinação 3D com o mouse (só em telas com ponteiro preciso) */
-if(fino&&!reduz){d.querySelectorAll('.preco,.dif>div,.equip>div,.estat>div,.sim a,.nums>div,.hero').forEach(function(el){
+if(fino&&!reduz){d.querySelectorAll('.preco,.dif>div,.equip>div,.garantias>div,.bene>div,.sim a,.nums>div,.hero').forEach(function(el){
  var f=el.id==='hero'?.45:1;
  el.addEventListener('pointermove',function(e){var r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
   el.style.transform='perspective(900px) rotateX('+(-y*7*f)+'deg) rotateY('+(x*9*f)+'deg) translateZ(0)';});

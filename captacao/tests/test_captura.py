@@ -281,16 +281,30 @@ class BotoesParcelaProvasTests(Base):
         self.assertEqual(utils.parcela_estimada(Decimal("100000"), 30, 60, 0), (Decimal("1167"), Decimal("30000")))
         self.assertEqual(utils.parcela_estimada(None), (None, None))
 
-    def test_destaques_de_vendas_reais(self):
+    def test_numeros_de_vendas_nunca_aparecem_mesmo_reais(self):
+        """Decisão da loja: não exibir quantos carros ou quantos do modelo já foram vendidos."""
         v = novo_veiculo()
         for i in range(2):
             novo_veiculo(status="vendido", placa=f"VEN{i}A00")           # mesmo modelo (Argo)
         for i in range(20):
             novo_veiculo(status="vendido", placa=f"OUT{i}A00", modelo="Outro")
         html = self.abrir(v)
-        self.assertIn('data-conta="2"', html)
-        self.assertIn("Argo já vendidos", html)
-        self.assertIn('data-conta="20" data-prefixo="+">+20</b><span>carros vendidos', html)
+        self.assertNotIn("carros vendidos", html)
+        self.assertNotIn("já vendidos", html)
+        self.assertNotIn("Já vendemos", html)
+        self.assertNotIn("data-conta", html)
+        self.assertNotIn('id="pulso"', html)                      # sem pedidos reais, sem notificação
+        self.assertEqual(self.sinais(html), [])
+
+    def test_blocos_de_condicoes_e_garantias_em_destaque(self):
+        html = self.abrir(novo_veiculo())
+        self.assertIn('class="bene"', html)
+        self.assertIn("até 60x", html)
+        self.assertIn("até 21x", html)
+        self.assertIn("Aceitamos carro ou moto como entrada", html)
+        self.assertIn('class="garantias"', html)
+        for texto in ("Garantia", "Revisado", "Laudo cautelar"):
+            self.assertIn(f"<b>{texto}</b>", html)
 
     def test_sem_vendas_nao_mostra_destaque_de_modelo(self):
         html = self.abrir(novo_veiculo())
@@ -307,18 +321,9 @@ class BotoesParcelaProvasTests(Base):
         self.assertIn('id="pulso"', html)
         self.assertIn("2 pessoas pediram simulação deste carro nas últimas 24 horas", self.sinais(html))
 
-    def test_pulso_inclui_vendas_do_estoque(self):
-        v = novo_veiculo()
-        for i in range(3):
-            novo_veiculo(status="vendido", placa=f"VEN{i}A00")
-        html = self.abrir(v)
-        self.assertIn('id="pulso"', html)
-        self.assertIn("Já vendemos 3 Argo aqui na TopCar", self.sinais(html))
-
     def test_pagina_indisponivel_nao_tem_pulso_nem_destaques(self):
         html = self.abrir(novo_veiculo(status="vendido"))
         self.assertNotIn('id="pulso"', html)
-        self.assertNotIn('class="estat"', html)
 
     def test_etiquetas_curtas_nos_demais_equipamentos(self):
         v = novo_veiculo(itens_serie=["Rodas aro 15 com calotas esportivas em dois tons", "Wi-Fi embarcado",
