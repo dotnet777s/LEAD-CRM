@@ -4,7 +4,7 @@
 # Repositório privado: use REPO_URL="https://USUARIO:TOKEN@github.com/dotnet777s/LEAD-CRM.git" (token só com leitura).
 set -euo pipefail
 
-REPO_URL="${REPO_URL:?defina REPO_URL}"
+REPO_URL="${REPO_URL:-}"
 DOMINIO="${DOMINIO:-leads.topcarpe.site}"
 APP_DIR=/opt/adcrm
 APP_USER=adcrm
@@ -26,7 +26,8 @@ fi
 
 echo "==> Usuário e código"
 id "$APP_USER" >/dev/null 2>&1 || useradd --system --create-home --home-dir "$APP_DIR" --shell /usr/sbin/nologin "$APP_USER"
-if [ ! -d "$APP_DIR/.git" ]; then
+if [ ! -f "$APP_DIR/manage.py" ]; then
+  [ -n "$REPO_URL" ] || { echo "Código não encontrado em $APP_DIR e REPO_URL não definida."; exit 1; }
   sudo -u "$APP_USER" git clone "$REPO_URL" "$APP_DIR/app_tmp"
   shopt -s dotglob
   mv "$APP_DIR"/app_tmp/* "$APP_DIR"/
