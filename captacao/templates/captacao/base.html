@@ -1,0 +1,31 @@
+{% load static %}<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{% block title %}TopCar · Leads{% endblock %}</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#080808">
+<link rel="icon" href="{% static 'captacao/favicon.png' %}">
+<link rel="stylesheet" href="{% static 'captacao/crm.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
+{% block head %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<nav class="top">
+  <a href="{% url 'captacao:kanban' %}" class="logo"><img src="{% static 'captacao/logo-menu.png' %}" alt="TopCar" height="26"></a>
+  <a href="{% url 'captacao:kanban' %}" class="{% if request.resolver_match.url_name == 'kanban' %}on{% endif %}">Funil</a>
+  <a href="{% url 'captacao:painel' %}" class="{% if request.resolver_match.url_name == 'painel' %}on{% endif %}">Painel</a>
+  <a href="{% url 'captacao:carros' %}" class="{% if request.resolver_match.url_name == 'carros' %}on{% endif %}">Carros</a>
+  {% if eh_gestor %}<a href="{% url 'captacao:equipe' %}" class="{% if request.resolver_match.url_name == 'equipe' %}on{% endif %}">Equipe</a>{% endif %}
+  <a href="{% url 'captacao:eventos' %}" class="{% if request.resolver_match.url_name == 'eventos' %}on{% endif %}">Meta</a>
+  <span class="grow"></span>
+  <form method="post" action="{% url 'captacao:sair' %}">{% csrf_token %}<button class="link">Sair</button></form>
+</nav>
+{% block content %}{% endblock %}
+<dialog id="dlg"><div id="dlg-box"></div></dialog>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script src="{% static 'captacao/crm.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

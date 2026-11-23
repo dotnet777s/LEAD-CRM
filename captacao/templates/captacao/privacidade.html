@@ -1,0 +1,16 @@
+{% load static %}<!doctype html>
+<html lang="pt-br"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Política de privacidade · TopCar</title><link rel="icon" href="{% static 'captacao/favicon.png' %}">
+<style>body{margin:0;background:#080808;color:#ededed;font:16px/1.6 system-ui,sans-serif}main{max-width:680px;margin:0 auto;padding:24px 16px}h1{font-size:24px}h2{font-size:18px;margin-top:24px}a{color:#22c55e}</style></head>
+<body><main>
+<h1>Política de privacidade</h1>
+<p>A {{ loja.nome }} respeita a Lei Geral de Proteção de Dados (Lei 13.709/2018). Esta página explica como tratamos os dados que você informa ao pedir informações sobre um veículo.</p>
+<h2>Quais dados coletamos</h2>
+<p>Nome, WhatsApp e as respostas do formulário (forma de pagamento, entrada, troca e prazo de compra). Também registramos dados técnicos da visita (endereço IP, navegador e identificadores de campanha, como cookies do Meta Pixel) para medir a eficácia dos anúncios.</p>
+<h2>Para que usamos</h2>
+<p>Para entrar em contato pelo WhatsApp sobre o veículo, atender sua solicitação e melhorar nossos anúncios. Dados de contato e identificadores técnicos são enviados à Meta (Facebook/Instagram) de forma protegida (criptografada por hash) para medição e otimização de campanhas.</p>
+<h2>Por quanto tempo</h2>
+<p>Mantemos os dados enquanto houver relacionamento comercial ou interesse legítimo, e os excluímos quando você solicitar.</p>
+<h2>Seus direitos</h2>
+<p>Você pode pedir acesso, correção ou exclusão dos seus dados a qualquer momento pelo WhatsApp <a href="https://wa.me/{{ loja.whatsapp }}">{{ loja.whatsapp }}</a> ou presencialmente: {{ loja.endereco }}.</p>
+</main></body></html>

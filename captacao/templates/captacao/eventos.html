@@ -1,0 +1,20 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Eventos Meta{% endblock %}
+{% block content %}
+<div class="pg">
+  <h1 style="font-size:20px">Eventos enviados à Meta</h1>
+  {% if not capi_ligada %}<div class="box" style="border-color:var(--am);color:var(--am);margin-bottom:12px">
+    A Conversions API está desligada ou sem credenciais (META_CAPI_ENABLED, META_PIXEL_ID, META_CAPI_ACCESS_TOKEN). Os eventos ficam na fila e saem quando for ligada.</div>{% endif %}
+  <div class="grid" style="margin-bottom:12px">
+    <div class="box"><div class="num">{{ contagem.enviado|default:0 }}</div>enviados</div>
+    <div class="box"><div class="num">{{ contagem.pendente|default:0 }}</div>na fila</div>
+    <div class="box"><div class="num" style="color:var(--rd)">{{ contagem.erro|default:0 }}</div>com erro</div>
+    <div class="box"><div class="num">{{ contagem.nao_enviado|default:0 }}</div>não enviados (fora da janela)</div>
+  </div>
+  <div class="box" style="overflow-x:auto"><table class="t">
+    <thead><tr><th>Quando</th><th>Evento</th><th>Lead</th><th>Status</th><th class="n">Tent.</th><th>Detalhe</th></tr></thead>
+    <tbody hx-get="{% url 'captacao:eventos' %}" hx-trigger="every 30s" hx-select="tbody" hx-target="this" hx-swap="outerHTML">
+    {% for e in eventos %}{% include "captacao/_evento_linha.html" %}{% empty %}<tr><td colspan="6" style="color:var(--mu)">Nada ainda.</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+{% endblock %}

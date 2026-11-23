@@ -1,0 +1,342 @@
+{% load static %}<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }} · {{ preco_fmt }} | TopCar Veículos</title>
+<meta name="description" content="{{ veiculo.nome }} {{ veiculo.ano }}, {{ veiculo.km }} km, {{ preco_fmt }}. Simule o financiamento e agende sua visita na TopCar Veículos.">
+<meta name="theme-color" content="#0a0c0f">
+<link rel="icon" href="{% static 'captacao/favicon.png' %}">
+<link rel="canonical" href="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
+<meta property="og:type" content="product">
+<meta property="og:title" content="{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }} · {{ preco_fmt }}">
+<meta property="og:description" content="{{ veiculo.km }} km · Revisado · Vistoria cautelar · Financiamento em até 60x · Cartão em até 21x">
+<meta property="og:url" content="{{ site_url }}{% url 'captacao:captura' veiculo.pk slug %}">
+{% if destaque %}<meta property="og:image" content="{{ site_url }}{% url 'captacao:foto' destaque.pk 1200 %}">
+<link rel="preload" as="image" href="{% url 'captacao:foto' destaque.pk 800 %}" imagesrcset="{% url 'captacao:foto' destaque.pk 480 %} 480w, {% url 'captacao:foto' destaque.pk 800 %} 800w, {% url 'captacao:foto' destaque.pk 1200 %} 1200w" imagesizes="(min-width:960px) 640px, 100vw" fetchpriority="high">{% endif %}
+{% if not disponivel %}<meta name="robots" content="noindex,follow">{% endif %}
+<style>
+:root{--bg:#0a0c0f;--sf:#11151a;--sf2:#151b21;--bd:#1f272f;--bd2:#2a343e;--tx:#f4f6f8;--mu:#8d99a4;--gr:#25d366;--gd:#1fb958;--gt:#05230f;--am:#f5b942;--rd:#ff6b66;--r:14px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;padding-bottom:84px;-webkit-font-smoothing:antialiased}
+a{color:inherit}.ic{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.w{max-width:1120px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid var(--bd);background:rgba(10,12,15,.9)}
+header .w{display:flex;align-items:center;justify-content:space-between;height:60px}
+header img{height:30px;width:auto;display:block}
+.aberto{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mu)}
+.aberto i{width:8px;height:8px;border-radius:50%;background:#58636d}
+.aberto.on{color:#c9d3da}.aberto.on i{background:var(--gr);box-shadow:0 0 0 3px rgba(37,211,102,.18)}
+.grid{display:grid;gap:24px;grid-template-areas:"top" "form" "rest";padding-bottom:12px}
+.top{grid-area:top;min-width:0}.formcol{grid-area:form}.rest{grid-area:rest;min-width:0}
+.hero{position:relative;background:var(--sf);aspect-ratio:4/3;overflow:hidden;margin:0 -20px}
+.hero img{width:100%;height:100%;object-fit:cover;display:block}
+.sem-foto{display:grid;place-items:center;height:100%;color:var(--mu);font-size:15px}
+.badge{position:absolute;z-index:2;background:rgba(10,12,15,.82);backdrop-filter:blur(8px);border:1px solid var(--bd2);border-radius:8px;padding:6px 11px;font-size:13px;font-weight:600;color:var(--tx);display:flex;gap:7px;align-items:center}
+button.badge{cursor:pointer;right:14px;bottom:14px}
+.badge.vend{left:14px;top:14px;background:#2b1213;border-color:#5a2426;color:#ff9d99}
+.thumbs{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}.thumbs::-webkit-scrollbar{display:none}
+.thumbs button{flex:0 0 76px;height:56px;padding:0;border:1px solid var(--bd);border-radius:8px;overflow:hidden;background:var(--sf);cursor:pointer}
+.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.thumbs .mais{display:grid;place-items:center;font-weight:700;font-size:14px;color:var(--tx);background:var(--sf2)}
+.marca{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);font-weight:600;margin:20px 0 4px}
+h1{font-size:30px;line-height:1.1;margin:0;letter-spacing:-.02em;font-weight:700}
+.ver{color:var(--mu);margin:6px 0 0;font-size:15px}
+.specs{display:grid;grid-template-columns:repeat(3,1fr);margin:18px 0;border:1px solid var(--bd);border-radius:var(--r);background:var(--sf)}
+.specs div{padding:12px 14px}.specs div+div{border-left:1px solid var(--bd)}
+.specs small{display:block;color:var(--mu);font-size:12px;letter-spacing:.04em;text-transform:uppercase}.specs b{font-size:16px;font-weight:600}
+.preco{border:1px solid var(--bd);border-radius:var(--r);background:var(--sf);padding:18px}
+.preco small{color:var(--mu);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.preco .v{font-size:38px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:2px 0 14px}
+.preco ul{list-style:none;margin:0;padding:14px 0 0;border-top:1px solid var(--bd);display:grid;gap:10px;font-size:15px}
+.preco li{display:flex;gap:10px;align-items:center;color:#d3dbe1}.preco li .ic{color:var(--gr)}
+.aviso{background:#241b09;border:1px solid #5a4415;color:var(--am);border-radius:12px;padding:12px 14px;margin:16px 0 0;font-weight:600;font-size:15px}
+.btn{display:flex;width:100%;align-items:center;justify-content:center;gap:10px;text-align:center;border:0;border-radius:12px;background:var(--gr);color:var(--gt);font-weight:700;font-size:17px;padding:16px 18px;text-decoration:none;cursor:pointer;transition:background .15s,transform .08s}
+.btn:hover{background:#2be06f}.btn:active{background:var(--gd);transform:scale(.99)}.btn[disabled]{opacity:.6}
+.btn.ghost{background:transparent;color:var(--tx);border:1px solid var(--bd2)}.btn.ghost:hover{background:var(--sf2)}
+.btn.peq{font-size:15px;padding:13px 16px}
+.quiz{background:var(--sf);border:1px solid var(--bd2);border-radius:18px;padding:22px;box-shadow:0 24px 60px -30px #000}
+.quiz h2{font-size:22px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em;font-weight:700}
+.quiz .sub{color:var(--mu);font-size:14.5px;margin:0 0 18px}
+.qtop{display:none;align-items:center;gap:12px;margin:0 0 18px;font-size:12.5px;color:var(--mu);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.stepper .qtop{display:flex}
+.bar{flex:1;height:4px;background:var(--bd2);border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;width:20%;background:var(--gr);border-radius:9px;transition:width .25s}
+fieldset{border:0;padding:0;margin:0 0 18px;min-width:0}
+legend{font-weight:600;font-size:18px;margin-bottom:14px;padding:0;line-height:1.3}
+label.t{display:block;font-weight:500;font-size:14px;color:#c4ced6;margin-bottom:6px}
+.stepper .passo{display:none;animation:entra .2s ease}.stepper .passo.on{display:block}
+@keyframes entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+input[type=text],input[type=tel]{width:100%;padding:15px 14px;border-radius:12px;border:1px solid var(--bd2);background:var(--bg);color:var(--tx);font-size:17px}
+input[type=text]:focus,input[type=tel]:focus{border-color:var(--gr);outline:0;box-shadow:0 0 0 3px rgba(37,211,102,.15)}
+input:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--gr);outline-offset:2px}
+.op{display:grid;gap:10px}.op label{position:relative;display:block}
+.op input{position:absolute;opacity:0;inset:0;width:100%;height:100%;cursor:pointer;margin:0}
+.op span{display:flex;align-items:center;justify-content:space-between;padding:16px;border:1px solid var(--bd2);border-radius:12px;background:var(--bg);font-size:16.5px;font-weight:500;transition:border-color .12s,background .12s}
+.op span:after{content:"";width:20px;height:20px;border-radius:50%;border:1.5px solid #46525d;flex:none}
+.op label:hover span{border-color:#46525d}
+.op input:checked+span{border-color:var(--gr);background:rgba(37,211,102,.08)}
+.op input:checked+span:after{background:var(--gr);border-color:var(--gr);box-shadow:inset 0 0 0 4px var(--bg)}
+.op input:focus-visible+span{outline:2px solid var(--gr);outline-offset:2px}
+.err{color:var(--rd);font-size:13.5px;margin-top:6px}
+.lgpd{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--mu);line-height:1.45}
+.lgpd input{margin-top:2px;width:18px;height:18px;accent-color:var(--gr);flex:none}
+.voltar{background:none;border:0;color:var(--mu);font-size:14px;padding:6px 0;cursor:pointer;display:none}
+.stepper .voltar.ok{display:inline-flex;align-items:center;gap:4px}
+.seguro{display:flex;gap:7px;align-items:center;justify-content:center;font-size:12.5px;color:var(--mu);margin-top:14px}.seguro .ic{width:14px;height:14px}
+.hp{position:absolute;left:-9999px;height:0;overflow:hidden}
+h2.s{font-size:20px;margin:36px 0 14px;letter-spacing:-.01em;font-weight:700}
+.dif{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dif div{border:1px solid var(--bd);background:var(--sf);border-radius:var(--r);padding:16px}
+.dif .ic{width:24px;height:24px;color:var(--gr);margin-bottom:10px}.dif b{display:block;font-size:15px;margin-bottom:2px}.dif span{color:var(--mu);font-size:13.5px;line-height:1.4;display:block}
+ul.itens{columns:2;column-gap:20px;list-style:none;padding:0;margin:0;font-size:15px}
+ul.itens li{margin-bottom:9px;break-inside:avoid;padding-left:24px;position:relative}
+ul.itens li:before{content:"";position:absolute;left:2px;top:.45em;width:10px;height:6px;border-left:2px solid var(--gr);border-bottom:2px solid var(--gr);transform:rotate(-45deg)}
+.etapas{display:grid;gap:12px;list-style:none;padding:0;margin:0;counter-reset:p}
+.etapas li{counter-increment:p;display:flex;gap:14px;align-items:center;border:1px solid var(--bd);background:var(--sf);border-radius:var(--r);padding:14px 16px;font-size:15px}
+.etapas li:before{content:counter(p);flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--gr);color:var(--gr);font-weight:700;display:grid;place-items:center;font-size:14px}
+.faq details{border-bottom:1px solid var(--bd);padding:14px 2px}.faq details:first-child{border-top:1px solid var(--bd)}
+.faq summary{font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.faq summary::-webkit-details-marker{display:none}.faq summary:after{content:"+";color:var(--mu);font-size:22px;line-height:1}.faq details[open] summary:after{content:"–"}
+.faq p{color:var(--mu);margin:10px 0 0;font-size:15px}
+.loja{border:1px solid var(--bd);background:var(--sf);border-radius:var(--r);padding:18px;display:grid;gap:14px}
+.loja div{display:flex;gap:12px;align-items:flex-start;font-size:15px}.loja .ic{color:var(--gr);margin-top:2px}.loja small{color:var(--mu);display:block}
+.final{margin-top:36px;text-align:center;border:1px solid var(--bd2);background:var(--sf);border-radius:18px;padding:28px 20px}
+.final h2{margin:0 0 6px;font-size:22px}.final p{margin:0 0 18px;color:var(--mu)}
+.sim{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.sim a{text-decoration:none;background:var(--sf);border:1px solid var(--bd);border-radius:12px;overflow:hidden;font-size:13px}
+.sim img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}.sim div{padding:10px}.sim b{color:var(--gr)}
+footer{border-top:1px solid var(--bd);margin-top:44px;padding:24px 0 30px;color:var(--mu);font-size:13px;text-align:center}
+footer img{height:24px;opacity:.85;display:block;margin:0 auto 10px}
+.fixo{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(10,12,15,.96);backdrop-filter:blur(10px);border-top:1px solid var(--bd2);z-index:5;display:flex;gap:14px;align-items:center;transition:transform .2s}
+.fixo.esc{transform:translateY(110%)}
+.fixo .p{font-weight:700;font-size:18px;line-height:1.15;white-space:nowrap}.fixo .p small{display:block;font-size:11.5px;font-weight:500;color:var(--mu)}
+.fixo .btn{padding:14px;font-size:16px;flex:1}
+dialog{border:0;padding:0;background:transparent;max-width:96vw;max-height:96vh;color:#fff;overflow:visible}dialog::backdrop{background:rgba(0,0,0,.94)}
+dialog img{max-width:96vw;max-height:84vh;display:block;border-radius:8px;margin:0 auto}
+.lbt{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:14px}.lbt form{margin:0}
+.lbt .x{background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer}
+.lbm{position:relative;display:flex;align-items:center;justify-content:center}
+.nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:0;color:#fff;width:40px;height:52px;border-radius:10px;cursor:pointer;display:grid;place-items:center}
+#lbp{left:6px}#lbx{right:6px}
+@media(min-width:960px){
+ body{padding-bottom:0}.fixo{display:none}
+ .grid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-areas:"top form" "rest form";align-items:start;column-gap:40px;row-gap:0;padding-top:28px}
+ .formcol{position:sticky;top:20px}.hero{margin:0;border-radius:18px}
+ h1{font-size:36px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+</style>
+{% include "captacao/_pixel.html" %}
+{% if pixel_id %}<script>
+fbq('track','PageView',{},{eventID:'{{ event_id }}'});
+fbq('track','ViewContent',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicle',value:{{ veiculo.valor_venda|stringformat:"s" }},currency:'BRL'},{eventID:'{{ event_id_vc }}'});
+</script>
+<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id={{ pixel_id }}&ev=PageView&noscript=1"></noscript>{% endif %}
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0 5 5L21 12.6 12.6 21a2.1 2.1 0 0 1-3-3L18 9.6"/><path d="M14.7 6.3 11 10 8 7 4 9.5 3 6l3-3 3.5 1L12 8"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.4 3.1 8 7.5 9.5 4.4-1.5 7.5-5.1 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></symbol>
+<symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 9.5 12 4l9 5.5"/><path d="M5 10v8M9.7 10v8M14.3 10v8M19 10v8M3 20h18"/></symbol>
+<symbol id="i-card" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h3"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-cam" viewBox="0 0 24 24"><path d="M4 8h3l1.6-2.5h6.8L17 8h3v11H4V8Z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+<symbol id="i-left" viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></symbol>
+<symbol id="i-right" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></symbol>
+<symbol id="i-wa" viewBox="0 0 24 24"><path d="M20 11.7a8 8 0 0 1-11.8 7L4 20l1.3-4A8 8 0 1 1 20 11.7Z"/><path d="M9.2 8.6c.3 2.4 2.3 4.6 5 5.4l1.1-1.2-1.7-.9-.8.6c-1-.4-1.8-1.2-2.2-2.2l.6-.8-.9-1.7-1.1 1.2Z"/></symbol>
+</defs></svg>
+
+<header><div class="w"><img src="{% static 'captacao/logo.png' %}" alt="TopCar Veículos" width="auto" height="30"><span class="aberto" id="aberto"><i></i><span>Atendimento pelo WhatsApp</span></span></div></header>
+
+<main class="w grid">
+<section class="top">
+<div class="hero">
+{% if destaque %}<img src="{% url 'captacao:foto' destaque.pk 800 %}" srcset="{% url 'captacao:foto' destaque.pk 480 %} 480w, {% url 'captacao:foto' destaque.pk 800 %} 800w, {% url 'captacao:foto' destaque.pk 1200 %} 1200w" sizes="(min-width:960px) 640px, 100vw" width="800" height="{{ destaque_h }}" fetchpriority="high" alt="{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }}">
+{% else %}<div class="sem-foto">Fotos em breve</div>{% endif %}
+{% if not disponivel %}<span class="badge vend">Indisponível</span>{% endif %}
+{% if galeria|length > 1 %}<button type="button" class="badge" data-abrir="0"><svg class="ic" style="width:16px;height:16px"><use href="#i-cam"/></svg>{{ galeria|length }} fotos</button>{% endif %}
+</div>
+{% if galeria|length > 1 %}<div class="thumbs">{% for g in galeria|slice:":7" %}
+<button type="button" data-abrir="{{ forloop.counter0 }}" aria-label="Ver foto {{ forloop.counter }}"><img src="{% url 'captacao:foto' g.pk 160 %}" width="160" height="120" loading="lazy" decoding="async" alt=""></button>{% endfor %}
+{% if galeria|length > 7 %}<button type="button" class="mais" data-abrir="7" aria-label="Ver todas as fotos">+{{ galeria|length|add:"-7" }}</button>{% endif %}</div>{% endif %}
+
+{% if not disponivel %}
+<div class="aviso">{% if veiculo.status == "vendido" %}Este carro foi vendido.{% else %}Este carro não está disponível no momento.{% endif %} Veja opções parecidas abaixo ou deixe seus dados e avisamos quando chegar outro.</div>
+{% endif %}
+
+<p class="marca">{{ veiculo.marca_fmt }}</p>
+<h1>{{ veiculo.modelo_fmt }} {{ veiculo.ano }}</h1>
+{% if veiculo.versao %}<p class="ver">{{ veiculo.versao_fmt }}</p>{% endif %}
+<div class="specs"><div><small>Ano</small><b>{{ veiculo.ano }}</b></div><div><small>Quilometragem</small><b>{{ veiculo.km }} km</b></div>{% if veiculo.cor %}<div><small>Cor</small><b>{{ veiculo.cor_fmt }}</b></div>{% endif %}</div>
+<div class="preco"><small>Preço à vista</small><div class="v">{{ preco_fmt }}</div>
+<ul><li><svg class="ic"><use href="#i-bank"/></svg>Financiamento em até 60x</li><li><svg class="ic"><use href="#i-card"/></svg>Cartão de crédito em até 21x</li></ul></div>
+</section>
+
+<section class="formcol">
+<form id="form" class="quiz" method="post" action="{% url 'captacao:captura' veiculo.pk slug %}" novalidate{% if reabrir_form %} data-erro{% endif %}>
+{% csrf_token %}
+<input type="hidden" name="event_id" value="{{ event_id }}">
+{% for k, v in utm.items %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+<div class="hp" aria-hidden="true"><label>Não preencha <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+
+<h2>{% if disponivel %}Receba a simulação no WhatsApp{% else %}Avisamos quando chegar um parecido{% endif %}</h2>
+<p class="sub">{% if disponivel %}Responda 4 perguntas rápidas e um consultor envia as condições do {{ veiculo.modelo_fmt }}.{% else %}Responda 4 perguntas rápidas e um consultor indica as melhores opções.{% endif %}</p>
+<div class="qtop"><span id="qpasso">Etapa 1 de 5</span><div class="bar"><i id="qbar"></i></div></div>
+
+{% for g in grupos %}{% with campo=g.campo %}
+<fieldset class="passo" data-campo="{{ campo }}"><legend>{{ g.titulo }}</legend>
+<div class="op">{% for val, rot, marcado in g.opcoes %}<label><input type="radio" name="{{ campo }}" value="{{ val }}" {% if marcado %}checked{% endif %}><span>{{ rot }}</span></label>{% endfor %}</div>
+{% for e in g.erros %}<div class="err">{{ e }}</div>{% endfor %}
+{% if campo == 'troca' %}
+<div id="troca-box" hidden style="margin-top:14px"><label class="t" for="id_troca_carro">Qual carro (modelo e ano)?</label>
+<input type="text" id="id_troca_carro" name="troca_carro" value="{{ form.troca_carro.value|default:'' }}" maxlength="100" placeholder="Ex.: Gol 2015">
+{% for e in form.troca_carro.errors %}<div class="err">{{ e }}</div>{% endfor %}
+<button type="button" class="btn peq" id="troca-ok" style="margin-top:12px">Continuar</button></div>
+{% endif %}
+</fieldset>
+{% endwith %}{% endfor %}
+
+<fieldset class="passo" data-final>
+<legend>Para onde enviamos as condições?</legend>
+<label class="t" for="id_nome">Nome</label>
+<input type="text" id="id_nome" name="nome" value="{{ form.nome.value|default_if_none:'' }}" autocomplete="name" enterkeyhint="next" required>
+{% for e in form.nome.errors %}<div class="err">{{ e }}</div>{% endfor %}
+<div class="err" id="e_nome" hidden></div>
+<label class="t" for="id_telefone" style="margin-top:14px">WhatsApp</label>
+<input type="tel" id="id_telefone" name="telefone" value="{{ form.telefone.value|default:'' }}" inputmode="numeric" autocomplete="tel" placeholder="(81) 99999-9999" enterkeyhint="go" required>
+{% for e in form.telefone.errors %}<div class="err">{{ e }}</div>{% endfor %}
+<div class="err" id="e_tel" hidden></div>
+<label class="lgpd" style="margin-top:16px"><input type="checkbox" name="lgpd" value="1" {% if form.data.lgpd %}checked{% endif %}>
+<span>Concordo em ser contatado pela TopCar pelo WhatsApp e com a <a href="{% url 'captacao:privacidade' %}" target="_blank" rel="noopener">política de privacidade</a>.</span></label>
+{% for e in form.lgpd.errors %}<div class="err">{{ e }}</div>{% endfor %}
+<div class="err" id="e_lgpd" hidden></div>
+<button class="btn" type="submit" id="enviar" style="margin-top:18px"><svg class="ic"><use href="#i-wa"/></svg><span>Receber no WhatsApp</span></button>
+</fieldset>
+<button type="button" class="voltar" id="voltar"><svg class="ic" style="width:16px;height:16px"><use href="#i-left"/></svg>Voltar</button>
+<div class="seguro"><svg class="ic"><use href="#i-lock"/></svg>Dados criptografados</div>
+</form>
+</section>
+
+<section class="rest">
+<h2 class="s">Por que comprar na TopCar</h2>
+<div class="dif">
+<div><svg class="ic"><use href="#i-wrench"/></svg><b>Veículo revisado</b><span>Todos os carros passam por revisão antes da venda.</span></div>
+<div><svg class="ic"><use href="#i-shield"/></svg><b>Vistoria cautelar</b><span>Todos os veículos têm vistoria cautelar.</span></div>
+<div><svg class="ic"><use href="#i-bank"/></svg><b>Financiamento</b><span>Em até 60x, com simulação sem compromisso.</span></div>
+<div><svg class="ic"><use href="#i-card"/></svg><b>Cartão de crédito</b><span>Parcelamento em até 21x.</span></div>
+</div>
+
+{% if not disponivel and similares %}
+<h2 class="s">Parecidos que estão na loja</h2>
+<div class="sim">{% for v, t in similares %}
+<a href="{% url 'captacao:captura' v.pk v.slug %}">{% if t %}<img src="{% url 'captacao:foto' t.pk 480 %}" width="480" height="360" loading="lazy" alt="{{ v.marca_fmt }} {{ v.modelo_fmt }}">{% endif %}
+<div>{{ v.marca_fmt }} {{ v.modelo_fmt }} {{ v.ano }}<br><b>{{ v.preco_fmt }}</b></div></a>{% endfor %}</div>
+{% endif %}
+
+{% if itens or diferenciais %}
+<h2 class="s">Itens e diferenciais</h2>
+{% if diferenciais %}<ul class="itens" style="columns:1;margin-bottom:14px">{% for d in diferenciais %}<li><b>{{ d }}</b></li>{% endfor %}</ul>{% endif %}
+{% if itens %}<ul class="itens">{% for i in itens %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
+{% endif %}
+
+<h2 class="s">Como funciona</h2>
+<ol class="etapas">
+<li>Você responde 4 perguntas rápidas nesta página.</li>
+<li>Um consultor envia a simulação pelo WhatsApp.</li>
+<li>Você agenda a visita e conhece o carro na loja.</li>
+</ol>
+
+<h2 class="s">Dúvidas frequentes</h2>
+<div class="faq">
+<details><summary>O carro é revisado e tem vistoria?</summary><p>Sim. Todos os carros da TopCar passam por revisão e têm vistoria cautelar.</p></details>
+<details><summary>Dá para financiar?</summary><p>Sim, em até 60x. A simulação sai no WhatsApp, sem compromisso.</p></details>
+<details><summary>Posso parcelar no cartão?</summary><p>Sim, em até 21x no cartão de crédito.</p></details>
+<details><summary>Preciso pagar algo para simular?</summary><p>Não. A simulação e a visita são gratuitas.</p></details>
+</div>
+
+<h2 class="s">Visite a loja</h2>
+<div class="loja">
+<div><svg class="ic"><use href="#i-pin"/></svg><span><b>{{ loja.nome }}</b><small>{{ loja.endereco }}</small></span></div>
+<div><svg class="ic"><use href="#i-clock"/></svg><span><b>Horário de atendimento</b><small>{{ loja.horario }}</small></span></div>
+<a class="btn ghost peq" href="{{ loja.mapa_url }}" target="_blank" rel="noopener">Como chegar</a>
+</div>
+
+<div class="final"><h2>Gostou do {{ veiculo.modelo_fmt }}?</h2><p>Receba as condições no WhatsApp.</p><a class="btn" href="#form" data-ir>{% if disponivel %}Receber simulação{% else %}Quero ser avisado{% endif %}</a></div>
+</section>
+</main>
+
+<footer><div class="w"><img src="{% static 'captacao/logo.png' %}" alt="TopCar Veículos" width="auto" height="24">© TopCar Veículos · <a href="{% url 'captacao:privacidade' %}">Política de privacidade</a></div></footer>
+
+<div class="fixo" id="fixo"><div class="p">{{ preco_fmt }}<small>{{ veiculo.modelo_fmt }} {{ veiculo.ano }}</small></div><a class="btn" href="#form" id="cta">{% if disponivel %}Receber simulação{% else %}Quero ser avisado{% endif %}</a></div>
+
+<dialog id="lb"><div class="lbt"><span id="lbn"></span><form method="dialog"><button class="x">Fechar</button></form></div><div class="lbm"><button type="button" class="nav" id="lbp" aria-label="Anterior"><svg class="ic"><use href="#i-left"/></svg></button><img id="lbimg" alt="Foto ampliada"><button type="button" class="nav" id="lbx" aria-label="Próxima"><svg class="ic"><use href="#i-right"/></svg></button></div></dialog>
+
+<script>
+(function(){
+var d=document,form=d.getElementById('form'),tel=d.getElementById('id_telefone');
+tel.addEventListener('input',function(){var n=tel.value.replace(/\D/g,'').slice(0,11),s=n;
+ if(n.length>2)s='('+n.slice(0,2)+') '+n.slice(2);
+ if(n.length>7)s='('+n.slice(0,2)+') '+n.slice(2,7)+'-'+n.slice(7);
+ tel.value=s;});
+
+/* loja aberta agora (horário de Recife) */
+try{var p=new Intl.DateTimeFormat('en-US',{timeZone:'America/Recife',weekday:'short',hour:'numeric',minute:'numeric',hour12:false}).formatToParts(new Date()),o={};
+ p.forEach(function(x){o[x.type]=x.value});var h=(+o.hour%24)+(+o.minute)/60,sab=o.weekday==='Sat',dom=o.weekday==='Sun',fim=sab?17:18;
+ var a=d.getElementById('aberto'),t=a.querySelector('span');
+ if(!dom&&h>=8&&h<fim){a.classList.add('on');t.textContent='Aberto agora · até às '+fim+'h'}
+ else{t.textContent='Respondemos a partir das 8h'}}catch(e){}
+
+/* formulário em etapas (sem JS, aparece inteiro) */
+var passos=[].slice.call(form.querySelectorAll('.passo')),atual=0;
+var box=d.getElementById('troca-box'),volt=d.getElementById('voltar');
+function ativos(){var pg=form.querySelector('input[name=pagamento]:checked');
+ return passos.filter(function(p){return !(p.dataset.campo==='entrada'&&pg&&pg.value==='a_vista')});}
+function mostrar(i){var l=ativos();atual=Math.max(0,Math.min(i,l.length-1));
+ passos.forEach(function(p){p.classList.remove('on')});l[atual].classList.add('on');
+ d.getElementById('qpasso').textContent='Etapa '+(atual+1)+' de '+l.length;
+ d.getElementById('qbar').style.width=((atual+1)/l.length*100)+'%';
+ volt.classList.toggle('ok',atual>0);}
+function proximo(){var l=ativos();if(atual<l.length-1){mostrar(atual+1);
+ var n=l[atual],f=n.dataset.final!==undefined&&n.querySelector('input[type=text]');if(f){setTimeout(function(){f.focus()},250)}}}
+function trocaBox(){var r=form.querySelector('input[name=troca]:checked');box.hidden=!(r&&r.value==='sim');}
+if(!form.hasAttribute('data-erro')){
+ form.classList.add('stepper');mostrar(0);
+ form.addEventListener('change',function(e){var t=e.target;if(t.type!=='radio')return;
+  if(t.name==='pagamento'&&t.value==='a_vista'){var s=form.querySelector('input[name=entrada][value=sem]');if(s)s.checked=true;}
+  if(t.name==='troca'){trocaBox();if(t.value==='sim'){var c=d.getElementById('id_troca_carro');c&&c.focus();return;}}
+  setTimeout(proximo,160);});
+ d.getElementById('troca-ok').addEventListener('click',function(){var c=d.getElementById('id_troca_carro');
+  if(!c.value.trim()){c.style.borderColor='var(--rd)';c.focus();return;}proximo();});
+ volt.addEventListener('click',function(){mostrar(atual-1);});
+}else{trocaBox();form.querySelectorAll('input[name=troca]').forEach(function(i){i.addEventListener('change',trocaBox)});d.getElementById('troca-ok').hidden=true;form.scrollIntoView();}
+function erro(id,msg){var e=d.getElementById(id);e.textContent=msg;e.hidden=false;}
+form.addEventListener('submit',function(ev){
+ ['e_nome','e_tel','e_lgpd'].forEach(function(i){d.getElementById(i).hidden=true});
+ var ok=true,n=d.getElementById('id_nome').value.trim(),dig=tel.value.replace(/\D/g,'');
+ if(n.length<2){erro('e_nome','Informe seu nome.');ok=false}
+ if(dig.length<10){erro('e_tel','Informe um WhatsApp válido com DDD.');ok=false}
+ if(!form.lgpd.checked){erro('e_lgpd','Aceite para continuar.');ok=false}
+ if(!ok){ev.preventDefault();return;}
+ var b=d.getElementById('enviar');b.disabled=true;b.querySelector('span').textContent='Enviando…';});
+
+/* barra fixa some quando o formulário está visível */
+var fx=d.getElementById('fixo');
+if('IntersectionObserver' in window){new IntersectionObserver(function(es){fx.classList.toggle('esc',es[0].isIntersecting)},{threshold:.25}).observe(form);}
+d.querySelectorAll('#cta,[data-ir]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();form.scrollIntoView({block:'center'});});});
+
+/* galeria ampliada */
+var fs=[{% for g in galeria %}'{% url 'captacao:foto' g.pk 1200 %}'{% if not forloop.last %},{% endif %}{% endfor %}];
+var lb=d.getElementById('lb'),img=d.getElementById('lbimg'),k=0,x0=null;
+function ver(n){if(!fs.length)return;k=(n+fs.length)%fs.length;img.src=fs[k];d.getElementById('lbn').textContent=(k+1)+' / '+fs.length;new Image().src=fs[(k+1)%fs.length];}
+function abrir(n){ver(Math.min(n,fs.length-1));if(!lb.open)lb.showModal();}
+d.querySelectorAll('[data-abrir]').forEach(function(b){b.addEventListener('click',function(){abrir(+b.dataset.abrir)})});
+d.getElementById('lbp').addEventListener('click',function(){ver(k-1)});d.getElementById('lbx').addEventListener('click',function(){ver(k+1)});
+lb.addEventListener('keydown',function(e){if(e.key==='ArrowLeft')ver(k-1);if(e.key==='ArrowRight')ver(k+1)});
+lb.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+lb.addEventListener('touchend',function(e){if(x0===null)return;var dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>50)ver(k+(dx<0?1:-1))});
+lb.addEventListener('click',function(e){if(e.target===lb)lb.close();});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<button class="link fechar" onclick="document.getElementById('dlg').close()" aria-label="Fechar">✕</button>
+<h2 style="margin:0 0 2px">{{ v.marca_fmt }} {{ v.modelo_fmt }} {{ v.ano }}</h2>
+<p style="color:var(--mu);margin:0 0 6px">{{ v.versao_fmt }} · {{ v.placa }}</p>
+{% if marcado and not fotos %}<div class="box" style="border-color:var(--am);color:var(--am);margin:10px 0">O estoque marca este carro com fotos, mas nenhum arquivo foi vinculado ainda.</div>{% endif %}
+{% if not configurado and fotos %}<div class="box" style="border-color:var(--am);color:var(--am);margin:10px 0">Credenciais do B2 não configuradas: as imagens não carregam neste ambiente.</div>{% endif %}
+
+{% if aba != "videos" %}<div class="sec-t">Fotos ({{ fotos|length }})</div>
+{% if fotos %}<div class="midias">{% for t in fotos %}<a href="{% url 'captacao:foto' t.pk 1200 %}" target="_blank" rel="noopener"><img src="{% url 'captacao:foto' t.pk 480 %}" loading="lazy" alt="Foto {{ forloop.counter }}"></a>{% endfor %}</div>
+{% else %}<p style="color:var(--mu)">Nenhuma foto vinculada.</p>{% endif %}{% endif %}
+
+{% if aba != "fotos" %}<div class="sec-t">Vídeos ({{ videos|length }})</div>
+{% if videos %}<div class="videos">{% for m in videos %}{% if m.url %}<video controls preload="none" playsinline src="{{ m.url }}"></video>{% else %}<div class="box" style="color:var(--mu)">Vídeo {{ forloop.counter }}: configure o B2 para reproduzir.</div>{% endif %}{% endfor %}</div>
+{% else %}<p style="color:var(--mu)">Nenhum vídeo vinculado.</p>{% endif %}{% endif %}

@@ -1,0 +1,54 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Painel{% endblock %}
+{% block content %}
+<div class="pg">
+<form class="barra" method="get" style="padding:0 0 12px">
+  <select name="periodo" onchange="this.form.submit()">{% for v, r in periodos %}<option value="{{ v }}" {% if v == periodo %}selected{% endif %}>{{ r }}</option>{% endfor %}</select>
+  {% if periodo == 'custom' %}<input type="date" name="de" value="{{ de|date:'Y-m-d' }}" style="width:auto"><input type="date" name="ate" value="{{ ate|date:'Y-m-d' }}" style="width:auto">{% endif %}
+  <select name="carro" onchange="this.form.submit()"><option value="">Todos os carros</option>{% for v in veiculos %}<option value="{{ v.pk }}" {% if sel_carro == v.pk|stringformat:"s" %}selected{% endif %}>{{ v.marca_fmt }} {{ v.modelo_fmt }} {{ v.ano }}</option>{% endfor %}</select>
+  <select name="anuncio" onchange="this.form.submit()"><option value="">Todos os anúncios</option>{% for a in lista_anuncios %}<option {% if sel_anuncio == a %}selected{% endif %}>{{ a }}</option>{% endfor %}</select>
+  <button class="btn sec sm">Aplicar</button>
+  <span style="color:var(--mu);font-size:13px">{{ de|date:"d/m" }} a {{ ate|date:"d/m/Y" }} · leads de anúncio (Meta)</span>
+</form>
+
+<div class="grid">
+  <div class="box"><h2>Leads</h2><div class="num">{{ total }}</div>
+    <span class="tag A">A {{ por_classe.A }}</span> <span class="tag B">B {{ por_classe.B }}</span> <span class="tag C">C {{ por_classe.C }}</span></div>
+  <div class="box"><h2>Primeira resposta</h2><div class="num">{% if media_min is not None %}{{ media_min }} <small>min em média</small>{% else %}—{% endif %}</div>
+    {% if pct5 is not None %}<b style="color:{% if pct5 >= 80 %}var(--gr){% else %}var(--am){% endif %}">{{ pct5 }}%</b> respondidos em até 5 min{% endif %}</div>
+  <div class="box"><h2>Vendas</h2><div class="num">{{ funil.4.n }}</div>R$ {{ receita|floatformat:0 }} em vendas</div>
+</div>
+
+<div class="grid" style="margin-top:12px">
+  <div class="box funil"><h2>Funil</h2>
+    {% for f in funil %}<div class="l"><div class="b" style="width:{{ f.largura }}%">{{ f.n }}</div>
+    <small>{{ f.nome }}{% if f.taxa is not None %} · {{ f.taxa }}% da etapa anterior{% endif %}</small></div>{% endfor %}</div>
+  <div class="box"><h2>Leads por dia</h2>
+    <div class="dias">{% for x in dias %}<div style="height:{{ x.h }}%" title="{{ x.dia|date:'d/m' }}: {{ x.total }} (A {{ x.A }} · B {{ x.B }} · C {{ x.C }})"></div>{% endfor %}</div>
+    <small style="color:var(--mu)">passe o dedo/mouse nas barras para ver a classe</small></div>
+</div>
+
+<div class="grid" style="margin-top:12px">
+  <div class="box"><h2>Anúncios (utm_content)</h2><table class="t"><tr><th>Anúncio</th><th class="n">Leads</th><th class="n">Qualif.</th><th class="n">Vendas</th></tr>
+    {% for a in anuncios %}<tr><td>{{ a.nome|truncatechars:26 }}</td><td class="n">{{ a.leads }}</td><td class="n">{{ a.qualificados }}</td><td class="n">{{ a.vendas }}</td></tr>{% empty %}<tr><td colspan="4" style="color:var(--mu)">Sem dados</td></tr>{% endfor %}</table></div>
+  <div class="box"><h2>Veículos</h2><table class="t"><tr><th>Carro</th><th class="n">Leads</th><th class="n">Qualif.</th><th class="n">Vendas</th></tr>
+    {% for a in carros %}<tr><td>{{ a.nome|truncatechars:26 }}</td><td class="n">{{ a.leads }}</td><td class="n">{{ a.qualificados }}</td><td class="n">{{ a.vendas }}</td></tr>{% empty %}<tr><td colspan="4" style="color:var(--mu)">Sem dados</td></tr>{% endfor %}</table></div>
+  <div class="box"><h2>Motivos de perda</h2><table class="t">
+    {% for m, n in perdas %}<tr><td>{{ m }}</td><td class="n">{{ n }}</td></tr>{% empty %}<tr><td style="color:var(--mu)">Nenhuma perda</td></tr>{% endfor %}</table></div>
+</div>
+
+<div class="box" style="margin-top:12px"><h2>Custos de {{ mes|date:"F/Y" }}</h2>
+  <form method="post" action="{% url 'captacao:investimento' %}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">{% csrf_token %}
+    <input type="hidden" name="mes" value="{{ mes|date:'Y-m-d' }}">
+    <label class="l" style="margin:0">Investimento (R$)</label>
+    <input type="text" name="valor" inputmode="decimal" value="{{ investimento.valor|default_if_none:'' }}" placeholder="1300" style="width:140px" {% if not gestor %}disabled{% endif %}>
+    {% if gestor %}<button class="btn sec sm">Salvar</button>{% endif %}
+  </form>
+  <div class="grid" style="margin-top:12px">
+    <div><small style="color:var(--mu)">Por lead ({{ n_mes.0 }})</small><div class="num">{% if custo_lead %}R$ {{ custo_lead }}{% else %}—{% endif %}</div></div>
+    <div><small style="color:var(--mu)">Por lead qualificado ({{ n_mes.1 }})</small><div class="num">{% if custo_qualificado %}R$ {{ custo_qualificado }}{% else %}—{% endif %}</div></div>
+    <div><small style="color:var(--mu)">Por venda ({{ n_mes.2 }})</small><div class="num">{% if custo_venda %}R$ {{ custo_venda }}{% else %}—{% endif %}</div></div>
+  </div>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "captacao/base.html" %}
+{% block head %}<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>{% endblock %}
+{% block content %}
+<form id="filtros" class="barra" hx-get="{% url 'captacao:quadro' %}" hx-target="#quadro" hx-trigger="input delay:300ms, change" hx-sync="this:replace" onsubmit="return false">
+  <input type="search" name="q" placeholder="Buscar nome ou telefone" autocomplete="off">
+  <button type="button" id="filtrar" class="btn sec filtrar" aria-expanded="false">Filtros</button>
+  <div class="extra">
+  <select name="periodo" aria-label="Período">{% for v, r in periodos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
+  <select name="classe" aria-label="Classe"><option value="">Classe</option><option>A</option><option>B</option><option>C</option></select>
+  <select name="consultor" aria-label="Consultor"><option value="">Consultor</option><option value="sem">Sem consultor</option>
+    {% for u in consultores %}<option value="{{ u.pk }}">{{ u.first_name|default:u.username }}</option>{% endfor %}</select>
+  <select name="carro" aria-label="Carro"><option value="">Carro</option>
+    {% for c in carros %}<option value="{{ c.pk }}">{{ c.marca_fmt }} {{ c.modelo_fmt }} {{ c.ano }}</option>{% endfor %}</select>
+  <select name="origem" aria-label="Origem"><option value="">Origem</option>{% for v, r in origens %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
+  </div>
+  <button type="button" id="som" class="som" title="Toca um aviso quando chega lead novo"><svg viewBox="0 0 24 24" class="ico"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/><path class="cortado" d="M4 4l16 16"/></svg><span>Som desligado</span></button>
+  <button type="button" class="btn" hx-get="{% url 'captacao:lead_novo' %}" hx-target="#dlg-box">Novo lead</button>
+</form>
+<div id="quadro" hx-get="{% url 'captacao:quadro' %}" hx-trigger="load, every 30s, quadroAtualizar from:body" hx-include="#filtros" hx-swap="innerHTML"></div>
+{% endblock %}

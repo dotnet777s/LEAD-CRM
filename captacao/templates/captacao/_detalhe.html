@@ -1,0 +1,71 @@
+<button class="link fechar" onclick="document.getElementById('dlg').close()" aria-label="Fechar">✕</button>
+<h2 style="margin:0">{{ lead.nome }} <span class="tag {{ lead.classe }}">{{ lead.classe }}</span></h2>
+<div class="carro" style="color:var(--mu)">{{ lead.carro_texto|default:"Sem carro definido" }}</div>
+<p style="margin:12px 0"><a class="btn full js-wa" href="{{ lead.whatsapp_url }}?text={{ mensagem|urlencode }}" target="_blank" rel="noopener" data-marcar="{% url 'captacao:whatsapp' lead.pk %}">Abrir WhatsApp · {{ lead.telefone_formatado }}</a></p>
+
+<div class="sec-t">Etapa: {{ lead.get_etapa_display }}{% if lead.etapa == 'novo' %} · <span class="sla {{ lead.sla }}">{{ lead.tempo_txt }}</span>{% endif %}</div>
+<div class="chips">
+{% for val, nome in etapas_funil %}
+  {% if val in com_form %}
+  <button class="{% if val == lead.etapa %}atual{% endif %}" hx-get="{% url 'captacao:mover' lead.pk %}?etapa={{ val }}" hx-target="#dlg-box">{{ nome }}</button>
+  {% else %}
+  <button class="{% if val == lead.etapa %}atual{% endif %}" hx-post="{% url 'captacao:mover_direto' lead.pk %}" hx-vals='{"etapa": "{{ val }}"}' hx-swap="none"
+          hx-on::after-request="htmx.ajax('GET','{% url 'captacao:lead' lead.pk %}',{target:'#dlg-box',swap:'innerHTML'})">{{ nome }}</button>
+  {% endif %}
+{% endfor %}
+</div>
+{% if lead.etapa == 'perdido' %}<p class="err">Motivo: {{ lead.get_motivo_perda_display }}</p>{% endif %}
+{% if lead.etapa == 'vendido' %}<p style="color:var(--gr)">Vendido: {{ lead.veiculo_vendido|default:"—" }} · R$ {{ lead.valor_venda }}</p>{% endif %}
+
+<div class="sec-t">Respostas</div>
+<p style="margin:0">{{ resumo|default:"—" }}</p>
+{% if interacoes %}<small style="color:var(--mu)">Pediu informação {{ interacoes|length }}x de novo.</small>{% endif %}
+
+<div class="sec-t">Dados</div>
+<dl class="kv">
+  <dt>Origem</dt><dd>{{ lead.get_origem_display }}</dd>
+  {% if lead.utm_campaign %}<dt>Campanha</dt><dd>{{ lead.utm_campaign }}</dd>{% endif %}
+  {% if lead.utm_content %}<dt>Anúncio</dt><dd>{{ lead.utm_content }}</dd>{% endif %}
+  <dt>Chegou</dt><dd>{{ lead.criado_em|date:"d/m H:i" }}</dd>
+  {% if lead.primeira_resposta_em %}<dt>1ª resposta</dt><dd>{{ lead.primeira_resposta_em|date:"d/m H:i" }}</dd>{% endif %}
+  {% if lead.visita_em %}<dt>Visita</dt><dd>{{ lead.visita_em|date:"d/m H:i" }}</dd>{% endif %}
+</dl>
+
+<div class="sec-t">Consultor</div>
+<form hx-post="{% url 'captacao:consultor' lead.pk %}" hx-target="#dlg-box" style="display:flex;gap:6px">
+  {% if gestor %}
+  <select name="vendedor"><option value="">Sem consultor</option>
+    {% for u in consultores %}<option value="{{ u.pk }}" {% if u.pk == lead.vendedor_id %}selected{% endif %}>{{ u.first_name|default:u.username }}</option>{% endfor %}</select>
+  <button class="btn sec">Salvar</button>
+  {% else %}
+  <span style="flex:1;align-self:center">{% if lead.vendedor %}{{ lead.vendedor.first_name|default:lead.vendedor.username }}{% else %}Sem consultor{% endif %}</span>
+  {% if lead.vendedor_id != request.user.pk %}<button class="btn sec">Assumir</button>{% endif %}
+  {% endif %}
+</form>
+
+<div class="sec-t">Próximo contato</div>
+<form hx-post="{% url 'captacao:retorno' lead.pk %}" hx-target="#dlg-box" style="display:flex;gap:6px">
+  <input type="datetime-local" name="proximo_contato" value="{% if lead.proximo_contato %}{{ lead.proximo_contato|date:'Y-m-d\TH:i' }}{% endif %}">
+  <button class="btn sec">Salvar</button>
+</form>
+
+<div class="sec-t">Notas</div>
+<form hx-post="{% url 'captacao:nota' lead.pk %}" hx-target="#dlg-box" style="display:flex;gap:6px">
+  <input type="text" name="texto" placeholder="Anotar algo…" maxlength="500" autocomplete="off"><button class="btn sec">Add</button>
+</form>
+
+<div class="sec-t">Eventos Meta</div>
+{% if lead.de_anuncio %}
+<ul class="hist">{% for e in eventos %}<li><span class="badge {{ e.status }}">{{ e.get_status_display }}</span> {{ e.nome }}<small>{{ e.criado_em|date:"d/m H:i" }}{% if e.motivo %} · {{ e.motivo }}{% endif %}</small></li>
+{% empty %}<li><small>Nenhum evento ainda.</small></li>{% endfor %}</ul>
+{% else %}<small style="color:var(--mu)">Lead de outra origem: não envia eventos para a Meta.</small>{% endif %}
+
+<div class="sec-t">Histórico</div>
+<ul class="hist">{% for h in historico %}
+<li>{% if h.tipo == 'etapa' %}<b>{{ h.de_etapa }} ➜ {{ h.para_etapa }}</b>{% endif %} {{ h.texto }}
+<small>{{ h.criado_em|date:"d/m H:i" }}{% if h.usuario %} · {{ h.usuario.first_name|default:h.usuario.username }}{% endif %} · {{ h.get_tipo_display }}</small></li>{% endfor %}</ul>
+
+{% if gestor %}
+<div class="sec-t">LGPD</div>
+<button class="btn red sm" hx-post="{% url 'captacao:excluir' lead.pk %}" hx-confirm="Excluir DEFINITIVAMENTE os dados de {{ lead.nome }}?" hx-swap="none">Excluir dados deste lead</button>
+{% endif %}

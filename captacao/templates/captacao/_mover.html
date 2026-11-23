@@ -1,0 +1,20 @@
+<button class="link fechar" onclick="document.getElementById('dlg').close()" aria-label="Fechar">✕</button>
+<h2 style="margin:0">{{ etapa_nome }}</h2>
+<div style="color:var(--mu);margin-bottom:6px">{{ lead.nome }} · {{ lead.carro_texto }}</div>
+{% if erro %}<div class="err" role="alert">{{ erro }}</div>{% endif %}
+<form hx-post="{% url 'captacao:mover' lead.pk %}" hx-target="#dlg-box" hx-swap="innerHTML">
+  <input type="hidden" name="etapa" value="{{ etapa }}">
+  {% if etapa == 'perdido' %}
+    <label class="l">Motivo da perda</label>
+    <div class="chips">{% for v, r in motivos %}<label><input type="radio" name="motivo" value="{{ v }}" style="position:absolute;opacity:0"><button type="button" onclick="this.previousElementSibling.checked=true;this.parentNode.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('atual'));this.classList.add('atual')">{{ r }}</button></label>{% endfor %}</div>
+  {% elif etapa == 'vendido' %}
+    <label class="l">Veículo vendido</label>
+    <select name="veiculo_vendido" required>{% for c in carros %}<option value="{{ c.pk }}" {% if c.pk == lead.veiculo_id %}selected{% endif %}>{{ c.marca }} {{ c.modelo }} {{ c.ano }} · {{ c.placa }}</option>{% endfor %}</select>
+    <label class="l">Valor da venda (R$)</label>
+    <input type="text" name="valor" inputmode="decimal" required value="{{ valor_sugerido }}" placeholder="59900">
+  {% elif etapa == 'visita' %}
+    <label class="l">Dia e hora da visita</label>
+    <input type="datetime-local" name="visita_em" required value="{{ visita_sugerida }}">
+  {% endif %}
+  <p style="margin-top:16px"><button class="btn full">Confirmar</button></p>
+</form>

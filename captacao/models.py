@@ -1,0 +1,229 @@
+import uuid
+
+from django.conf import settings
+from django.db import models
+from django.utils import timezone
+
+
+class Lead(models.Model):
+    """Lead do CRM (tabela própria; o estoque só é lido, via catalogo.Veiculo)."""
+
+    class Etapa(models.TextChoices):
+        NOVO = "novo", "Novo"
+        ATENDIMENTO = "atendimento", "Em atendimento"
+        QUALIFICADO = "qualificado", "Qualificado"
+        VISITA = "visita", "Visita agendada"
+        COMPARECEU = "compareceu", "Compareceu"
+        NEGOCIACAO = "negociacao", "Negociação"
+        VENDIDO = "vendido", "Vendido"
+        PERDIDO = "perdido", "Perdido"
+
+    ABERTAS = [Etapa.NOVO, Etapa.ATENDIMENTO, Etapa.QUALIFICADO, Etapa.VISITA, Etapa.COMPARECEU, Etapa.NEGOCIACAO]
+    # Ordem do funil (quadro, botão "avançar" e taxas do painel)
+    FUNIL = ABERTAS + [Etapa.VENDIDO]
+
+    class Classe(models.TextChoices):
+        A = "A", "A · quente"
+        B = "B", "B · morno"
+        C = "C", "C · frio"
+
+    class Origem(models.TextChoices):
+        META_LP = "meta_lp", "Anúncio Meta (página)"
+        WHATSAPP = "whatsapp", "WhatsApp direto"
+        PORTAL = "portal", "Portal (OLX, Mobiauto...)"
+        LOJA = "loja", "Loja"
+        INDICACAO = "indicacao", "Indicação"
+        OUTRO = "outro", "Outro"
+
+    class MotivoPerda(models.TextChoices):
+        PRECO = "preco", "Preço"
+        CREDITO = "credito_negado", "Crédito negado"
+        COMPROU_OUTRO = "comprou_outro", "Comprou em outro lugar"
+        SEM_RESPOSTA = "sem_resposta", "Sem resposta"
+        SO_PESQUISANDO = "so_pesquisando", "Só pesquisando"
+        OUTRO = "outro", "Outro"
+
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    nome = models.CharField(max_length=120)
+    telefone = models.CharField("WhatsApp", max_length=13, db_index=True,
+                                help_text="Só dígitos, com 55 (ex.: 5581999999999).")
+    # Carro de interesse (estoque é lido, nunca escrito). Sem constraint: a tabela é de outro sistema.
+    veiculo = models.ForeignKey("catalogo.Veiculo", null=True, blank=True, on_delete=models.SET_NULL,
+                                db_constraint=False, related_name="leads_crm")
+    carro_texto = models.CharField("Carro de interesse", max_length=150, blank=True,
+                                   help_text="Cópia do nome/preço no momento da captura.")
+    origem = models.CharField(max_length=12, choices=Origem.choices, default=Origem.META_LP, db_index=True)
+    classe = models.CharField(max_length=1, choices=Classe.choices, default=Classe.B)
+    etapa = models.CharField(max_length=12, choices=Etapa.choices, default=Etapa.NOVO, db_index=True)
+    etapa_desde = models.DateTimeField(default=timezone.now)
+    vendedor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                 related_name="leads_crm")
+
+    respostas = models.JSONField(default=dict, blank=True)
+
+    # funil
+    primeira_resposta_em = models.DateTimeField(null=True, blank=True)
+    visita_em = models.DateTimeField("Visita marcada para", null=True, blank=True)
+    proximo_contato = models.DateTimeField(null=True, blank=True)
+    motivo_perda = models.CharField(max_length=16, choices=MotivoPerda.choices, blank=True)
+    veiculo_vendido = models.ForeignKey("catalogo.Veiculo", null=True, blank=True, on_delete=models.SET_NULL,
+                                        db_constraint=False, related_name="vendas_crm")
+    valor_venda = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vendido_em = models.DateTimeField(null=True, blank=True)
+    observacao = models.TextField(blank=True)
+
+    # tracking (Meta)
+    utm_source = models.CharField(max_length=120, blank=True)
+    utm_medium = models.CharField(max_length=120, blank=True)
+    utm_campaign = models.CharField(max_length=200, blank=True)
+    utm_term = models.CharField(max_length=200, blank=True)
+    utm_content = models.CharField(max_length=200, blank=True, db_index=True)
+    fbclid = models.CharField(max_length=500, blank=True)
+    fbp = models.CharField(max_length=200, blank=True)
+    fbc = models.CharField(max_length=500, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    url_origem = models.CharField(max_length=1000, blank=True)
+    event_id_lead = models.CharField("event_id do Lead (Pixel/CAPI)", max_length=80, blank=True)
+
+    # LGPD
+    consentimento_em = models.DateTimeField(null=True, blank=True)
+    consentimento_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    criado_em = models.DateTimeField(default=timezone.now, db_index=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.nome} ({self.telefone})"
+
+    @property
+    def de_anuncio(self):
+        """Só leads vindos da página/anúncio enviam eventos de CRM para a Meta."""
+        return self.origem == self.Origem.META_LP or bool(self.fbc or self.fbp)
+
+    @property
+    def whatsapp_url(self):
+        return f"https://wa.me/{self.telefone}" if self.telefone else ""
+
+    @property
+    def telefone_formatado(self):
+        t = self.telefone[2:] if self.telefone.startswith("55") else self.telefone
+        if len(t) == 11:
+            return f"({t[:2]}) {t[2:7]}-{t[7:]}"
+        if len(t) == 10:
+            return f"({t[:2]}) {t[2:6]}-{t[6:]}"
+        return self.telefone
+
+    @property
+    def proxima_etapa(self):
+        if self.etapa in self.ABERTAS:
+            return self.FUNIL[self.FUNIL.index(self.etapa) + 1]
+        return None
+
+
+class Interacao(models.Model):
+    """Novo envio do formulário pelo mesmo telefone em até 30 dias (não cria outro card)."""
+    lead = models.ForeignKey(Lead, related_name="interacoes", on_delete=models.CASCADE)
+    veiculo = models.ForeignKey("catalogo.Veiculo", null=True, blank=True, on_delete=models.SET_NULL,
+                                db_constraint=False, related_name="+")
+    respostas = models.JSONField(default=dict, blank=True)
+    utm_content = models.CharField(max_length=200, blank=True)
+    criado_em = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+
+class Historico(models.Model):
+    """Linha do tempo do lead: etapa, nota, consultor e eventos enviados à Meta."""
+
+    class Tipo(models.TextChoices):
+        CRIADO = "criado", "Lead criado"
+        ETAPA = "etapa", "Mudança de etapa"
+        NOTA = "nota", "Nota"
+        CONSULTOR = "consultor", "Troca de consultor"
+        META = "meta", "Evento Meta"
+        FORM = "form", "Novo envio do formulário"
+
+    lead = models.ForeignKey(Lead, related_name="historico", on_delete=models.CASCADE)
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    de_etapa = models.CharField(max_length=12, blank=True)
+    para_etapa = models.CharField(max_length=12, blank=True)
+    duracao_etapa = models.DurationField(null=True, blank=True)
+    texto = models.CharField(max_length=500, blank=True)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    criado_em = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ["-criado_em", "-id"]
+
+
+class EventoMeta(models.Model):
+    """Outbox da Conversions API: nada é enviado na requisição; o worker lê esta tabela."""
+
+    class Status(models.TextChoices):
+        PENDENTE = "pendente", "Pendente"
+        ENVIADO = "enviado", "Enviado"
+        ERRO = "erro", "Erro (esgotou tentativas)"
+        NAO_ENVIADO = "nao_enviado", "Não enviado"
+
+    lead = models.ForeignKey(Lead, null=True, blank=True, related_name="eventos_meta", on_delete=models.SET_NULL)
+    nome = models.CharField(max_length=40, db_index=True)
+    event_id = models.CharField(max_length=120, unique=True)
+    payload = models.JSONField(default=dict)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDENTE, db_index=True)
+    tentativas = models.PositiveSmallIntegerField(default=0)
+    proxima_tentativa_em = models.DateTimeField(default=timezone.now, db_index=True)
+    resposta = models.TextField(blank=True)
+    motivo = models.CharField(max_length=255, blank=True)
+    criado_em = models.DateTimeField(default=timezone.now)
+    enviado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+
+class Investimento(models.Model):
+    """Verba de anúncios do mês (informada à mão) para custo por lead, por qualificado e por venda."""
+    mes = models.DateField(unique=True, help_text="Sempre o dia 1 do mês.")
+    valor = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        ordering = ["-mes"]
+
+
+class TelegramVinculo(models.Model):
+    """Liga um usuário do CRM a um chat do Telegram (avisos de lead, lembretes)."""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="telegram")
+    chat_id = models.BigIntegerField(null=True, blank=True, unique=True)
+    codigo = models.CharField(max_length=12, blank=True)
+    codigo_expira_em = models.DateTimeField(null=True, blank=True)
+    vinculado_em = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user} -> {self.chat_id or 'sem chat'}"
+
+
+class NotificacaoTelegram(models.Model):
+    """Fila de mensagens do bot (enviada pelo worker, nunca na requisição). `chave` evita aviso duplicado."""
+
+    class Status(models.TextChoices):
+        PENDENTE = "pendente", "Pendente"
+        ENVIADO = "enviado", "Enviado"
+        ERRO = "erro", "Erro"
+
+    chave = models.CharField(max_length=120, unique=True, null=True, blank=True)
+    tipo = models.CharField(max_length=20, blank=True)
+    chat_id = models.BigIntegerField()
+    texto = models.TextField()
+    botoes = models.JSONField(default=list, blank=True)
+    lead = models.ForeignKey(Lead, null=True, blank=True, on_delete=models.SET_NULL, related_name="avisos_telegram")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDENTE, db_index=True)
+    tentativas = models.PositiveSmallIntegerField(default=0)
+    proxima_tentativa_em = models.DateTimeField(default=timezone.now)
+    criado_em = models.DateTimeField(default=timezone.now)
+    enviado_em = models.DateTimeField(null=True, blank=True)
+    motivo = models.CharField(max_length=300, blank=True)

@@ -1,0 +1,50 @@
+{% load static %}<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0a0c0f">
+<title>Continue no WhatsApp · TopCar Veículos</title>
+<link rel="icon" href="{% static 'captacao/favicon.png' %}">
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0c0f;color:#f4f6f8;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:20px;-webkit-font-smoothing:antialiased}
+.c{width:100%;max-width:440px;text-align:center}
+.logo{height:30px;margin-bottom:26px}
+.ok{width:56px;height:56px;border-radius:50%;border:1.5px solid #25d366;display:grid;place-items:center;margin:0 auto 18px;color:#25d366}
+.ok svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+h1{font-size:26px;line-height:1.2;margin:0 0 8px;letter-spacing:-.01em}
+p{color:#8d99a4;margin:0 0 22px}
+.car{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;background:#11151a;border:1px solid #1f272f;border-radius:14px;padding:14px 16px;margin-bottom:18px}
+.car small{display:block;color:#8d99a4;font-size:12px;letter-spacing:.04em;text-transform:uppercase}.car b{font-weight:600}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#25d366;color:#05230f;font-weight:700;font-size:18px;padding:17px;border-radius:12px;text-decoration:none}
+.btn:hover{background:#2be06f}.btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+small.a{display:block;margin-top:14px;color:#8d99a4;font-size:13.5px}
+</style>
+{% include "captacao/_pixel.html" %}
+{% if pixel_id %}<script>fbq('track','Lead',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicle',value:{{ preco|stringformat:"s" }},currency:'BRL'},{eventID:'{{ event_id_lead }}'});</script>{% endif %}
+</head>
+<body>
+<div class="c">
+<img class="logo" src="{% static 'captacao/logo.png' %}" alt="TopCar Veículos">
+<div class="ok"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+<h1>Recebemos seus dados, {{ lead.nome|truncatechars:20 }}</h1>
+<p>Continue no WhatsApp para receber a simulação e as condições do veículo.</p>
+<div class="car"><span><small>Veículo</small><b>{{ veiculo.marca_fmt }} {{ veiculo.modelo_fmt }} {{ veiculo.ano }}</b></span></div>
+<a id="wa" class="btn" href="{{ wa_url }}" rel="noopener"><svg viewBox="0 0 24 24"><path d="M20 11.7a8 8 0 0 1-11.8 7L4 20l1.3-4A8 8 0 1 1 20 11.7Z"/><path d="M9.2 8.6c.3 2.4 2.3 4.6 5 5.4l1.1-1.2-1.7-.9-.8.6c-1-.4-1.8-1.2-2.2-2.2l.6-.8-.9-1.7-1.1 1.2Z"/></svg>Abrir WhatsApp</a>
+<small class="a" id="aviso">Abrindo o WhatsApp automaticamente…</small>
+</div>
+<script>
+(function(){
+var enviado=false,a=document.getElementById('wa');
+function contato(){
+ if(enviado)return;enviado=true;
+ try{fbq('track','Contact',{content_ids:['{{ veiculo.pk }}'],content_type:'vehicle',value:{{ preco|stringformat:"s" }},currency:'BRL'},{eventID:'{{ event_id_contact }}'});}catch(e){}
+ try{fetch('{% url "captacao:contato" pk lead.uuid %}',{method:'POST',keepalive:true,headers:{'X-CSRFToken':'{{ csrf_token }}'}});}catch(e){}
+}
+a.addEventListener('click',contato);
+setTimeout(function(){contato();location.href=a.href;},1500);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<div id="qdados" data-ultimo="{{ ultimo_novo }}" hidden></div>
+<div class="abas">{% for c in colunas %}<button type="button" data-etapa="{{ c.etapa }}">{{ c.nome }}<b>{{ c.total }}</b></button>{% endfor %}</div>
+<div class="quadro" data-com-form="{{ com_form|join:',' }}">
+{% for c in colunas %}
+<section class="col" data-etapa="{{ c.etapa }}" aria-label="{{ c.nome }}">
+  <h3>{{ c.nome }} <span>{{ c.total }}</span></h3>
+  <div class="lista" data-etapa="{{ c.etapa }}">
+  {% for l in c.cards %}
+    <article class="card c{{ l.classe }}" data-id="{{ l.pk }}" data-ts="{{ l.criado_ts }}" {% if l.sla %}data-sla="1"{% endif %}
+             data-mover-url="{% url 'captacao:mover' l.pk %}" data-direto-url="{% url 'captacao:mover_direto' l.pk %}">
+      <div class="topo">
+        <button class="nome" hx-get="{% url 'captacao:lead' l.pk %}" hx-target="#dlg-box">{{ l.nome|truncatechars:26 }}</button>
+        <span>{% if l.sla %}<span class="sla {{ l.sla }}">{{ l.tempo_txt }}</span>{% else %}<span class="tag {{ l.classe }}">{{ l.classe }}</span>{% endif %}</span>
+      </div>
+      <div class="carro">{{ l.carro_texto|default:"Sem carro definido"|truncatechars:44 }}</div>
+      <div class="meta">
+        {% if l.sla %}<span class="tag {{ l.classe }}">{{ l.classe }}</span>{% endif %}
+        <span>{{ l.get_origem_display }}</span>
+        {% if l.utm_content %}<span title="Anúncio">{{ l.utm_content|truncatechars:18 }}</span>{% endif %}
+        <span class="quem{% if not l.vendedor %} sem{% endif %}">{% if l.vendedor %}{{ l.vendedor.first_name|default:l.vendedor.username }}{% else %}Sem consultor{% endif %}</span>
+        {% if not l.sla %}<span>{{ l.tempo_txt }}</span>{% endif %}
+        {% if l.visita_em and l.etapa == 'visita' %}<span class="vis">Visita {{ l.visita_em|date:"d/m H:i" }}</span>{% endif %}
+        {% if l.retorno_atrasado %}<span class="atrasado">Retorno atrasado</span>{% endif %}
+      </div>
+      {% if c.etapa != 'vendido' and c.etapa != 'perdido' %}
+      <div class="acoes">
+        {% if l.prox %}
+          {% if l.prox_form %}<button class="btn prim" hx-get="{% url 'captacao:mover' l.pk %}?etapa={{ l.prox.value }}" hx-target="#dlg-box">{{ l.prox.label }}<i>➜</i></button>
+          {% else %}<button class="btn prim" hx-post="{% url 'captacao:mover_direto' l.pk %}" hx-vals='{"etapa": "{{ l.prox.value }}"}' hx-swap="none">{{ l.prox.label }}<i>➜</i></button>{% endif %}
+        {% endif %}
+        <a class="btn sec mini js-wa" href="{{ l.whatsapp_url }}" target="_blank" rel="noopener" data-marcar="{% url 'captacao:whatsapp' l.pk %}" title="Abrir WhatsApp" aria-label="Abrir WhatsApp"><svg viewBox="0 0 24 24" class="ico"><path d="M20 11.7a8 8 0 0 1-11.8 7L4 20l1.3-4A8 8 0 1 1 20 11.7Z"/><path d="M9.2 8.6c.3 2.4 2.3 4.6 5 5.4l1.1-1.2-1.7-.9-.8.6c-1-.4-1.8-1.2-2.2-2.2l.6-.8-.9-1.7-1.1 1.2Z"/></svg></a>
+        <button class="btn red mini" title="Marcar como perdido" aria-label="Marcar como perdido" hx-get="{% url 'captacao:mover' l.pk %}?etapa=perdido" hx-target="#dlg-box">✕</button>
+      </div>
+      {% endif %}
+    </article>
+  {% empty %}<div class="vazio">Nenhum lead</div>{% endfor %}
+  </div>
+</section>
+{% endfor %}
+</div>

@@ -1,0 +1,9 @@
+<tr id="ev-{{ e.pk }}">
+  <td>{{ e.criado_em|date:"d/m H:i:s" }}</td>
+  <td>{{ e.nome }}</td>
+  <td>{% if e.lead %}{{ e.lead.nome|truncatechars:18 }}{% else %}<span style="color:var(--mu)">visitante</span>{% endif %}</td>
+  <td><span class="badge {{ e.status }}">{{ e.get_status_display }}</span></td>
+  <td class="n">{{ e.tentativas }}</td>
+  <td style="color:var(--mu)">{{ e.motivo }}
+    {% if gestor and e.status == 'erro' or gestor and e.status == 'nao_enviado' %}<button class="btn sec sm" hx-post="{% url 'captacao:reenviar' e.pk %}" hx-target="#ev-{{ e.pk }}" hx-swap="outerHTML">Reenviar</button>{% endif %}</td>
+</tr>

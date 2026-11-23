@@ -1,0 +1,11 @@
+<button class="link fechar" onclick="document.getElementById('dlg').close()" aria-label="Fechar">✕</button>
+<h2 style="margin:0">Novo lead</h2>
+<div style="color:var(--mu)">WhatsApp direto, portais ou loja. Não envia eventos para a Meta.</div>
+<form hx-post="{% url 'captacao:lead_novo' %}" hx-target="#dlg-box" hx-swap="innerHTML">
+  <label class="l">Nome</label><input type="text" name="nome" required value="{{ dados.nome }}">{% for e in erros.nome %}<div class="err">{{ e }}</div>{% endfor %}
+  <label class="l">WhatsApp</label><input type="tel" name="telefone" required inputmode="numeric" placeholder="(81) 99999-9999" value="{{ dados.telefone }}">{% for e in erros.telefone %}<div class="err">{{ e }}</div>{% endfor %}
+  <label class="l">Origem</label><select name="origem">{% for v, r in origens %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
+  <label class="l">Carro de interesse</label><select name="veiculo"><option value="">—</option>{% for c in carros %}<option value="{{ c.pk }}">{{ c.marca }} {{ c.modelo }} {{ c.ano }}</option>{% endfor %}</select>
+  <label class="l">Observação</label><input type="text" name="observacao" maxlength="500">
+  <p style="margin-top:16px"><button class="btn full">Cadastrar</button></p>
+</form>

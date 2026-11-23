@@ -1,0 +1,29 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Equipe{% endblock %}
+{% block content %}
+<div class="pg">
+{% for m in messages %}<div class="box" style="margin-bottom:10px;border-color:{% if m.tags == 'error' %}var(--rd){% else %}var(--gr){% endif %}">{{ m }}</div>{% endfor %}
+<div class="grid" style="grid-template-columns:minmax(0,1fr)">
+<div class="box"><h2>Novo consultor</h2>
+<form method="post" style="display:grid;gap:4px;max-width:420px">{% csrf_token %}
+<label class="l" for="id_nome">Nome</label><input type="text" id="id_nome" name="nome" value="{{ form.nome.value|default:'' }}" required>{% for e in form.nome.errors %}<div class="err">{{ e }}</div>{% endfor %}
+<label class="l" for="id_usuario">Usuário (para entrar)</label><input type="text" id="id_usuario" name="usuario" value="{{ form.usuario.value|default:'' }}" autocapitalize="none" required>{% for e in form.usuario.errors %}<div class="err">{{ e }}</div>{% endfor %}
+<label class="l" for="id_senha">Senha inicial (mín. 8 caracteres)</label><input type="text" id="id_senha" name="senha" autocomplete="off" required>{% for e in form.senha.errors %}<div class="err">{{ e }}</div>{% endfor %}
+<label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-size:14px"><input type="checkbox" name="gestor" style="width:auto"> Gestor (vê todos os leads, troca consultor, exclui dados)</label>
+<button class="btn">Criar consultor</button></form>
+<p style="color:var(--mu);font-size:13px;margin:10px 0 0">O consultor vê só os leads dele e os que ainda não têm dono. Passe o usuário e a senha para ele entrar em /entrar/.</p></div>
+
+<div class="box"><h2>Equipe</h2>
+<table class="t"><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th class="n">Leads abertos</th><th>Telegram</th><th></th></tr>
+{% for u in usuarios %}<tr {% if not u.is_active %}style="opacity:.5"{% endif %}>
+<td><b>{{ u.first_name|default:u.username }}</b></td><td>{{ u.username }}</td>
+<td>{% if u.pk in gestores %}Gestor{% else %}Consultor{% endif %}{% if not u.is_active %} · inativo{% endif %}</td><td class="n">{{ u.abertos }}</td>
+<td style="white-space:nowrap">{% if u.pk in telegram %}<span class="badge enviado">vinculado</span>
+<form method="post" action="{% url 'captacao:equipe_acao' u.pk 'telegram-sair' %}" style="display:inline">{% csrf_token %}<button class="btn sec sm">Desvincular</button></form>
+{% else %}<form method="post" action="{% url 'captacao:equipe_acao' u.pk 'telegram' %}" style="display:inline">{% csrf_token %}<button class="btn sec sm">Gerar código</button></form>{% endif %}</td>
+<td style="white-space:nowrap">
+<form method="post" action="{% url 'captacao:equipe_acao' u.pk 'senha' %}" style="display:inline-flex;gap:4px">{% csrf_token %}<input type="text" name="senha" placeholder="Nova senha" style="width:130px;padding:6px 8px" autocomplete="off"><button class="btn sec sm">Redefinir</button></form>
+{% if u != request.user %}<form method="post" action="{% url 'captacao:equipe_acao' u.pk 'ativo' %}" style="display:inline">{% csrf_token %}<button class="btn sec sm">{% if u.is_active %}Desativar{% else %}Reativar{% endif %}</button></form>{% endif %}
+</td></tr>{% endfor %}</table></div>
+</div></div>
+{% endblock %}
