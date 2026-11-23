@@ -231,10 +231,7 @@ def _contexto_pagina(request, pk, form=None):
         grupos.append({"campo": campo, "titulo": titulo, "erros": form.errors.get(campo, []) if form.is_bound else [],
                        "opcoes": opcoes(campo, lista)})
     extras = {"troca": opcoes("troca", utils.TROCA), "entrada": opcoes("entrada", utils.ENTRADA)}
-    simulador = settings.SIMULADOR_ATIVO or request.GET.get("simulador") == "1"
-    sim_cfg = {"previa": simulador and not settings.SIMULADOR_ATIVO, "taxa": settings.FINANCIAMENTO_TAXA_AM,
-               "entrada_pct": settings.FINANCIAMENTO_ENTRADA_PCT, "parcelas": settings.FINANCIAMENTO_PARCELAS,
-               "opcoes": [12, 24, 36, 48, 60]}
+
     similares = []
     for sv, st in dados["similares"]:
         sv.slug, sv.preco_fmt = utils.slug_veiculo(sv), utils.preco_brl(sv.valor_venda)
@@ -244,7 +241,6 @@ def _contexto_pagina(request, pk, form=None):
             "galeria": [{"pk": t.pk, "h": fotos.altura_para(t, 480)} for t in dados["fotos"]],
             "pixel_id": settings.META_PIXEL_ID, "site_url": settings.SITE_URL, "form": form, "grupos": grupos,
             "consent": consent, "variante": variante, "ab": settings.AB_VARIANTES[variante], "extras": extras,
-            "simulador": simulador, "sim": sim_cfg,
             "clarity_id": settings.CLARITY_ID if consent else "",
             "preco_fmt": utils.preco_brl(v.valor_venda)}
 

@@ -118,13 +118,6 @@ def saudacao(agora=None):
     return "Bom dia" if h < 12 else "Boa tarde" if h < 18 else "Boa noite"
 
 
-def simulacao_txt(sim):
-    """'entrada de R$ 20.697 e 60x de R$ 1.386' a partir de {'entrada':..., 'parcelas':..., 'parcela':...}."""
-    if not sim:
-        return ""
-    return f"entrada de {preco_brl(sim.get('entrada'))} e {sim.get('parcelas')}x de {preco_brl(sim.get('parcela'))}"
-
-
 def mensagem_whatsapp(veiculo, respostas, nome="", agora=None):
     """Mensagem inicial do cliente para a loja (tom profissional). Resume só o que o cliente respondeu."""
     primeiro = (nome or "").split()[0].title() if (nome or "").strip() else ""
@@ -145,8 +138,6 @@ def mensagem_whatsapp(veiculo, respostas, nome="", agora=None):
         perfil.append(f"• Carro ou moto na troca: {troca_txt}")
     if respostas.get("prazo"):
         perfil.append(f"• Previsão de compra: {rotulo(PRAZO, respostas.get('prazo'))}")
-    if respostas.get("simulacao"):
-        perfil.append(f"• Simulação que fiz no site: {simulacao_txt(respostas['simulacao'])} (estimativa)")
     if perfil:
         linhas += ["Segue um resumo do meu perfil:"] + perfil + [""]
     linhas.append("Aguardo o seu retorno. Obrigado(a).")

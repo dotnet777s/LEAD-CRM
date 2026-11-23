@@ -212,16 +212,6 @@ h2.s:before{content:"";display:inline-block;width:22px;height:3px;border-radius:
 .confianca{display:flex;gap:9px;align-items:center;justify-content:center;margin:16px 0 12px;padding:10px 12px;border:1px solid rgba(46,230,107,.3);border-radius:12px;background:rgba(46,230,107,.07);font-size:13.5px;font-weight:600;color:#c9f5d9}
 .confianca .ic{width:18px;height:18px;color:var(--gr);flex:none}
 .qt{font-weight:600;font-size:16px;margin:0 0 10px}.op.dupla{grid-template-columns:1fr 1fr}
-.simbox{border:1px solid rgba(46,230,107,.35);border-radius:14px;padding:16px;margin:0 0 14px;background:linear-gradient(160deg,rgba(46,230,107,.09),rgba(46,230,107,.01))}
-.sim-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font:700 16px var(--tt)}
-.previa{font:700 11px Inter,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--am);border:1px solid rgba(245,185,66,.5);border-radius:999px;padding:3px 9px}
-.sim-linha{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:var(--tx2);margin:8px 0 6px}.sim-linha b{color:#fff;font-size:16px}.sim-linha em{font-style:normal;color:var(--mu);font-size:13px;margin-left:6px}
-.simbox input[type=range]{width:100%;accent-color:var(--gr);height:28px;margin:0}
-.sim-n{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:4px 0 14px}
-.sim-n button{border:1px solid var(--bd2);background:var(--bg);color:var(--tx2);border-radius:10px;padding:10px 0;font-weight:700;font-size:14px;cursor:pointer}
-.sim-n button.on{border-color:var(--gr);background:rgba(46,230,107,.12);color:#fff}
-.sim-res{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;color:var(--tx2)}.sim-res b{font:800 34px/1.1 var(--tt);color:#fff;letter-spacing:-.02em}
-.sim-det{color:var(--mu);font-size:13.5px;margin:4px 0 8px}.simbox small{display:block;color:var(--mu);font-size:12px;margin-top:6px;text-transform:none;letter-spacing:0;line-height:1.4}
 @media(min-width:960px){
  body{padding-bottom:0}.pulso{left:24px;right:auto;bottom:24px}.fixo{display:none}
  .grid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-areas:"top form" "rest form";align-items:start;column-gap:40px;row-gap:0;padding-top:28px}
@@ -234,7 +224,7 @@ h2.s:before{content:"";display:inline-block;width:22px;height:3px;border-radius:
 <script>
 window.TC={consent:{{ consent|yesno:"true,false" }},ev:'{{ event_id }}',vc:'{{ event_id_vc }}',pk:'{{ veiculo.pk }}',valor:{{ veiculo.valor_venda|default:0|stringformat:"s" }},
  url:'{{ url_pagina|escapejs }}',inicio:'{% url "captacao:inicio" veiculo.pk %}',etapa:'{% url "captacao:etapa" veiculo.pk %}',consentir:'{% url "captacao:consentir" veiculo.pk %}',
- clarity:'{{ clarity_id|escapejs }}',{% if simulador and veiculo.valor_venda %}sim:{preco:{{ veiculo.valor_venda|stringformat:"s" }},taxa:{{ sim.taxa|stringformat:"s" }},n:{{ sim.parcelas }}},{% endif %}ab:{t1:'{{ ab.t1|escapejs }}',t2:'{{ ab.t2|escapejs }}',e1:'{{ ab.e1|escapejs }}',e2:'{{ ab.e2|escapejs }}'}};
+ clarity:'{{ clarity_id|escapejs }}',ab:{t1:'{{ ab.t1|escapejs }}',t2:'{{ ab.t2|escapejs }}',e1:'{{ ab.e1|escapejs }}',e2:'{{ ab.e2|escapejs }}'}};
 (function(){var n=navigator,c=n.connection||{};
  if((n.deviceMemory&&n.deviceMemory<=2)||(n.hardwareConcurrency&&n.hardwareConcurrency<=2)||c.saveData||/(^|-)(2g|3g)$/.test(c.effectiveType||''))document.documentElement.classList.add('leve');})();
 </script>
@@ -302,16 +292,7 @@ window.TC={consent:{{ consent|yesno:"true,false" }},ev:'{{ event_id }}',vc:'{{ e
 </div>
 <div class="preco glow"><small>Preço à vista</small><div class="v">{{ preco_fmt }}</div>
 {% if fipe_abaixo %}<div class="fipe"><svg class="ic"><use href="#i-tag"/></svg>{{ fipe_abaixo }} abaixo da tabela FIPE</div>{% endif %}
-{% if simulador and disponivel and veiculo.valor_venda %}<div class="simbox" id="simbox">
-<div class="sim-top"><span>Simule a sua parcela</span>{% if sim.previa %}<span class="previa">Prévia</span>{% endif %}</div>
-<div class="sim-linha"><label for="sim-ent">Entrada</label><span><b id="sim-ent-v"></b><em id="sim-ent-p"></em></span></div>
-<input type="range" id="sim-ent" min="0" max="80" step="5" value="{{ sim.entrada_pct }}" aria-label="Entrada, em porcentagem do valor do carro">
-<div class="sim-linha" style="margin-top:12px"><span>Em quantas parcelas</span></div>
-<div class="sim-n" id="sim-n" role="group" aria-label="Número de parcelas">{% for n in sim.opcoes %}<button type="button" data-n="{{ n }}" class="{% if n == sim.parcelas %}on{% endif %}" aria-pressed="{% if n == sim.parcelas %}true{% else %}false{% endif %}">{{ n }}x</button>{% endfor %}</div>
-<div class="sim-res"><span>Parcelas de</span><b id="sim-par">—</b><span>por mês</span></div>
-<div class="sim-det" id="sim-det"></div>
-<small>Estimativa ilustrativa. Taxa e aprovação dependem da análise de crédito.</small>
-</div>{% elif parcela_fmt and disponivel %}<div class="parc">Parcelas a partir de <b>{{ parcela_fmt }}/mês</b> em {{ parcelas_n }}x, com entrada de {{ entrada_pct }}% ({{ entrada_fmt }})<small>Estimativa ilustrativa. Taxa e aprovação dependem da análise de crédito.</small></div>{% endif %}
+{% if parcela_fmt and disponivel %}<div class="parc">Parcelas a partir de <b>{{ parcela_fmt }}/mês</b> em {{ parcelas_n }}x, com entrada de {{ entrada_pct }}% ({{ entrada_fmt }})<small>Estimativa ilustrativa. Taxa e aprovação dependem da análise de crédito.</small></div>{% endif %}
 <div class="bene">
 <div><svg class="ic"><use href="#i-bank"/></svg><b>até 60x</b><span>Financiamento</span></div>
 <div><svg class="ic"><use href="#i-card"/></svg><b>até 21x</b><span>Cartão de crédito</span></div>
@@ -324,7 +305,6 @@ window.TC={consent:{{ consent|yesno:"true,false" }},ev:'{{ event_id }}',vc:'{{ e
 {% csrf_token %}
 <input type="hidden" name="event_id" value="{{ event_id }}">
 <input type="hidden" name="intencao" id="intencao" value="{{ form.data.intencao|default:'simular' }}">
-<input type="hidden" name="sim_entrada" id="sim_entrada"><input type="hidden" name="sim_parcelas" id="sim_parcelas"><input type="hidden" name="sim_parcela" id="sim_parcela">
 {% for k, v in utm.items %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
 <div class="hp" aria-hidden="true"><label>Não preencha <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
 
@@ -576,20 +556,6 @@ if(fino&&!reduz&&!leve){d.querySelectorAll('.preco,.dif>div,.equip>div,.garantia
  el.addEventListener('pointermove',function(e){var r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
   el.style.transform='perspective(900px) rotateX('+(-y*7*f)+'deg) rotateY('+(x*9*f)+'deg) translateZ(0)';});
  el.addEventListener('pointerleave',function(){el.style.transform='';});});}
-/* ===== simulador de parcela (prévia): Tabela Price, igual ao cálculo do servidor ===== */
-var sbx=d.getElementById('simbox');
-if(sbx&&TC.sim){var smE=d.getElementById('sim-ent'),smN=TC.sim.n,smMexeu=false;
- function smBRL(v){return 'R$ '+Math.round(v).toLocaleString('pt-BR');}
- function smCalc(){var pct=+smE.value,ent=TC.sim.preco*pct/100,fin=TC.sim.preco-ent,i=TC.sim.taxa/100,par=i?fin*i/(1-Math.pow(1+i,-smN)):fin/smN;
-  d.getElementById('sim-ent-v').textContent=smBRL(ent);d.getElementById('sim-ent-p').textContent=pct+'% do valor';
-  d.getElementById('sim-par').textContent=smBRL(par);d.getElementById('sim-det').textContent='Financiado '+smBRL(fin)+' em '+smN+'x';
-  if(smMexeu){d.getElementById('sim_entrada').value=Math.round(ent);d.getElementById('sim_parcelas').value=smN;d.getElementById('sim_parcela').value=Math.round(par);
-  var fp=d.querySelector('#fixo .p small');if(fp)fp.textContent=smBRL(par)+'/mês em '+smN+'x';}}
- smE.addEventListener('input',function(){smMexeu=true;smCalc();});
- d.querySelectorAll('#sim-n button').forEach(function(b){b.addEventListener('click',function(){smMexeu=true;smN=+b.dataset.n;
-  d.querySelectorAll('#sim-n button').forEach(function(x){var on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on?'true':'false');});smCalc();});});
- smCalc();}
-
 /* ===== cookies (LGPD): sem aceitar, nada de Pixel, Clarity nem identificadores ===== */
 function lerCk(){var m=d.cookie.match(/(?:^|; )tc_consent=([^;]*)/);return m?m[1]:'';}
 function gravarCk(v){d.cookie='tc_consent='+v+';max-age='+(180*86400)+';path=/;SameSite=Lax'+(location.protocol==='https:'?';Secure':'');}

@@ -27,8 +27,6 @@ def resumo_respostas(r):
         partes.append(f"Troca: {troca}")
     if r.get("prazo"):
         partes.append(f"Compra: {utils.rotulo(utils.PRAZO, r.get('prazo'))}")
-    if r.get("simulacao"):
-        partes.append(f"Simulação: {utils.simulacao_txt(r['simulacao'])}")
     if r.get("intencao") == "visita":
         partes.append("Quer agendar visita")
     if r.get("parcial"):

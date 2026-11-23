@@ -131,9 +131,6 @@ def texto_lead(lead, titulo):
     if r.get("prazo"):
         prazo = utils.rotulo(utils.PRAZO, r.get("prazo"))
         perfil.append(f"• Compra: {esc(prazo)}"); partes.append(f"compra: {prazo.lower()}")
-    if r.get("simulacao"):
-        perfil.append(f"• Simulação no site: {esc(utils.simulacao_txt(r['simulacao']))}")
-        partes.append(f"simulou {utils.simulacao_txt(r['simulacao'])}")
     if r.get("parcial"):
         linhas += [f"⏳ <i>Não terminou o formulário (falta troca e entrada). {esc('Quer: ' + quer)}</i>" if perfil
                    else f"⏳ <i>Deixou o contato e não terminou o formulário. {esc('Quer: ' + quer)}</i>", ""]

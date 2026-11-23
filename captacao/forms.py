@@ -4,21 +4,7 @@ from . import utils
 from .models import Lead
 
 
-def _simulacao(d):
-    """{'entrada', 'parcelas', 'parcela'} se o cliente mexeu no simulador; senão None."""
-    ent, n, par = d.get("sim_entrada"), d.get("sim_parcelas"), d.get("sim_parcela")
-    if ent is None or not n or par is None:
-        return None
-    return {"entrada": int(ent), "parcelas": int(n), "parcela": int(par)}
-
-
-class _Simulador(forms.Form):
-    sim_entrada = forms.DecimalField(required=False, min_value=0, max_value=10_000_000, max_digits=12, decimal_places=2, localize=False)
-    sim_parcelas = forms.IntegerField(required=False, min_value=1, max_value=96)
-    sim_parcela = forms.DecimalField(required=False, min_value=0, max_value=10_000_000, max_digits=12, decimal_places=2, localize=False)
-
-
-class CapturaForm(_Simulador):
+class CapturaForm(forms.Form):
     nome = forms.CharField(max_length=120, min_length=2, error_messages={"required": "Informe seu nome."})
     telefone = forms.CharField(max_length=20, error_messages={"required": "Informe seu WhatsApp."})
     pagamento = forms.ChoiceField(choices=utils.PAGAMENTO, error_messages={"required": "Escolha uma opção."})
@@ -54,13 +40,10 @@ class CapturaForm(_Simulador):
         if d.get("troca") == "sim":
             r["troca_carro"] = d["troca_carro"].strip()
         r["intencao"] = d.get("intencao") or "simular"
-        sim = _simulacao(d)
-        if sim:
-            r["simulacao"] = sim
         return r
 
 
-class ContatoInicialForm(_Simulador):
+class ContatoInicialForm(forms.Form):
     """Passo do contato: o cliente já respondeu pagamento e prazo. O lead fica salvo para a equipe antes do último passo."""
     nome = forms.CharField(max_length=120, min_length=2)
     telefone = forms.CharField(max_length=20)
@@ -83,9 +66,6 @@ class ContatoInicialForm(_Simulador):
         d = self.cleaned_data
         r = {"parcial": True, "pagamento": d["pagamento"], "prazo": d["prazo"], "intencao": d.get("intencao") or "simular",
              "variante": variante}
-        sim = _simulacao(d)
-        if sim:
-            r["simulacao"] = sim
         return r
 
 

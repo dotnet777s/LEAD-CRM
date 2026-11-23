@@ -497,60 +497,24 @@ class FormularioOpcionalTests(Base):
         self.assertEqual(Lead.objects.count(), 0)
 
 
-class SimuladorTests(Base):
-    def setUp(self):
-        super().setUp()
-        self.v = novo_veiculo(valor_venda="68990")
+class SemSimuladorTests(Base):
+    """O simulador de parcela foi descartado: nem a prévia por URL existe mais."""
 
-    def abrir(self, query=""):
+    def test_pagina_nao_tem_simulador_nem_com_o_parametro(self):
         from django.core.cache import cache
-        cache.clear()
-        return self.client.get(f"/v/{self.v.pk}-fiat-argo-2022/{query}", HTTP_USER_AGENT="Mozilla/5.0").content.decode()
+        v = novo_veiculo(valor_venda="68990")
+        for query in ("", "?simulador=1"):
+            cache.clear()
+            html = self.client.get(f"/v/{v.pk}-fiat-argo-2022/{query}", HTTP_USER_AGENT="Mozilla/5.0").content.decode()
+            self.assertNotIn('id="simbox"', html)
+            self.assertNotIn("Simule a sua parcela", html)
+            self.assertIn("Parcelas a partir de", html)                       # fica a parcela estimada fixa
 
-    def test_desligado_por_padrao_mostra_a_parcela_estatica(self):
-        html = self.abrir()
-        self.assertNotIn('id="simbox"', html)
-        self.assertIn("Parcelas a partir de", html)
-
-    def test_previa_com_parametro_na_url(self):
-        html = self.abrir("?simulador=1")
-        self.assertIn('id="simbox"', html)
-        self.assertIn("Prévia", html)
-        self.assertIn('id="sim-ent"', html)
-        self.assertEqual(html.count('data-n="'), 5)
-        self.assertIn("Estimativa ilustrativa", html)
-        self.assertNotIn("Parcelas a partir de", html)                                   # o simulador substitui o bloco estático
-
-    @override_settings(SIMULADOR_ATIVO=True)
-    def test_ligado_para_todos_sem_etiqueta_de_previa(self):
-        html = self.abrir()
-        self.assertIn('id="simbox"', html)
-        self.assertNotIn("Prévia", html)
-
-    def test_simulacao_vai_para_o_lead_para_a_mensagem_e_para_o_telegram(self):
-        import urllib.parse
-        r = self.client.post(f"/v/{self.v.pk}-fiat-argo-2022/", {
+    def test_campos_do_simulador_sao_ignorados(self):
+        v = novo_veiculo()
+        r = self.client.post(f"/v/{v.pk}-fiat-argo-2022/", {
             "nome": "Maria Silva", "telefone": "(81) 99999-8888", "lgpd": "1", "pagamento": "financiado", "prazo": "semana",
             "event_id": "b" * 32, "sim_entrada": "20697", "sim_parcelas": "60", "sim_parcela": "1386"},
             HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.9.1.1")
         self.assertEqual(r.status_code, 302)
-        lead = Lead.objects.get()
-        self.assertEqual(lead.respostas["simulacao"], {"entrada": 20697, "parcelas": 60, "parcela": 1386})
-        texto = urllib.parse.unquote(self.client.get(r["Location"]).context["wa_url"].split("text=")[1])
-        self.assertIn("Simulação que fiz no site: entrada de R$ 20.697 e 60x de R$ 1.386 (estimativa)", texto)
-        self.assertIn("Simulação no site: entrada de R$ 20.697 e 60x de R$ 1.386", telegram.texto_lead(lead, "Novo lead"))
-
-    def test_valores_invalidos_do_simulador_sao_recusados(self):
-        r = self.client.post(f"/v/{self.v.pk}-fiat-argo-2022/", {
-            "nome": "Maria Silva", "telefone": "(81) 99999-8888", "lgpd": "1", "pagamento": "financiado", "prazo": "semana",
-            "event_id": "c" * 32, "sim_entrada": "-5", "sim_parcelas": "1000", "sim_parcela": "abc"},
-            HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.9.1.2")
-        self.assertEqual(r.status_code, 400)
-        self.assertEqual(Lead.objects.count(), 0)
-
-    def test_sem_mexer_no_simulador_nao_grava_simulacao(self):
-        self.client.post(f"/v/{self.v.pk}-fiat-argo-2022/", {
-            "nome": "Maria Silva", "telefone": "(81) 99999-8888", "lgpd": "1", "pagamento": "a_vista", "prazo": "semana",
-            "event_id": "d" * 32, "sim_entrada": "", "sim_parcelas": "", "sim_parcela": ""},
-            HTTP_USER_AGENT="Mozilla/5.0", HTTP_X_FORWARDED_FOR="200.9.1.3")
         self.assertNotIn("simulacao", Lead.objects.get().respostas)
