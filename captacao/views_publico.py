@@ -49,16 +49,15 @@ def _dados_do_veiculo(pk):
     similares = []
     if not disponivel:
         preco = veiculo.valor_venda
-        qs = (Veiculo.objects.filter(status__in=Veiculo.EM_LOJA, possui_fotos=True,
+        qs = (Veiculo.objects.filter(status__in=Veiculo.EM_LOJA, total_fotos__gt=0,
                                      valor_venda__gte=preco * Decimal("0.85"), valor_venda__lte=preco * Decimal("1.15"))
               .exclude(pk=pk))
         similares = sorted(qs, key=lambda v: (abs(v.ano - veiculo.ano), abs(v.valor_venda - preco)))[:3]
     capa = fotos.capas([v.pk for v in similares])
-    ficha = veiculo.ficha if isinstance(veiculo.ficha, dict) else {}
     dados = {
         "veiculo": veiculo, "disponivel": disponivel, "fotos": lista, "video": videos[0] if videos else None,
         "similares": [(v, capa.get(v.pk)) for v in similares],
-        "itens": (ficha.get("itens_serie") or [])[:14], "diferenciais": (ficha.get("diferenciais") or [])[:5],
+        "itens": list(veiculo.itens_serie or [])[:14], "diferenciais": list(veiculo.opcionais or [])[:5],
     }
     cache.set(chave, dados, CACHE_SEGUNDOS)
     return dados
@@ -181,7 +180,7 @@ def privacidade(request):
 
 @cache_control(public=True, max_age=31536000, immutable=True)
 def foto(request, pk, largura):
-    take = get_object_or_404(fotos.TakeVeiculo, pk=pk, foto=True, ativo=True)
+    take = get_object_or_404(fotos.FotoVeiculo, pk=pk)
     try:
         caminho = fotos.arquivo_webp(take, largura)
     except ValueError:

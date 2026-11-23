@@ -220,7 +220,7 @@ class KanbanTests(Base):
 
 class CarrosTests(Base):
     def test_lista_paginas_de_captura(self):
-        v = novo_veiculo(status="loja_olinda")
+        v = novo_veiculo()
         novo_veiculo(placa="OUT1A00", modelo="Vendido1", status="vendido")
         self.client.force_login(get_user_model().objects.create_user("g", password="x12345678", is_staff=True))
         r = self.client.get("/carros/")
@@ -269,31 +269,44 @@ class EquipeTests(Base):
 
 
 class MidiasTests(Base):
-    def test_lista_e_secao_de_midias_separadas(self):
-        from catalogo.models import TakeVeiculo
-        v = novo_veiculo(status="loja_olinda")
-        TakeVeiculo.objects.create(veiculo=v, arquivo="a.jpg", foto=True, ativo=True)
-        TakeVeiculo.objects.create(veiculo=v, arquivo="b.mp4", foto=False, ativo=True)
+    def test_lista_e_janela_de_fotos(self):
+        v = novo_veiculo(fotos=3)
         self.client.force_login(get_user_model().objects.create_user("g", password="x12345678", is_staff=True))
         self.assertEqual(self.client.get("/carros/").status_code, 200)
-        r = self.client.get(f"/carros/{v.pk}/midias/")
+        r = self.client.get(f"/carros/{v.pk}/midias/?aba=fotos")
         self.assertEqual(r.status_code, 200)
         html = r.content.decode()
-        self.assertIn("Fotos (2)", html)   # novo_veiculo já cria 1 foto
-        self.assertIn("Vídeos (1)", html)
+        self.assertIn("Fotos (3)", html)
+        self.assertNotIn("Vídeos (", html)
 
-    def test_janela_so_de_videos(self):
-        from catalogo.models import TakeVeiculo
-        v = novo_veiculo(status="loja_olinda")
-        TakeVeiculo.objects.create(veiculo=v, arquivo="b.mp4", foto=False, ativo=True)
+    def test_janela_de_videos_avisa_que_ficam_no_route(self):
+        v = novo_veiculo()
         self.client.force_login(get_user_model().objects.create_user("g", password="x12345678", is_staff=True))
         html = self.client.get(f"/carros/{v.pk}/midias/?aba=videos").content.decode()
-        self.assertIn("Vídeos (1)", html)
+        self.assertIn("Vídeos (0)", html)
+        self.assertIn("ROUTE", html)
         self.assertNotIn("Fotos (", html)
 
-    def test_recife_e_olinda_aparecem(self):
-        a, b = novo_veiculo(status="loja_recife"), novo_veiculo(status="loja_olinda")
+    def test_recife_e_olinda_aparecem_com_o_local(self):
+        a, b = novo_veiculo(unidade="Recife"), novo_veiculo(unidade="Olinda")
         self.client.force_login(get_user_model().objects.create_user("g", password="x12345678", is_staff=True))
         html = self.client.get("/carros/").content.decode()
         self.assertIn(f"/v/{a.pk}-", html)
         self.assertIn(f"/v/{b.pk}-", html)
+        self.assertIn("está em Recife", html)
+        self.assertIn("está em Olinda", html)
+
+    def test_foto_vem_do_banco_e_e_redimensionada(self):
+        import io
+        from PIL import Image
+        from catalogo.models import FotoArquivo, FotoVeiculo
+        v = novo_veiculo()
+        f = FotoVeiculo.objects.get(veiculo_rid=v.rid)
+        buf = io.BytesIO()
+        Image.new("RGB", (1600, 1200), "red").save(buf, "JPEG")
+        FotoArquivo.objects.create(foto=f, jpeg=buf.getvalue())
+        with self.settings(FOTOS_CACHE=__import__("tempfile").mkdtemp()):
+            r = self.client.get(f"/foto/{f.pk}/480.webp")
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r["Content-Type"], "image/webp")
+            self.assertEqual(self.client.get(f"/foto/{f.pk}/333.webp").status_code, 404)

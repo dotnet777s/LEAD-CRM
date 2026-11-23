@@ -1,12 +1,13 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import connection
+from django.db.models import Count
 
-from catalogo.models import TakeVeiculo, Veiculo
+from catalogo.models import FotoVeiculo, Veiculo
 
 
 class Command(BaseCommand):
-    help = "Confere a conexão com o estoque (somente leitura): banco usado e quantos carros há em Olinda."
+    help = "Confere a conexão com o estoque do ROUTE (somente leitura): banco usado, carros disponíveis e fotos."
 
     def handle(self, *a, **o):
         db = connection.settings_dict
@@ -14,11 +15,14 @@ class Command(BaseCommand):
         try:
             total = Veiculo.objects.count()
         except Exception as e:  # tabela inexistente ou sem acesso
-            self.stderr.write(f"Não consegui ler estoque_veiculo: {e}")
+            self.stderr.write(f"Não consegui ler a tabela veiculo: {e}")
             if not settings.DATABASE_URL_DEFINIDA:
                 self.stderr.write("DATABASE_URL não está definida: o app está usando o SQLite local (sem o estoque real).")
             return
-        olinda = Veiculo.objects.filter(status="loja_olinda").count()
-        com_fotos = Veiculo.objects.filter(status="loja_olinda", possui_fotos=True).count()
-        self.stdout.write(f"Veículos no estoque: {total} · em loja Olinda: {olinda} · com fotos: {com_fotos}")
-        self.stdout.write(f"Fotos/vídeos cadastrados: {TakeVeiculo.objects.count()}")
+        disp = Veiculo.objects.filter(status__in=Veiculo.EM_LOJA)
+        por_local = ", ".join(f"{(r['unidade'] or '?')}: {r['n']}" for r in disp.values("unidade").annotate(n=Count("pk")).order_by("unidade"))
+        self.stdout.write(f"Veículos no estoque: {total} · disponíveis: {disp.count()} ({por_local}) · com fotos: {disp.filter(total_fotos__gt=0).count()}")
+        self.stdout.write(f"Fotos cadastradas: {FotoVeiculo.objects.count()}")
+        sem_id = Veiculo.objects.filter(status__in=Veiculo.EM_LOJA, pk__isnull=True).count()
+        if sem_id:
+            self.stderr.write(f"{sem_id} carros sem topcrm_id: não têm página de captura.")

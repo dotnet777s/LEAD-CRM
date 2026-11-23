@@ -1,7 +1,7 @@
 # CRM de captação TopCar (leads.topcarpe.site)
 
 Página de captura por carro (`/v/<id>-<slug>/`) + Meta Pixel/Conversions API + Kanban + painel. Unidade: Olinda.
-O estoque (`estoque_*`) é **somente leitura** (app `catalogo`, `managed=False`); tudo novo vive em `captacao_*`.
+O estoque do ROUTE (`veiculo`, `veiculo_foto`, `veiculo_foto_arquivo`) é **somente leitura** (app `catalogo`, `managed=False`); tudo novo vive em `captacao_*`.
 
 ## Rodar local (SQLite)
 ```
@@ -15,7 +15,7 @@ python -m venv .venv && .venv\Scripts\pip install -r requirements.txt
 Abra `http://127.0.0.1:8001/` (CRM, login) e `/v/1/` (página do carro).
 
 ## Produção (Neon)
-Defina `DATABASE_URL` (aí `CATALOGO_CRIAR_TABELAS` é sempre ignorado: nenhuma tabela `estoque_*` é criada), `DJANGO_SECRET_KEY`,
+Defina `DATABASE_URL` (aí `CATALOGO_CRIAR_TABELAS` é sempre ignorado: nenhuma tabela do ROUTE é criada), `DJANGO_SECRET_KEY`,
 `DJANGO_DEBUG=0`, `DJANGO_ALLOWED_HOSTS`, `SITE_URL`. Depois `migrate` (só cria `captacao_*`) e `collectstatic`.
 Comando de start: `gunicorn config.wsgi:application --workers 1 --threads 4`.
 
@@ -25,7 +25,6 @@ Comando de start: `gunicorn config.wsgi:application --workers 1 --threads 4`.
 | `META_PIXEL_ID`, `META_CAPI_ACCESS_TOKEN`, `META_GRAPH_API_VERSION` | Pixel e CAPI |
 | `META_CAPI_ENABLED` | `1` liga o envio (desligado, os eventos ficam na fila) |
 | `META_TEST_EVENT_CODE` | só em teste (aba "Testar eventos") |
-| `B2_BUCKET`, `B2_KEY_ID`, `B2_APP_KEY`, `B2_ENDPOINT`, `B2_REGION` | fotos do estoque (leitura; chave = `takes/<arquivo>`) |
 | `LOJA_WHATSAPP` | número da loja (padrão 5581960002209) |
 
 ## Worker da Meta
@@ -48,7 +47,7 @@ python manage.py telegram_bot
 - Comandos: `/leads` (seus leads em aberto), `/ajuda`. Se o token vazar, gere outro com `/revoke` no @BotFather.
 
 ## Mídias do carro
-Aba **Carros**: cada carro mostra a contagem de fotos e vídeos e o botão **Mídias** (fotos e vídeos em seções separadas, lidos do estoque). Para testar com o JSON exportado do estoque (só SQLite local): `python manage.py importar_estoque arquivo.json`.
+Aba **Carros**: cada carro mostra a contagem de fotos e vídeos e o botão **Mídias** (fotos e vídeos em seções separadas, lidos do estoque). Os vídeos ficam no ROUTE e ainda não aparecem aqui. Para conferir a conexão: `python manage.py estoque_status`.
 
 ## Carro herói
 É só apontar o anúncio para outra página `/v/<id>/`. Não há configuração.
@@ -64,7 +63,7 @@ Consentimento (data/IP) gravado no lead. Exclusão: botão no detalhe do lead (g
 `python manage.py test captacao --settings=config.settings_test`
 
 ## Checklist de validação
-- [ ] `/v/<id>/` no celular, Lighthouse Performance ≥ 90 (fotos precisam do B2 configurado)
+- [ ] `/v/<id>/` no celular, Lighthouse Performance ≥ 90
 - [ ] Enviar o formulário: lead em "Novo" em até 30 s e WhatsApp com a mensagem certa
 - [ ] "Testar eventos": PageView, ViewContent, Lead e Contact do navegador e do servidor, deduplicados
 - [ ] Mover para Qualificado, Visita agendada e Vendido envia QualifiedLead, Schedule e Purchase uma vez cada

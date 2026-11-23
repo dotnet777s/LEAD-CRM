@@ -11,7 +11,7 @@ urlpatterns = [
     path("v/<int:pk>/", pub.CapturaView.as_view(), name="captura"),
     path("v/<int:pk>/obrigado/<uuid:lead_uuid>/", pub.obrigado, name="obrigado"),
     path("v/<int:pk>/contato/<uuid:lead_uuid>/", pub.ContatoView.as_view(), name="contato"),
-    path("foto/<int:pk>/<int:largura>.webp", pub.foto, name="foto"),
+    path("foto/<str:pk>/<int:largura>.webp", pub.foto, name="foto"),
     path("privacidade/", pub.privacidade, name="privacidade"),
 
     # ---- CRM (login) ----

@@ -169,13 +169,8 @@ class CarrosView(LoginRequiredMixin, TemplateView):
         from . import utils
         ctx = super().get_context_data(**kw)
         q = (self.request.GET.get("q") or "").strip().lower()
-        from catalogo.models import TakeVeiculo
-        n_fotos, n_videos = Counter(), Counter()
-        for vid, foto, arq in TakeVeiculo.objects.filter(ativo=True).values_list("veiculo_id", "foto", "arquivo"):
-            if foto:
-                n_fotos[vid] += 1
-            elif arq.lower().endswith(VIDEO_EXT):
-                n_videos[vid] += 1
+        from . import fotos as fotos_mod
+        n_fotos, n_videos = fotos_mod.contagem_por_veiculo(), Counter()     # vídeos ficam no ROUTE
         leads = dict(Lead.objects.filter(veiculo_id__isnull=False).values_list("veiculo_id").annotate(n=Count("id")))
         carros = []
         for v in Veiculo.objects.filter(status__in=Veiculo.EM_LOJA).order_by("marca", "modelo"):
@@ -200,6 +195,5 @@ class MidiasView(LoginRequiredMixin, TemplateView):
         v = get_object_or_404(Veiculo, pk=pk)
         lista, videos = fotos_mod.midia_do_veiculo(pk)
         aba = self.request.GET.get("aba", "")
-        ctx.update(v=v, aba=aba, fotos=lista, configurado=fotos_mod.configurado(), marcado=v.possui_fotos,
-                   videos=[{"take": t, "url": fotos_mod.url_assinada(t.arquivo, 3600)} for t in videos])
+        ctx.update(v=v, aba=aba, fotos=lista, marcado=v.possui_fotos, videos=videos)
         return ctx

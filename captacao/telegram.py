@@ -104,7 +104,7 @@ def _carro(lead):
     v = lead.veiculo
     if not v:
         return esc(lead.carro_texto or "Sem carro definido")
-    local = "Recife" if v.status == "loja_recife" else "Olinda" if v.status == "loja_olinda" else ""
+    local = v.local
     detalhe = " · ".join(x for x in (utils.preco_brl(v.valor_venda), f"{v.km:,}".replace(",", ".") + " km" if v.km else "",
                                      v.cor_fmt, f"em {local}" if local else "") if x)
     return f"<b>{esc(v.marca_fmt)} {esc(v.modelo_fmt)} {v.ano}</b>\n{esc(detalhe)}"

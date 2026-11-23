@@ -3,19 +3,19 @@
 {% block content %}
 <div class="pg">
 <form class="barra" method="get" style="padding:0 0 12px"><input type="search" name="q" value="{{ q }}" placeholder="Buscar carro ou placa" style="max-width:280px"><button class="btn sec sm">Buscar</button>
-<span style="color:var(--mu);font-size:13px">{{ carros|length }} carros em loja (Olinda) · cada um tem a sua página de captura</span></form>
+<span style="color:var(--mu);font-size:13px">{{ carros|length }} carros disponíveis · cada um tem a sua página de captura</span></form>
 <div class="box" style="margin-bottom:12px"><h2>Parâmetros para o anúncio (Meta)</h2>
 <p style="margin:0 0 8px;color:var(--mu);font-size:14px">Cole em "Parâmetros de URL" do anúncio. Assim o CRM sabe de qual campanha e anúncio veio cada lead.</p>
 <code id="utm" style="word-break:break-all">{{ utm }}</code> <button class="btn sec sm" data-copiar="{{ utm }}">Copiar</button></div>
 <div class="box"><table class="t"><tr><th>Carro</th><th class="n">Preço</th><th class="n">Fotos</th><th class="n">Vídeos</th><th class="n">Leads</th><th>Página de captura</th></tr>
 {% for c in carros %}<tr>
-<td><b>{{ c.v.marca_fmt }} {{ c.v.modelo_fmt }}</b> {{ c.v.ano }}<br><small style="color:var(--mu)">{{ c.v.versao_fmt }} · {{ c.v.placa }} · {% if c.v.status == "loja_recife" %}está em Recife{% else %}está em Olinda{% endif %}{% if not c.fotos %} · <span style="color:var(--am)">sem fotos vinculadas: a página fica indisponível</span>{% endif %}</small></td>
+<td><b>{{ c.v.marca_fmt }} {{ c.v.modelo_fmt }}</b> {{ c.v.ano }}<br><small style="color:var(--mu)">{{ c.v.versao_fmt }} · {{ c.v.placa }} · {% if c.v.local %}está em {{ c.v.local }}{% else %}local não informado{% endif %}{% if not c.fotos %} · <span style="color:var(--am)">sem fotos vinculadas: a página fica indisponível</span>{% endif %}</small></td>
 <td class="n">{{ c.preco }}</td><td class="n"><button class="btn sec sm" hx-get="{% url 'captacao:midias' c.v.pk %}?aba=fotos" hx-target="#dlg-box">{{ c.fotos }}</button></td>
 <td class="n"><button class="btn sec sm" hx-get="{% url 'captacao:midias' c.v.pk %}?aba=videos" hx-target="#dlg-box">{{ c.videos }}</button></td><td class="n">{{ c.leads }}</td>
 <td style="white-space:nowrap"><a class="btn sm" href="{{ c.caminho }}" target="_blank" rel="noopener">Abrir</a>
 <button class="btn sec sm" data-copiar="{{ c.url }}">Copiar link</button>
 <button class="btn sec sm" data-copiar="{{ c.url }}?{{ utm }}">Link do anúncio</button></td></tr>
-{% empty %}<tr><td colspan="6" style="color:var(--mu)">Nenhum carro em loja em Olinda.</td></tr>{% endfor %}</table></div>
+{% empty %}<tr><td colspan="6" style="color:var(--mu)">Nenhum carro disponível.</td></tr>{% endfor %}</table></div>
 </div>
 {% endblock %}
 {% block scripts %}<script>

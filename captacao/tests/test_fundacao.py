@@ -10,17 +10,16 @@ from captacao.models import Lead
 
 
 def novo_veiculo(**kw):
-    agora = timezone.now()
-    dados = dict(marca="Fiat", modelo="Argo", versao="1.0", ano_modelo=2022, placa="ABC1D23", km=30000,
-                 valor_venda=Decimal("59900"), status="loja_olinda", possui_fotos=True,
-                 criado_em=agora, atualizado_em=agora)
+    dados = dict(rid="pfund0001", marca="Fiat", modelo="Argo", versao="1.0", ano_modelo=2022, placa="ABC1D23", km=30000,
+                 valor_venda=Decimal("59900"), status="disponivel", unidade="Olinda", total_fotos=1,
+                 atualizado_em=timezone.now())
     dados.update(kw)
     return Veiculo.objects.create(**dados)
 
 
 class FundacaoTests(TestCase):
     def test_tabelas_do_estoque_sao_nao_gerenciadas(self):
-        self.assertEqual(Veiculo._meta.db_table, "estoque_veiculo")
+        self.assertEqual(Veiculo._meta.db_table, "veiculo")
         # nos testes as tabelas existem (settings_test); em producao a migration e no-op
         self.assertTrue(settings.CATALOGO_CRIAR_TABELAS)
 

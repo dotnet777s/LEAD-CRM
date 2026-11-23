@@ -22,10 +22,10 @@ class Command(BaseCommand):
         for i, (m, mo, ano, preco) in enumerate([("Fiat", "Argo", 2022, 59900), ("VW", "Polo", 2021, 64900),
                                                  ("Chevrolet", "Onix", 2022, 62000)]):
             v, _ = Veiculo.objects.get_or_create(placa=f"DEM{i}A00", defaults=dict(
+                rid=f"pdemo000{i}",
                 marca=m, modelo=mo, versao="1.0 Flex", ano_modelo=ano, km=30000 + i * 9000, valor_venda=Decimal(preco),
-                status="loja_olinda", possui_fotos=True, criado_em=agora, atualizado_em=agora,
-                ficha={"itens_serie": ["Ar-condicionado", "Direção elétrica", "Central multimídia"],
-                       "diferenciais": ["Único dono", "Revisado"]}))
+                status="disponivel", unidade="Olinda", total_fotos=1, atualizado_em=agora,
+                itens_serie=["Ar-condicionado", "Direção elétrica", "Central multimídia"], opcionais=["Único dono", "Revisado"]))
             carros.append(v)
         u = get_user_model().objects.filter(is_superuser=True).first()
         casos = [("Maria Silva", "81999990001", "a_vista", "sem", "semana", 2),

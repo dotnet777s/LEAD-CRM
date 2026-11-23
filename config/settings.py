@@ -142,8 +142,6 @@ TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN")
 TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", "leadsreceiverbot")
 TELEGRAM_SLA_MINUTOS = int(env("TELEGRAM_SLA_MINUTOS", "5") or 5)
 
-# --- Fotos (B2, somente leitura) ---
-B2 = {k: env(f"B2_{k.upper()}") for k in ("bucket", "key_id", "app_key", "endpoint", "region")}
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
