@@ -44,10 +44,10 @@ def _dados_do_veiculo(pk):
     if dados:
         return dados
     veiculo = get_object_or_404(Veiculo, pk=pk)
-    disponivel = veiculo.em_loja and veiculo.possui_fotos
+    disponivel = veiculo.em_loja and veiculo.possui_fotos and veiculo.valor_venda is not None
     lista, videos = fotos.midia_do_veiculo(pk)
     similares = []
-    if not disponivel:
+    if not disponivel and veiculo.valor_venda is not None:
         preco = veiculo.valor_venda
         qs = (Veiculo.objects.filter(status__in=Veiculo.EM_LOJA, total_fotos__gt=0,
                                      valor_venda__gte=preco * Decimal("0.85"), valor_venda__lte=preco * Decimal("1.15"))
@@ -161,7 +161,7 @@ def obrigado(request, pk, lead_uuid):
         "lead": lead, "veiculo": veiculo, "pixel_id": settings.META_PIXEL_ID, "loja": settings.LOJA,
         "wa_url": utils.link_whatsapp(settings.LOJA["whatsapp"], texto),
         "event_id_lead": lead.event_id_lead, "event_id_contact": _contact_event_id(lead),
-        "preco": float(veiculo.valor_venda), "pk": pk})
+        "preco": float(veiculo.valor_venda or 0), "pk": pk})
 
 
 class ContatoView(View):

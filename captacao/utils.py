@@ -92,6 +92,8 @@ def classificar(respostas):
 
 
 def preco_brl(valor):
+    if valor is None:
+        return "Sob consulta"
     return "R$ " + f"{Decimal(valor):,.0f}".replace(",", ".")
 
 

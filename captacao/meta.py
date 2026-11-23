@@ -57,7 +57,7 @@ def custom_data(veiculo=None, valor=None, classe=None, extra=None):
     cd = {"content_type": "vehicle", "currency": "BRL"}
     if veiculo is not None:
         cd["content_ids"] = [str(veiculo.pk)]
-        cd["value"] = float(valor if valor is not None else veiculo.valor_venda)
+        cd["value"] = float(valor if valor is not None else (veiculo.valor_venda or 0))
     elif valor is not None:
         cd["value"] = float(valor)
     if classe:
