@@ -1,4 +1,6 @@
 """Páginas públicas: captura do carro, obrigado (WhatsApp), contato (Meta), fotos e privacidade."""
+import json
+from collections import Counter
 import random
 import re
 import uuid
@@ -377,6 +379,89 @@ class ConsentirView(View):
         meta.enfileirar_evento_web("ViewContent", f"{event_id}-vc", info, veiculo=veiculo, url=url)
         variante_ab(request), sid_visitante(request)
         return _gravar_cookies(request, JsonResponse({"ok": True}))
+
+
+FAIXAS_PRECO = [("ate50", "Até R$ 50 mil", 0, 50000), ("50a70", "R$ 50 a 70 mil", 50000, 70000),
+                ("70a90", "R$ 70 a 90 mil", 70000, 90000), ("acima90", "Acima de R$ 90 mil", 90000, 10**9)]
+
+
+def _sem_acento_minusculo(txt):
+    return utils.sem_acento(txt or "").lower()
+
+
+def _catalogo_dados():
+    """Tudo o que o catálogo precisa, em cache por 60 s. Só entram carros disponíveis, com preço e com foto
+    (a página do carro só existe nessas condições)."""
+    chave = "captacao:catalogo"
+    dados = cache.get(chave)
+    if dados:
+        return dados
+    carros = list(Veiculo.objects.filter(status__in=Veiculo.EM_LOJA, total_fotos__gt=0, valor_venda__isnull=False)
+                  .order_by("-atualizado_em", "marca", "modelo"))
+    capas = fotos.capas([v.pk for v in carros])
+    itens = []
+    for ordem, v in enumerate(carros):
+        capa = capas.get(v.pk)
+        if not capa:
+            continue
+        parcela, _ = utils.parcela_estimada(v.valor_venda, settings.FINANCIAMENTO_ENTRADA_PCT, settings.FINANCIAMENTO_PARCELAS,
+                                            settings.FINANCIAMENTO_TAXA_AM)
+        nome = f"{v.marca_fmt} {v.modelo_fmt}"
+        itens.append({
+            "pk": v.pk, "ordem": ordem, "url": reverse("captacao:captura", args=[v.pk, utils.slug_veiculo(v)]),
+            "marca": v.marca_fmt, "modelo": v.modelo_fmt, "nome": nome, "versao": v.versao_fmt, "ano": v.ano,
+            "cor": v.cor_fmt, "cambio": v.cambio_fmt, "local": v.local, "preco": float(v.valor_venda),
+            "preco_fmt": utils.preco_brl(v.valor_venda), "parcela_fmt": utils.preco_brl(parcela) if parcela else "",
+            "fipe_abaixo": _abaixo_da_fipe(v), "foto": capa.pk, "n_fotos": v.total_fotos,
+            "busca": _sem_acento_minusculo(f"{nome} {v.versao_fmt} {v.cor_fmt} {v.ano} {v.cambio_fmt}"),
+            "alt": f"{nome} {v.versao_fmt} {v.ano}".replace("  ", " ").strip(),
+        })
+    marcas = Counter(i["marca"] for i in itens)
+    cambios = Counter(i["cambio"] for i in itens if i["cambio"])
+    faixas = []
+    for chave_f, rotulo, de, ate in FAIXAS_PRECO:
+        n = sum(1 for i in itens if de <= i["preco"] < ate)
+        if n:
+            faixas.append({"chave": chave_f, "rotulo": rotulo, "de": de, "ate": ate, "n": n})
+    ld = {"@context": "https://schema.org", "@type": "ItemList", "name": "Catálogo de veículos TopCar",
+          "numberOfItems": len(itens),
+          "itemListElement": [{"@type": "ListItem", "position": n + 1, "name": f"{i['nome']} {i['versao']} {i['ano']}".replace("  ", " "),
+                               "url": settings.SITE_URL + i["url"]} for n, i in enumerate(itens)]}
+    dados = {"itens": itens, "total": len(itens), "marcas": sorted(marcas.items(), key=lambda x: (-x[1], x[0])),
+             "cambios": sorted(cambios.items()), "faixas": faixas,
+             "og_foto": itens[0]["foto"] if itens else None,
+             "ld": json.dumps(ld, ensure_ascii=False).replace("<", "\\u003c")}
+    cache.set(chave, dados, CACHE_SEGUNDOS)
+    return dados
+
+
+class CatalogoView(View):
+    """Catálogo público: todos os carros disponíveis com foto, com busca e filtros no próprio navegador."""
+    def get(self, request):
+        dados = _catalogo_dados()
+        consent = consentiu(request)
+        event_id = uuid.uuid4().hex
+        url = url_publica(request)
+        if consent and not request.user.is_authenticated and not BOTS.search(request.META.get("HTTP_USER_AGENT", "")):
+            meta.enfileirar_evento_web("PageView", event_id, info_requisicao(request), url=url)
+        return render(request, "captacao/catalogo.html", {
+            **dados, "consent": consent, "event_id": event_id, "url_pagina": url, "pixel_id": settings.META_PIXEL_ID,
+            "site_url": settings.SITE_URL, "loja": settings.LOJA, "clarity_id": settings.CLARITY_ID if consent else "",
+            "parcelas_n": settings.FINANCIAMENTO_PARCELAS, "entrada_pct": settings.FINANCIAMENTO_ENTRADA_PCT,
+            "wa_url": utils.link_whatsapp(settings.LOJA["whatsapp"], "Olá! Estou vendo o catálogo da TopCar Veículos e gostaria de ajuda para escolher um carro.")})
+
+
+class ConsentirCatalogoView(View):
+    """Aceitou os cookies no catálogo: só agora o PageView desta visita vai para a fila da Meta."""
+    def post(self, request):
+        if not consentiu(request) or request.user.is_authenticated or BOTS.search(request.META.get("HTTP_USER_AGENT", "")):
+            return JsonResponse({"ok": False}, status=400)
+        event_id = request.POST.get("event_id", "")
+        if not re.fullmatch(r"[0-9a-f]{32}", event_id):
+            return JsonResponse({"ok": False}, status=400)
+        url = request.POST.get("url", "")[:500] or url_publica(request, reverse("captacao:catalogo"))
+        meta.enfileirar_evento_web("PageView", event_id, info_requisicao(request), url=url)
+        return JsonResponse({"ok": True})
 
 
 def _qs(request):

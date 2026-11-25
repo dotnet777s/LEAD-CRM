@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from django.shortcuts import resolve_url
 
 # Públicos: página de captura do carro, obrigado, privacidade, fotos, estáticos e admin (login próprio).
-PUBLICOS = ("/v/", "/privacidade/", "/foto/", "/static/", "/admin/", "/robots.txt", "/favicon.ico")
+PUBLICOS = ("/v/", "/catalogo/", "/privacidade/", "/foto/", "/static/", "/admin/", "/robots.txt", "/favicon.ico")
 
 
 class LoginObrigatorioMiddleware:
