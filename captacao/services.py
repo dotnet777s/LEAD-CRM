@@ -95,6 +95,7 @@ def capturar_lead(veiculo, nome, telefone, respostas, tracking, agora=None, parc
         classe=classe, respostas=respostas, ip=ip, event_id_lead=event_id,
         consentimento_em=agora, consentimento_ip=ip, consent_meta=consent, criado_em=agora, etapa_desde=agora,
         etapa=Lead.Etapa.REQUALIFICAR if parcial else Lead.Etapa.NOVO, **campos)
+    _etiquetar_origem(lead)
     Historico.objects.create(lead=lead, tipo=Historico.Tipo.CRIADO, criado_em=agora,
                              texto=(f"Começou o formulário e deixou o contato: {carro}" if parcial
                                     else f"Capturado pela página: {carro}. {resumo_respostas(respostas)}")[:500])
@@ -140,11 +141,20 @@ def criar_lead_portal(portal, nome, telefone, carro_texto, veiculo, mensagem="",
                                criado_em=agora, etapa_desde=agora)
     Historico.objects.create(lead=lead, tipo=Historico.Tipo.CRIADO, criado_em=agora,
                              texto=f"Contato pelo portal {rotulo}{f' ({tipo})' if tipo else ''}: {carro}"[:500])
+    _etiquetar_origem(lead)
     try:
         telegram.avisar_novo_lead(lead)
     except Exception:  # noqa: BLE001 - aviso nunca impede a criação
         pass
     return lead, True
+
+
+def _etiquetar_origem(lead):
+    from . import classificacao          # import tardio: classificacao usa este módulo
+    try:
+        classificacao.etiquetar_origem(lead)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def criar_lead_manual(nome, telefone, veiculo=None, origem=Lead.Origem.WHATSAPP, usuario=None, observacao=""):
@@ -197,9 +207,7 @@ def mudar_etapa(lead, nova, usuario=None, motivo_perda="", veiculo_vendido=None,
 def marcar_atendimento(lead, usuario=None):
     """Chamado ao abrir o WhatsApp: tira o lead de 'Novo' e marca a primeira resposta."""
     if lead.etapa in (Lead.Etapa.NOVO, Lead.Etapa.REQUALIFICAR):
-        mudou = mudar_etapa(lead, Lead.Etapa.ATENDIMENTO, usuario)
-        followup.iniciar(lead)             # 1º contato feito: se o cliente não responder, a sequência cobra
-        return mudou
+        return mudar_etapa(lead, Lead.Etapa.ATENDIMENTO, usuario)
     return False
 
 

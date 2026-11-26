@@ -1,0 +1,28 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Visão geral{% endblock %}
+{% block titulo %}Visão geral{% endblock %}
+{% block content %}
+<div class="pg">
+  <div class="titulo-pg"><div><h1>Visão geral</h1><small>Leads dos últimos {{ dias }} dias: de onde vêm, quando chegam e o que procuram.</small></div>
+    <form method="get"><select name="dias" onchange="this.form.submit()">
+      <option value="7" {% if dias == 7 %}selected{% endif %}>7 dias</option><option value="14" {% if dias == 14 %}selected{% endif %}>14 dias</option><option value="30" {% if dias == 30 %}selected{% endif %}>30 dias</option>
+      <option value="90" {% if dias == 90 %}selected{% endif %}>90 dias</option><option value="180" {% if dias == 180 %}selected{% endif %}>180 dias</option></select></form></div>
+  <div class="kpis">
+    <div class="kpi"><b>{{ total }}</b><small>leads no período · média {{ por_dia }}/dia</small></div>
+    <div class="kpi"><b>{{ sem_humano }}</b><small>sem interação da equipe</small></div>
+    <div class="kpi"><b>{% if tempo_medio is not None %}{{ tempo_medio }} min{% else %}—{% endif %}</b><small>tempo médio até o 1º atendimento</small></div>
+    <div class="kpi"><b>{{ vendidos }}</b><small>vendidos · {{ perdidos }} perdidos</small></div>
+  </div>
+  <div class="grid">
+    <div class="box"><h2>Funil por etapa</h2>{% for e in funil %}<div class="barra-h"><span class="n">{{ e.nome }}</span><div style="flex:1"><i style="width:{{ e.pct }}%"></i></div><b>{{ e.n }}</b></div>{% endfor %}</div>
+    <div class="box"><h2>De onde vêm</h2>{% for o in origens %}<div class="barra-h"><span class="n">{{ o.nome }}</span><div style="flex:1"><i style="width:{{ o.pct }}%"></i></div><b>{{ o.n }}</b></div>{% empty %}<small>Sem dados.</small>{% endfor %}</div>
+    <div class="box"><h2>Estados (pelo DDD)</h2>{% for o in ufs %}<div class="barra-h"><span class="n">{{ o.nome }}</span><div style="flex:1"><i style="width:{{ o.pct }}%"></i></div><b>{{ o.n }}</b></div>{% empty %}<small>Sem dados.</small>{% endfor %}</div>
+    <div class="box"><h2>Carros mais procurados</h2>{% for o in carros %}<div class="barra-h"><span class="n" style="width:170px">{{ o.nome }}</span><div style="flex:1"><i style="width:{{ o.pct }}%"></i></div><b>{{ o.n }}</b></div>{% empty %}<small>Sem dados.</small>{% endfor %}</div>
+    <div class="box"><h2>Etiquetas</h2>{% for o in etiquetas %}<div class="barra-h"><span class="n">{{ o.nome }}</span><div style="flex:1"><i style="width:{{ o.pct }}%"></i></div><b>{{ o.n }}</b></div>{% empty %}<small>Nenhuma etiqueta aplicada ainda.</small>{% endfor %}</div>
+    <div class="box"><h2>Dia da semana</h2>{% for o in semana %}<div class="barra-h"><span class="n">{{ o.nome }}</span><div style="flex:1"><i style="width:{{ o.pct }}%"></i></div><b>{{ o.n }}</b></div>{% endfor %}</div>
+  </div>
+  <div class="box" style="margin-top:12px"><h2>Horário de chegada{% if pico_hora is not None %} · pico às {{ pico_hora }}h{% endif %}</h2>
+    <div class="horas">{% for o in horas %}<div title="{{ o.nome }}: {{ o.n }}" style="height:{{ o.pct }}%"></div>{% endfor %}</div>
+    <div style="display:flex;justify-content:space-between;color:var(--mu);font-size:11px;margin-top:4px"><span>00h</span><span>06h</span><span>12h</span><span>18h</span><span>23h</span></div></div>
+</div>
+{% endblock %}

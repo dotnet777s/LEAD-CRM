@@ -1,0 +1,39 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Etiquetas e funil{% endblock %}
+{% block titulo %}Etiquetas e funil{% endblock %}
+{% block content %}
+<div class="pg">
+  <div class="titulo-pg"><div><h1>Etiquetas e funil automático</h1><small>O funil anda sozinho conforme o que o cliente escreve. A etapa só avança; nunca volta sozinha.</small></div></div>
+  {% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}
+  <div class="box"><h2>Como está o funil</h2>
+    {% for e in etapas_resumo %}<div class="barra-h"><span class="n">{{ e.nome }}</span><div style="flex:1"><i style="width:{{ e.pct }}%"></i></div><b>{{ e.n }}</b></div>{% endfor %}
+    <small style="color:var(--mu)">As etapas são as colunas do Funil (Kanban). Para mudar a etapa de um lead, arraste o card ou use a conversa.</small></div>
+
+  <div class="box" style="margin-top:12px"><h2>Regras automáticas (palavras que o cliente escreve)</h2>
+    <small style="color:var(--mu)">Quando a mensagem do cliente tiver uma das palavras, o CRM põe a etiqueta e, se a regra mandar, leva o lead para a etapa. Também: o cliente que responde sai de “Novo” para “Em atendimento”.</small>
+    <div style="overflow-x:auto"><table class="t" style="margin-top:8px"><tr><th>Regra</th><th>Palavras</th><th>Etiqueta</th><th>Etapa</th><th></th></tr>
+    {% for r in regras %}<tr style="{% if not r.ativa %}opacity:.5{% endif %}"><td><b>{{ r.nome }}</b></td><td style="color:var(--mu);max-width:340px">{{ r.palavras|truncatechars:110 }}</td>
+      <td>{% if r.etiqueta %}<span class="etq" style="--c:{{ r.etiqueta.cor }}">{{ r.etiqueta.nome }}</span>{% else %}—{% endif %}</td>
+      <td>{% if r.etapa %}{{ r.get_etapa_display }}{% if r.motivo_perda %} <small style="color:var(--mu)">({{ r.get_motivo_perda_display }})</small>{% endif %}{% else %}—{% endif %}</td>
+      <td style="white-space:nowrap">{% if gestor %}<form method="post" action="{% url 'captacao:funil_acao_id' 'regra_ativar' r.pk %}" style="display:inline">{% csrf_token %}<button class="btn sec sm">{% if r.ativa %}Desligar{% else %}Ligar{% endif %}</button></form>
+        <form method="post" action="{% url 'captacao:funil_acao_id' 'regra_excluir' r.pk %}" style="display:inline" onsubmit="return confirm('Excluir esta regra?')">{% csrf_token %}<button class="btn red sm">Excluir</button></form>{% endif %}</td></tr>
+    {% endfor %}</table></div>
+    {% if gestor %}<form method="post" action="{% url 'captacao:funil_acao' 'regra' %}" class="cfg" style="margin-top:10px">{% csrf_token %}
+      <div class="linha"><label class="l">Nome da regra<input type="text" name="nome" maxlength="60" required></label>
+        <label class="l">Etiqueta<select name="etiqueta"><option value="">(nenhuma)</option>{% for e in etiquetas %}<option value="{{ e.pk }}">{{ e.nome }}</option>{% endfor %}</select></label>
+        <label class="l">Levar para a etapa<select name="etapa"><option value="">(não mudar)</option>{% for v, r in etapas %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></label>
+        <label class="l">Se for Perdido, motivo<select name="motivo_perda"><option value="">—</option>{% for v, r in motivos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></label></div>
+      <label class="l">Palavras (separe por vírgula)<textarea name="palavras" rows="2" required placeholder="ex.: financiar, financiamento, parcela"></textarea></label>
+      <button class="btn sm" style="margin-top:6px">Adicionar regra</button></form>{% endif %}
+  </div>
+
+  <div class="box" style="margin-top:12px"><h2>Etiquetas</h2>
+    <div class="etqs" style="margin-bottom:8px">{% for e in etiquetas %}<span class="etq" style="--c:{{ e.cor }}">{{ e.nome }} · {{ e.n }}{% if e.bloqueia_followup %} · sem follow-up{% endif %}
+      {% if gestor %}<form method="post" action="{% url 'captacao:funil_acao_id' 'etiqueta_excluir' e.pk %}" style="display:inline" onsubmit="return confirm('Excluir a etiqueta {{ e.nome|escapejs }}?')">{% csrf_token %}<button title="Excluir">×</button></form>{% endif %}</span>{% endfor %}</div>
+    {% if gestor %}<form method="post" action="{% url 'captacao:funil_acao' 'etiqueta' %}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">{% csrf_token %}
+      <input type="text" name="nome" placeholder="Nova etiqueta" maxlength="40" required style="max-width:220px"><input type="color" name="cor" value="#2ee66b" style="width:48px;padding:2px">
+      <label class="chk" style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="bloqueia" style="width:auto"> Impede o follow-up</label><button class="btn sec sm">Criar etiqueta</button></form>{% endif %}
+    <small style="color:var(--mu);display:block;margin-top:6px">Etiquetas de origem (OLX, Anúncio pago...) entram sozinhas. “Impede o follow-up” serve para quem não deve receber a sequência.</small>
+  </div>
+</div>
+{% endblock %}

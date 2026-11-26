@@ -25,12 +25,23 @@
   {% else %}
   <div class="c-ferr"><select id="c-rapidas" aria-label="Respostas rápidas"><option value="">Respostas rápidas (copiar)</option>{% for r in rapidas %}<option value="{{ r.texto }}">{{ r.titulo }}</option>{% endfor %}</select></div>
   {% endif %}
+  {% if api %}
+  <details class="prog"><summary>Programar uma mensagem{% if programadas %} ({{ programadas|length }}){% endif %}</summary>
+    <form hx-post="{% url 'captacao:conversa_programar' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" style="display:grid;gap:6px;margin-top:6px">
+      <input type="datetime-local" name="quando" required><input type="text" name="texto" placeholder="Texto que vai sair nesse horário" maxlength="1500" required><button class="btn sec sm" style="justify-self:start">Programar</button></form>
+    {% for p in programadas %}<div class="vis-i" style="margin-top:6px"><b>{{ p.enviar_em|date:"d/m H:i" }}</b><small>{{ p.texto|truncatechars:80 }}</small>
+      <button class="link" style="color:var(--rd);padding:2px 0" hx-post="{% url 'captacao:programada_cancelar' p.pk %}" hx-target="#c-conv" hx-swap="innerHTML">Cancelar</button></div>{% endfor %}
+  </details>{% endif %}
   <form hx-post="{% url 'captacao:conversa_nota' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" style="display:flex;gap:6px">
     <input type="text" name="texto" placeholder="Nota interna (o cliente não vê)" maxlength="500" autocomplete="off"><button class="btn sec sm">Anotar</button></form>
 </div>
 <aside class="c-info" id="c-info" hx-swap-oob="true">
   <h3>{{ lead.nome }}</h3><small style="color:var(--mu)">{{ lead.telefone_formatado }}{% if lead.email %} · {{ lead.email }}{% endif %}</small>
   <p style="margin:10px 0 0"><a class="btn full sm" target="_blank" rel="noopener" href="{{ lead.whatsapp_url }}">Abrir no WhatsApp do celular</a></p>
+  <div class="sec-t">Etiquetas</div>
+  <div class="etqs">{% for e in lead.etiquetas.all %}<span class="etq" style="--c:{{ e.cor }}">{{ e.nome }}<form hx-post="{% url 'captacao:lead_etiqueta' lead.pk 'remove' %}" hx-target="#c-conv" hx-swap="innerHTML" style="display:inline"><input type="hidden" name="etiqueta" value="{{ e.pk }}"><button title="Remover">×</button></form></span>{% empty %}<small style="color:var(--mu)">Sem etiquetas</small>{% endfor %}</div>
+  <form hx-post="{% url 'captacao:lead_etiqueta' lead.pk 'add' %}" hx-target="#c-conv" hx-swap="innerHTML" style="display:flex;gap:6px;margin-top:6px">
+    <select name="etiqueta"><option value="">Adicionar…</option>{% for e in etiquetas_todas %}<option value="{{ e.pk }}">{{ e.nome }}</option>{% endfor %}</select><button class="btn sec sm">Add</button></form>
   <div class="sec-t">Etapa</div>
   <div class="etp">{% for val, nome in funil %}{% if val == 'perdido' %}<button type="button" class="{% if val == lead.etapa %}atual{% endif %}" hx-get="{% url 'captacao:mover' lead.pk %}?etapa=perdido" hx-target="#dlg-box">{{ nome }}</button>
     {% elif val == 'visita' or val == 'vendido' %}<button type="button" class="{% if val == lead.etapa %}atual{% endif %}" hx-get="{% url 'captacao:mover' lead.pk %}?etapa={{ val }}" hx-target="#dlg-box">{{ nome }}</button>

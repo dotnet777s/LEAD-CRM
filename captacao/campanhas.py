@@ -24,6 +24,8 @@ def publico(filtro):
         qs = qs.filter(origem=filtro["origem"])
     if filtro.get("portal") in Lead.Portal.values:
         qs = qs.filter(portal=filtro["portal"])
+    if str(filtro.get("etiqueta") or "").isdigit():
+        qs = qs.filter(etiquetas__pk=int(filtro["etiqueta"]))
     dias = int(filtro.get("dias_parado") or 0)
     if dias > 0:
         qs = qs.filter(atualizado_em__lte=timezone.now() - timedelta(days=dias))

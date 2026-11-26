@@ -17,7 +17,7 @@ from catalogo.models import Veiculo
 
 from . import followup, services, utils, whatsapp
 from .forms import LeadManualForm
-from .models import EventoMeta, Lead
+from .models import Etiqueta, EventoMeta, Lead
 
 COM_FORM = (Lead.Etapa.VISITA, Lead.Etapa.VENDIDO, Lead.Etapa.PERDIDO)   # etapas que pedem dados extras
 LIMITE_COLUNA = 60
@@ -55,6 +55,8 @@ def aplicar_filtros(qs, params):
     ini = {"hoje": hoje, "7d": hoje - timedelta(days=6), "mes": hoje.replace(day=1)}.get(params.get("periodo"))
     if ini:
         qs = qs.filter(criado_em__date__gte=ini)
+    if params.get("etiqueta", "").isdigit():
+        qs = qs.filter(etiquetas__pk=int(params["etiqueta"]))
     q = (params.get("q") or "").strip()
     if q:
         digitos = utils.so_digitos(q)
@@ -99,7 +101,7 @@ class KanbanView(Base, TemplateView):
         ctx.update(
             consultores=U.objects.filter(is_active=True).order_by("first_name", "username"),
             carros=Veiculo.objects.filter(status__in=Veiculo.EM_LOJA).order_by("marca", "modelo"),
-            n_agora=followup.contagens()["agora"], origens=Lead.Origem.choices, gestor=eh_gestor(self.request.user), periodos=[("", "Tudo"), ("hoje", "Hoje"), ("7d", "7 dias"), ("mes", "Mês")])
+            n_agora=followup.contagens()["agora"], etiquetas=Etiqueta.objects.all(), origens=Lead.Origem.choices, gestor=eh_gestor(self.request.user), periodos=[("", "Tudo"), ("hoje", "Hoje"), ("7d", "7 dias"), ("mes", "Mês")])
         return ctx
 
 
@@ -116,7 +118,7 @@ class QuadroView(Base, View):
                 qs = qs.filter(etapa_desde__gte=corte)
             total = qs.count()
             ordem = "criado_em" if etapa == Lead.Etapa.NOVO else "-etapa_desde"
-            cards = [preparar_card(l, agora) for l in qs.order_by(ordem)[:LIMITE_COLUNA]]
+            cards = [preparar_card(l, agora) for l in qs.prefetch_related("etiquetas").order_by(ordem)[:LIMITE_COLUNA]]
             for l in cards:
                 l.fu = fus.get(l.pk)
                 if l.fu:
@@ -145,7 +147,7 @@ def render_detalhe(request, lead, erro_wa=""):
         "mensagem": mensagem_inicial(lead, request.user),
         "consultores": get_user_model().objects.filter(is_active=True).order_by("first_name", "username"),
         "com_form": [e.value for e in COM_FORM],
-        "fu": fu, "ultimo_fu": lead.followups.exclude(status__in=["ativo", "pausado"]).order_by("-id").first(),
+        "etiquetas_todas": Etiqueta.objects.all(), "fu": fu, "ultimo_fu": lead.followups.exclude(status__in=["ativo", "pausado"]).order_by("-id").first(),
         "conversa": list(lead.mensagens_wa.order_by("-criado_em")[:20])[::-1], "wa_ligado": whatsapp.configurado(),
         "wa_janela": whatsapp.configurado() and whatsapp.janela_aberta(lead.telefone), "erro_wa": erro_wa})
 

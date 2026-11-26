@@ -90,12 +90,6 @@ class MotorTests(TestCase):
         services.mudar_etapa(l, Lead.Etapa.QUALIFICADO)
         self.assertEqual(l.followups.get().status, FollowUp.Status.ENCERRADO)
 
-    def test_abrir_whatsapp_inicia_o_follow_up(self):
-        l = novo_lead()
-        services.marcar_atendimento(l)
-        self.assertEqual(l.etapa, Lead.Etapa.ATENDIMENTO)
-        self.assertEqual(l.followups.count(), 1)
-
     def test_mensagem_usa_primeiro_nome_e_carro(self):
         fu = followup.iniciar(novo_lead(nome="maria aparecida souza"), SEGUNDA_10H)
         txt = followup.montar_mensagem(fu)

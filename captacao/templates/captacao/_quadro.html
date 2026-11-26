@@ -25,6 +25,7 @@
         {% if l.portal %}<span class="portal">{{ l.get_portal_display }}</span>{% endif %}
         {% if l.retorno_atrasado %}<span class="atrasado">Retorno atrasado</span>{% endif %}
       </div>
+      {% if l.etiquetas.all %}<div class="etqs">{% for e in l.etiquetas.all %}<span class="etq" style="--c:{{ e.cor }}">{{ e.nome }}</span>{% endfor %}</div>{% endif %}
       {% if c.etapa != 'vendido' and c.etapa != 'perdido' %}
       <div class="acoes">
         {% if l.prox %}

@@ -28,6 +28,8 @@
 <symbol id="s-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></symbol>
 <symbol id="s-team" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.500"/><path d="M5 20c.6-4 3.300-6 7-6s6.400 2 7 6"/></symbol>
 <symbol id="s-wa" viewBox="0 0 24 24"><path d="M20 11.700a8 8 0 0 1-11.800 7L4 20l1.300-4A8 8 0 1 1 20 11.700Z"/><path d="M9.200 8.600c.3 2.400 2.300 4.600 5 5.400l1.100-1.200-1.700-.9-.8.600c-1-.4-1.800-1.200-2.200-2.200l.6-.8-.9-1.700-1.100 1.200Z"/></symbol>
+<symbol id="s-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8L3 12Z"/><circle cx="7.500" cy="8.500" r="1.300"/></symbol>
+<symbol id="s-pie" viewBox="0 0 24 24"><path d="M12 3v9h9A9 9 0 1 1 12 3Z"/><path d="M15 3.500A9 9 0 0 1 20.500 9H15V3.500Z"/></symbol>
 <symbol id="s-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
 <symbol id="s-out" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/></symbol>
 </defs></svg>
@@ -45,9 +47,11 @@
       <a href="{% url 'captacao:contatos' %}" class="{% if rota == 'contatos' %}on{% endif %}"><svg class="i"><use href="#s-users"/></svg><span>Contatos</span></a>
       <a href="{% url 'captacao:campanhas' %}" class="{% if rota == 'campanhas' %}on{% endif %}"><svg class="i"><use href="#s-mega"/></svg><span>Campanhas</span></a>
       <a href="{% url 'captacao:modelos' %}" class="{% if rota == 'modelos' %}on{% endif %}"><svg class="i"><use href="#s-doc"/></svg><span>Modelos</span></a>
+      <a href="{% url 'captacao:funil_config' %}" class="{% if rota == 'funil_config' %}on{% endif %}"><svg class="i"><use href="#s-tag"/></svg><span>Etiquetas e funil</span></a>
       <a href="{% url 'captacao:portais' %}" class="{% if rota == 'portais' %}on{% endif %}"><svg class="i"><use href="#s-globe"/></svg><span>Portais</span></a>
       <a href="{% url 'captacao:carros' %}" class="{% if rota == 'carros' %}on{% endif %}"><svg class="i"><use href="#s-car"/></svg><span>Carros</span></a>
       <div class="grp">Resultados</div>
+      <a href="{% url 'captacao:visao_geral' %}" class="{% if rota == 'visao_geral' %}on{% endif %}"><svg class="i"><use href="#s-pie"/></svg><span>Visão geral</span></a>
       <a href="{% url 'captacao:painel' %}" class="{% if rota == 'painel' %}on{% endif %}"><svg class="i"><use href="#s-chart"/></svg><span>Painel</span></a>
       <a href="{% url 'captacao:funil_form' %}" class="{% if rota == 'funil_form' %}on{% endif %}"><svg class="i"><use href="#s-form"/></svg><span>Formulário</span></a>
       <a href="{% url 'captacao:eventos' %}" class="{% if rota == 'eventos' %}on{% endif %}"><svg class="i"><use href="#s-bolt"/></svg><span>Meta</span></a>

@@ -14,8 +14,8 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from . import followup, telegram, utils
-from .models import Historico, Lead, ModeloWhatsApp, WhatsAppMensagem
+from . import classificacao, followup, telegram, utils
+from .models import Historico, Lead, MensagemProgramada, ModeloWhatsApp, WhatsAppMensagem
 
 log = logging.getLogger(__name__)
 JANELA = timedelta(hours=24)
@@ -181,6 +181,11 @@ def _entrada(m, nome_perfil, agora):
         Historico.objects.create(lead=lead, tipo=Historico.Tipo.NOTA, criado_em=agora, texto="Cliente pediu para não receber mais mensagens")
     parou = followup.cliente_respondeu(lead, agora=agora)
     try:
+        classificacao.cliente_respondeu(lead)
+        classificacao.aplicar_regras(lead, texto)
+    except Exception:  # noqa: BLE001 - classificar nunca impede de gravar a mensagem
+        log.exception("whatsapp: falha ao classificar")
+    try:
         if novo:
             telegram.avisar_novo_lead(lead)
         else:
@@ -322,3 +327,34 @@ def info_numero():
     if r.status_code >= 400:
         raise WhatsAppErro(_erro_meta(r))
     return r.json()
+
+
+def enviar_programadas(agora=None, limite=30):
+    """Chamado pelo worker: envia as mensagens programadas que venceram (só dentro da janela de 24 h)."""
+    agora = agora or timezone.now()
+    if not configurado():
+        return 0
+    n = 0
+    for p in MensagemProgramada.objects.filter(status="pendente", enviar_em__lte=agora).select_related("lead")[:limite]:
+        if p.lead.nao_contatar:
+            p.status, p.erro = "cancelada", "Cliente pediu para não receber mensagens."
+        else:
+            try:
+                enviar_texto(p.lead, p.texto, p.criada_por)
+                p.status = "enviada"
+                n += 1
+            except WhatsAppErro as e:
+                p.status, p.erro = "falhou", str(e)[:300]
+        p.save(update_fields=["status", "erro"])
+    return n
+
+
+def assinar_webhook():
+    """Inscreve ESTE app na conta (WABA) para receber as mensagens. A Meta entrega ao app inscrito pela URL cadastrada no app."""
+    if not (configurado() and settings.WHATSAPP_WABA_ID):
+        raise WhatsAppErro("Falta WHATSAPP_WABA_ID e/ou a conexão da API.")
+    r = requests.post(f"https://graph.facebook.com/{settings.WHATSAPP_API_VERSION}/{settings.WHATSAPP_WABA_ID}/subscribed_apps",
+                      headers={"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}"}, timeout=20)
+    if r.status_code >= 400:
+        raise WhatsAppErro(_erro_meta(r))
+    return True

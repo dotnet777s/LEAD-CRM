@@ -14,14 +14,14 @@ from django.views.generic import TemplateView
 from catalogo.models import Veiculo
 
 from . import fotos, followup, services, utils, whatsapp
-from .models import Historico, Lead, ModeloWhatsApp, RespostaRapida, WhatsAppMensagem
+from .models import Etiqueta, Historico, Lead, MensagemProgramada, ModeloWhatsApp, RespostaRapida, WhatsAppMensagem
 from .views import Base, eh_gestor, leads_visiveis, trigger
 
 FILTROS = [("todas", "Todas"), ("nao_lidas", "Não lidas"), ("minhas", "Minhas"), ("cliente", "Cliente esperando"),
-           ("loja", "Esperando cliente")]
+           ("loja", "Esperando cliente"), ("programadas", "Programadas")]
 
 
-def _conversas(user, filtro="todas", q=""):
+def _conversas(user, filtro="todas", q="", tag=""):
     msgs = WhatsAppMensagem.objects.filter(lead=OuterRef("pk")).order_by("-criado_em", "-id")
     qs = (leads_visiveis(user).filter(mensagens_wa__isnull=False).distinct()
           .annotate(ultima=Subquery(msgs.values("criado_em")[:1]), ultima_dir=Subquery(msgs.values("direcao")[:1]),
@@ -35,6 +35,10 @@ def _conversas(user, filtro="todas", q=""):
         qs = qs.filter(ultima_dir="in")
     elif filtro == "loja":
         qs = qs.filter(ultima_dir="out")
+    elif filtro == "programadas":
+        qs = qs.filter(programadas__status="pendente")
+    if tag.isdigit():
+        qs = qs.filter(etiquetas__pk=int(tag))
     q = (q or "").strip()
     if q:
         dig = utils.so_digitos(q)
@@ -55,6 +59,7 @@ class ConversasView(Base, TemplateView):
     def get_context_data(self, **kw):
         ctx = super().get_context_data(**kw)
         ctx.update(filtros=FILTROS, filtro=self.request.GET.get("f", "todas"), lead_id=self.request.GET.get("lead", ""),
+                   etiquetas=Etiqueta.objects.all(), tag=self.request.GET.get("tag", ""),
                    api=whatsapp.configurado())
         return ctx
 
@@ -63,11 +68,11 @@ class ListaView(Base, View):
     def get(self, request):
         filtro = request.GET.get("f", "todas")
         agora = timezone.now()
-        itens = list(_conversas(request.user, filtro, request.GET.get("q", "")))
+        itens = list(_conversas(request.user, filtro, request.GET.get("q", ""), request.GET.get("tag", "")))
         for l in itens:
             l.janela = (agora - l.ultima) < whatsapp.JANELA if l.ultima else False
         return render(request, "captacao/_conversas_lista.html", {
-            "itens": itens, "filtro": filtro, "filtros": FILTROS, "ativo": request.GET.get("lead", ""), "q": request.GET.get("q", "")})
+            "itens": itens, "filtro": filtro, "filtros": FILTROS, "tag": request.GET.get("tag", ""), "ativo": request.GET.get("lead", ""), "q": request.GET.get("q", "")})
 
 
 def _contexto_conversa(request, lead, erro=""):
@@ -78,7 +83,7 @@ def _contexto_conversa(request, lead, erro=""):
     return {"lead": lead, "mensagens": msgs, "api": whatsapp.configurado(), "janela": whatsapp.janela_aberta(lead.telefone),
             "rapidas": RespostaRapida.objects.all(), "modelos": ModeloWhatsApp.objects.filter(status="APPROVED"),
             "carros": Veiculo.objects.filter(status__in=Veiculo.EM_LOJA, total_fotos__gt=0).order_by("marca", "modelo"),
-            "erro": erro, "fu": fu, "etapas": Lead.Etapa, "funil": [(e.value, e.label) for e in Lead.FUNIL] + [("perdido", "Perdido")],
+            "erro": erro, "etiquetas_todas": Etiqueta.objects.all(), "programadas": lead.programadas.filter(status="pendente"), "fu": fu, "etapas": Lead.Etapa, "funil": [(e.value, e.label) for e in Lead.FUNIL] + [("perdido", "Perdido")],
             "consultores": get_user_model().objects.filter(is_active=True),
             "gestor": eh_gestor(request.user)}
 

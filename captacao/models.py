@@ -12,6 +12,7 @@ class Lead(models.Model):
         NOVO = "novo", "Novo"
         REQUALIFICAR = "requalificar", "Requalificar"
         ATENDIMENTO = "atendimento", "Em atendimento"
+        SEM_ESTOQUE = "sem_estoque", "Não temos"
         QUALIFICADO = "qualificado", "Qualificado"
         VISITA = "visita", "Visita agendada"
         COMPARECEU = "compareceu", "Compareceu"
@@ -20,7 +21,7 @@ class Lead(models.Model):
         PERDIDO = "perdido", "Perdido"
 
     # REQUALIFICAR: quem deixou o contato mas não terminou o formulário. Fica fora do funil de vendas (taxas e 'avançar').
-    ABERTAS = [Etapa.NOVO, Etapa.REQUALIFICAR, Etapa.ATENDIMENTO, Etapa.QUALIFICADO, Etapa.VISITA, Etapa.COMPARECEU, Etapa.NEGOCIACAO]
+    ABERTAS = [Etapa.NOVO, Etapa.REQUALIFICAR, Etapa.ATENDIMENTO, Etapa.SEM_ESTOQUE, Etapa.QUALIFICADO, Etapa.VISITA, Etapa.COMPARECEU, Etapa.NEGOCIACAO]
     # Ordem do funil (quadro, botão "avançar" e taxas do painel)
     FUNIL = [Etapa.NOVO, Etapa.ATENDIMENTO, Etapa.QUALIFICADO, Etapa.VISITA, Etapa.COMPARECEU, Etapa.NEGOCIACAO, Etapa.VENDIDO]
 
@@ -64,6 +65,7 @@ class Lead(models.Model):
     portal = models.CharField(max_length=10, choices=Portal.choices, blank=True, db_default="", db_index=True)
     email = models.EmailField(blank=True, db_default="")
     nao_contatar = models.BooleanField("Não quer receber mensagens", default=False, db_default=False)
+    etiquetas = models.ManyToManyField("Etiqueta", blank=True, related_name="leads")
     classe = models.CharField(max_length=1, choices=Classe.choices, default=Classe.B)
     etapa = models.CharField(max_length=12, choices=Etapa.choices, default=Etapa.NOVO, db_index=True)
     etapa_desde = models.DateTimeField(default=timezone.now)
@@ -131,7 +133,7 @@ class Lead(models.Model):
 
     @property
     def proxima_etapa(self):
-        if self.etapa == self.Etapa.REQUALIFICAR:
+        if self.etapa in (self.Etapa.REQUALIFICAR, self.Etapa.SEM_ESTOQUE):
             return self.Etapa.ATENDIMENTO
         if self.etapa in self.ABERTAS:
             return self.FUNIL[self.FUNIL.index(self.etapa) + 1]
@@ -308,10 +310,17 @@ class FollowUpConfig(models.Model):
     enviar_domingo = models.BooleanField(default=False)
     primeiro_nome = models.BooleanField("Chamar só pelo primeiro nome", default=True)
     envio_automatico = models.BooleanField("Enviar sozinho pela API do WhatsApp (quando conectada)", default=False)
+    etapas_gatilho = models.JSONField(default=list, blank=True)   # etapas em que o lead sem resposta entra no follow-up
+    vale_desde = models.DateTimeField(null=True, blank=True)       # só vale para quem entrou na etapa depois desta data
+
+    ETAPAS_PADRAO = ["novo", "requalificar", "atendimento"]
 
     @classmethod
     def obter(cls):
         c, _ = cls.objects.get_or_create(pk=1)
+        if not c.etapas_gatilho:        # primeira vez: vale só para quem entrar nessas etapas daqui para a frente
+            c.etapas_gatilho, c.vale_desde = list(cls.ETAPAS_PADRAO), timezone.now()
+            c.save(update_fields=["etapas_gatilho", "vale_desde"])
         return c
 
 
@@ -461,3 +470,53 @@ class CampanhaEnvio(models.Model):
 
     class Meta:
         unique_together = [("campanha", "lead")]
+
+
+# ===================================================================== etiquetas e classificação automática
+class Etiqueta(models.Model):
+    """Etiqueta colorida do lead (como no Avise Aí). Pode ser posta à mão ou pelas regras automáticas."""
+    nome = models.CharField(max_length=40, unique=True)
+    cor = models.CharField(max_length=7, default="#2ee66b")
+    bloqueia_followup = models.BooleanField("Impede o follow-up automático", default=False)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "nome"]
+
+    def __str__(self):
+        return self.nome
+
+
+class RegraClassificacao(models.Model):
+    """Se a mensagem do cliente tiver uma das palavras: põe a etiqueta e/ou leva o lead para a etapa (só avança)."""
+    nome = models.CharField(max_length=60)
+    palavras = models.TextField(help_text="Uma por linha ou separadas por vírgula. Sem diferenciar acento e maiúscula.")
+    etiqueta = models.ForeignKey(Etiqueta, null=True, blank=True, on_delete=models.SET_NULL, related_name="regras")
+    etapa = models.CharField(max_length=12, blank=True, choices=Lead.Etapa.choices)
+    motivo_perda = models.CharField(max_length=16, blank=True, choices=Lead.MotivoPerda.choices)
+    ativa = models.BooleanField(default=True)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "id"]
+
+
+class MensagemProgramada(models.Model):
+    """Mensagem de WhatsApp para sair depois (ex.: amanhã às 9h). Sai pela API, dentro da janela de 24 h."""
+
+    class Status(models.TextChoices):
+        PENDENTE = "pendente", "Programada"
+        ENVIADA = "enviada", "Enviada"
+        FALHOU = "falhou", "Falhou"
+        CANCELADA = "cancelada", "Cancelada"
+
+    lead = models.ForeignKey(Lead, related_name="programadas", on_delete=models.CASCADE)
+    texto = models.TextField(max_length=1500)
+    enviar_em = models.DateTimeField(db_index=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDENTE, db_index=True)
+    erro = models.CharField(max_length=300, blank=True)
+    criada_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    criada_em = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["enviar_em"]

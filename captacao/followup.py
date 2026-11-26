@@ -10,14 +10,12 @@ Como funciona (parecido com o do Avise Aí, com melhorias):
 from datetime import datetime, time, timedelta
 
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, OuterRef, Q
 from django.utils import timezone
 
-from .models import FollowUp, FollowUpConfig, FollowUpPasso, FollowUpTentativa, Historico, Lead
+from .models import FollowUp, FollowUpConfig, FollowUpPasso, FollowUpTentativa, Historico, Lead, WhatsAppMensagem
 
 LETRAS = "ABC"
-ETAPAS_QUE_ENCERRAM = (Lead.Etapa.QUALIFICADO, Lead.Etapa.VISITA, Lead.Etapa.COMPARECEU, Lead.Etapa.NEGOCIACAO,
-                       Lead.Etapa.VENDIDO, Lead.Etapa.PERDIDO)
 
 PASSOS_PADRAO = [
     dict(ordem=1, espera_dias=0, espera_horas=1, hora_envio=None, variantes=[
@@ -81,12 +79,19 @@ def ativo_do_lead(lead):
     return lead.followups.filter(status__in=[FollowUp.Status.ATIVO, FollowUp.Status.PAUSADO]).first()
 
 
+def bloqueado_por_etiqueta(lead):
+    return lead.etiquetas.filter(bloqueia_followup=True).exists()
+
+
 @transaction.atomic
-def iniciar(lead, agora=None):
-    """Inicia a sequência (ignora se já há uma em andamento, se o lead já fechou ou se está desligado)."""
+def iniciar(lead, agora=None, manual=False):
+    """Inicia a sequência. Automático: só leads numa etapa que aciona follow-up e sem etiqueta que impeça.
+    Manual (botão no lead): vale em qualquer etapa aberta. Nunca para quem pediu para não receber mensagens."""
     agora = agora or timezone.now()
     cfg = FollowUpConfig.obter()
-    if not cfg.ativo or lead.nao_contatar or lead.etapa in ETAPAS_QUE_ENCERRAM or ativo_do_lead(lead):
+    if not cfg.ativo or lead.nao_contatar or lead.etapa in (Lead.Etapa.VENDIDO, Lead.Etapa.PERDIDO) or ativo_do_lead(lead):
+        return None
+    if not manual and (lead.etapa not in cfg.etapas_gatilho or bloqueado_por_etiqueta(lead)):
         return None
     passos = passos_ativos()
     if not passos:
@@ -105,11 +110,27 @@ def _fechar(fu, status, agora, texto, usuario=None):
 
 
 def encerrar_se_avancou(lead, agora=None):
-    """Chamado ao mudar de etapa: se o lead já está qualificado/fechado, o follow-up não faz mais sentido."""
-    if lead.etapa in ETAPAS_QUE_ENCERRAM:
+    """Chamado ao mudar de etapa: se o lead saiu das etapas que acionam follow-up, a sequência não faz mais sentido."""
+    if lead.etapa not in FollowUpConfig.obter().etapas_gatilho:
         agora = agora or timezone.now()
         for fu in lead.followups.filter(status__in=[FollowUp.Status.ATIVO, FollowUp.Status.PAUSADO]):
             _fechar(fu, FollowUp.Status.ENCERRADO, agora, f"Follow-up encerrado: lead foi para {lead.get_etapa_display()}")
+
+
+def sincronizar(agora=None, limite=200):
+    """Por estágio do funil (como no Avise Aí): todo lead que ENTROU numa etapa marcada, depois da data de ativação,
+    e não respondeu, entra na sequência. A espera da 1ª tentativa conta a partir da entrada na etapa.
+    Fora: quem pediu para sair, quem tem etiqueta que impede, quem já respondeu depois de entrar na etapa."""
+    agora = agora or timezone.now()
+    cfg = FollowUpConfig.obter()
+    if not cfg.ativo or not cfg.etapas_gatilho:
+        return 0
+    respondeu = WhatsAppMensagem.objects.filter(lead=OuterRef("pk"), direcao="in", criado_em__gte=OuterRef("etapa_desde"))
+    ja_tem = FollowUp.objects.filter(lead=OuterRef("pk"), iniciado_em__gte=OuterRef("etapa_desde"))
+    qs = (Lead.objects.filter(etapa__in=cfg.etapas_gatilho, nao_contatar=False, etapa_desde__gte=cfg.vale_desde)
+          .exclude(etiquetas__bloqueia_followup=True).exclude(Exists(respondeu)).exclude(Exists(ja_tem))
+          .distinct().order_by("etapa_desde")[:limite])
+    return sum(1 for l in qs if iniciar(l, l.etapa_desde))
 
 
 def cliente_respondeu(lead, usuario=None, agora=None):

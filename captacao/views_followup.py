@@ -46,6 +46,7 @@ class FollowUpView(Base, TemplateView):
 
     def get_context_data(self, **kw):
         ctx = super().get_context_data(**kw)
+        followup.sincronizar()
         aba = self.request.GET.get("aba", "agora")
         ctx.update(aba=aba if aba in dict(ABAS) else "agora", abas=ABAS, contagens=followup.contagens(), gestor=eh_gestor(self.request.user),
                    n_agora=followup.contagens()["agora"])
@@ -57,6 +58,7 @@ class FollowUpListaView(Base, View):
         aba = request.GET.get("aba", "agora")
         aba = aba if aba in dict(ABAS) else "agora"
         agora = timezone.now()
+        followup.sincronizar(agora)
         return render(request, "captacao/_followup_lista.html", {
             "itens": _itens(aba, request.user, agora), "aba": aba, "abas": ABAS, "contagens": followup.contagens(agora),
             "api": whatsapp.configurado(), "auto": FollowUpConfig.obter().envio_automatico})
@@ -96,7 +98,7 @@ class LeadFollowUpView(Base, View):
     def post(self, request, pk, acao):
         lead = self.lead(request, pk)
         if acao == "iniciar":
-            followup.iniciar(lead)
+            followup.iniciar(lead, manual=True)
         elif acao == "parar":
             followup.cliente_respondeu(lead, usuario=request.user)
         else:
@@ -130,7 +132,7 @@ class FollowUpConfigView(Base, View):
         return {"cfg": FollowUpConfig.obter(), "passos": passos, "salvo": salvo, "erro": erro, "api": whatsapp.configurado(),
                 "desempenho": followup.desempenho(), "contagens": followup.contagens(), "n_agora": followup.contagens()["agora"],
                 "webhook": f"{settings.SITE_URL}/whatsapp/webhook/", "tem_verify": bool(settings.WHATSAPP_VERIFY_TOKEN),
-                "tem_segredo": bool(settings.WHATSAPP_APP_SECRET)}
+                "tem_segredo": bool(settings.WHATSAPP_APP_SECRET), "etapas": Lead.Etapa.choices}
 
     def get(self, request):
         if not eh_gestor(request.user):
@@ -149,6 +151,10 @@ class FollowUpConfigView(Base, View):
             cfg.hora_inicio, cfg.hora_fim = ini, fim
             cfg.ativo, cfg.enviar_domingo = "ativo" in p, "enviar_domingo" in p
             cfg.primeiro_nome, cfg.envio_automatico = "primeiro_nome" in p, "envio_automatico" in p
+            novas = [e for e in p.getlist("etapas") if e in Lead.Etapa.values]
+            if novas != list(cfg.etapas_gatilho):
+                cfg.vale_desde = timezone.now()    # mudou o gatilho: vale daqui para a frente
+            cfg.etapas_gatilho = novas
             for passo in FollowUpPasso.objects.all():
                 k = f"p{passo.pk}_"
                 passo.ativo = (k + "ativo") in p

@@ -13,7 +13,7 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from . import campanhas, followup, services, utils, whatsapp
-from .models import Campanha, Historico, Lead, ModeloWhatsApp, RespostaRapida
+from .models import Campanha, Etiqueta, Historico, Lead, ModeloWhatsApp, RespostaRapida
 from .views import Base, eh_gestor, leads_visiveis, trigger
 
 PAGINA = 100
@@ -33,6 +33,8 @@ def _filtrar_contatos(user, p):
         qs = qs.filter(origem=p["origem"])
     if p.get("etapa") in Lead.Etapa.values:
         qs = qs.filter(etapa=p["etapa"])
+    if (p.get("etiqueta") or "").isdigit():
+        qs = qs.filter(etiquetas__pk=int(p["etiqueta"]))
     if p.get("nc") == "1":
         qs = qs.filter(nao_contatar=True)
     return qs.order_by("nome")
@@ -52,6 +54,7 @@ class ContatosView(Base, TemplateView):
         total = qs.count()
         ctx.update(contatos=qs[(pag - 1) * PAGINA: pag * PAGINA], total=total, pag=pag, tem_mais=total > pag * PAGINA,
                    q=p.get("q", ""), origem=p.get("origem", ""), etapa=p.get("etapa", ""), nc=p.get("nc", ""),
+                   etiquetas=Etiqueta.objects.all(), etiqueta=p.get("etiqueta", ""),
                    origens=Lead.Origem.choices, etapas=Lead.Etapa.choices, importado=p.get("importado"), ignorados=p.get("ignorados"),
                    gestor=eh_gestor(self.request.user))
         return ctx
@@ -200,13 +203,13 @@ class CampanhasView(Base, TemplateView):
         for c in lista:
             c.n = campanhas.numeros(c)
         ctx.update(campanhas=lista, modelos=ModeloWhatsApp.objects.filter(status="APPROVED"), api=whatsapp.configurado(),
-                   etapas=Lead.Etapa.choices, origens=Lead.Origem.choices, portais=Lead.Portal.choices, gestor=eh_gestor(self.request.user),
+                   etapas=Lead.Etapa.choices, etiquetas=Etiqueta.objects.all(), origens=Lead.Origem.choices, portais=Lead.Portal.choices, gestor=eh_gestor(self.request.user),
                    enviados_24h=campanhas.enviados_24h(), limite=settings.WHATSAPP_LIMITE_DIARIO, erro=self.request.GET.get("erro", ""))
         return ctx
 
 
 def _filtro_do_form(p):
-    return {"etapas": p.getlist("etapas"), "origem": p.get("origem", ""), "portal": p.get("portal", ""),
+    return {"etapas": p.getlist("etapas"), "origem": p.get("origem", ""), "portal": p.get("portal", ""), "etiqueta": p.get("etiqueta", ""),
             "dias_parado": int(p.get("dias_parado") or 0) if (p.get("dias_parado") or "0").isdigit() else 0}
 
 
@@ -260,9 +263,21 @@ class ConexaoView(Base, TemplateView):
             except whatsapp.WhatsAppErro as e:
                 erro = str(e)
         ctx.update(api=whatsapp.configurado(), info=info, erro=erro, gestor=eh_gestor(self.request.user),
-                   webhook=f"{settings.SITE_URL}/whatsapp/webhook/",
+                   webhook=f"{settings.SITE_URL}/whatsapp/webhook/", msg=self.request.GET.get("msg", ""), erro_acao=self.request.GET.get("erro", ""),
                    passos=[("Número e token no .env", bool(settings.WHATSAPP_PHONE_ID and settings.WHATSAPP_TOKEN)),
                            ("ID da conta (WABA) no .env", bool(settings.WHATSAPP_WABA_ID)),
                            ("Segredo do app (assinatura do webhook)", bool(settings.WHATSAPP_APP_SECRET)),
                            ("Token de verificação do webhook", bool(settings.WHATSAPP_VERIFY_TOKEN))])
         return ctx
+
+
+class WebhookAssinarView(Base, View):
+    """Inscreve este app na conta do WhatsApp para receber as mensagens (depois de cadastrar o webhook no app da Meta)."""
+    def post(self, request):
+        if not eh_gestor(request.user):
+            return HttpResponseForbidden()
+        try:
+            whatsapp.assinar_webhook()
+        except whatsapp.WhatsAppErro as e:
+            return redirect(f"/whatsapp/?erro={e}")
+        return redirect("/whatsapp/?msg=Recebimento de mensagens ativado para este app")

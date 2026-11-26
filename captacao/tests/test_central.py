@@ -99,7 +99,7 @@ class ConversasTests(Logado):
         self.assertEqual(l.mensagens_wa.filter(direcao="out").get().texto, "Olá, tudo bem?")
         l.refresh_from_db()
         self.assertEqual(l.etapa, Lead.Etapa.ATENDIMENTO)         # responder tira o lead de "Novo"
-        self.assertEqual(l.followups.count(), 1)                  # e começa o follow-up
+        self.assertEqual(l.followups.count(), 0)                  # o follow-up é por estágio (sincronizar), não por clique
 
     @override_settings(**API)
     @mock.patch("captacao.whatsapp.requests.post")

@@ -27,6 +27,7 @@
       <small style="color:var(--mu)">Sem marcar nada: todos os leads em aberto (menos vendidos e perdidos).</small>
       <div class="linha"><label class="l">Origem<select name="origem"><option value="">Qualquer</option>{% for v, r in origens %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></label>
         <label class="l">Portal<select name="portal"><option value="">Qualquer</option>{% for v, r in portais %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></label>
+        <label class="l">Etiqueta<select name="etiqueta"><option value="">Qualquer</option>{% for e in etiquetas %}<option value="{{ e.pk }}">{{ e.nome }}</option>{% endfor %}</select></label>
         <label class="l">Parado há (dias)<input type="number" name="dias_parado" min="0" value="0"></label></div>
       <p id="previa" style="margin:10px 0 0;color:var(--gr)"></p>
       <button class="btn" style="margin-top:8px">Criar campanha</button>

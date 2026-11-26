@@ -6,6 +6,11 @@
 {% if lead.portal %}<p style="margin:0 0 8px"><span class="portal">{{ lead.get_portal_display }}</span>{% if lead.email %} <small style="color:var(--mu)">{{ lead.email }}</small>{% endif %}</p>{% endif %}
 {% if lead.observacao and lead.origem == 'portal' %}<p class="nota-portal">{{ lead.observacao }}</p>{% endif %}
 
+<div class="sec-t">Etiquetas</div>
+<div class="etqs">{% for e in lead.etiquetas.all %}<span class="etq" style="--c:{{ e.cor }}">{{ e.nome }}<form hx-post="{% url 'captacao:lead_etiqueta' lead.pk 'remove' %}" hx-target="#dlg-box" style="display:inline"><input type="hidden" name="volta" value="detalhe"><input type="hidden" name="etiqueta" value="{{ e.pk }}"><button title="Remover">×</button></form></span>{% empty %}<small style="color:var(--mu)">Sem etiquetas</small>{% endfor %}</div>
+<form hx-post="{% url 'captacao:lead_etiqueta' lead.pk 'add' %}" hx-target="#dlg-box" style="display:flex;gap:6px;margin-top:6px"><input type="hidden" name="volta" value="detalhe">
+  <select name="etiqueta"><option value="">Adicionar etiqueta…</option>{% for e in etiquetas_todas %}<option value="{{ e.pk }}">{{ e.nome }}</option>{% endfor %}</select><button class="btn sec sm">Add</button></form>
+
 <div class="sec-t">Follow-up</div>
 {% if fu %}
 <div class="fu-box{% if fu.status == 'pausado' %} pausado{% endif %}">

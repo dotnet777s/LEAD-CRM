@@ -12,7 +12,10 @@
     <label class="chk"><input type="checkbox" name="ativo" {% if cfg.ativo %}checked{% endif %}> Follow-up ligado</label>
     <label class="chk"><input type="checkbox" name="primeiro_nome" {% if cfg.primeiro_nome %}checked{% endif %}> Chamar só pelo primeiro nome</label>
     <label class="chk"><input type="checkbox" name="enviar_domingo" {% if cfg.enviar_domingo %}checked{% endif %}> Também aos domingos</label>
-    <div class="linha"><label class="l">Das <input type="number" name="hora_inicio" min="0" max="23" value="{{ cfg.hora_inicio }}"></label>
+    <div class="sec-t">Etapas do funil que acionam o follow-up</div>
+    <div class="checks">{% for v, r in etapas %}{% if v != 'vendido' and v != 'perdido' %}<label><input type="checkbox" name="etapas" value="{{ v }}" {% if v in cfg.etapas_gatilho %}checked{% endif %}> {{ r }}</label>{% endif %}{% endfor %}</div>
+    <small style="color:var(--mu)">Todo lead que entrar numa etapa marcada e não responder recebe a sequência (a 1ª tentativa conta a partir da entrada na etapa). Vale para quem entrar daqui para a frente{% if cfg.vale_desde %}: desde {{ cfg.vale_desde|date:"d/m/Y H:i" }}{% endif %}. Etiquetas marcadas como “impede follow-up” e quem pediu para não receber mensagens ficam de fora.</small>
+    <div class="linha" style="margin-top:10px"><label class="l">Das <input type="number" name="hora_inicio" min="0" max="23" value="{{ cfg.hora_inicio }}"></label>
       <label class="l">Até as <input type="number" name="hora_fim" min="1" max="24" value="{{ cfg.hora_fim }}"></label></div>
     <small style="color:var(--mu)">Fora desse horário, a tentativa fica para a próxima manhã.</small>
     <label class="chk" style="margin-top:12px"><input type="checkbox" name="envio_automatico" {% if cfg.envio_automatico %}checked{% endif %} {% if not api %}disabled{% endif %}> Enviar sozinho pela API do WhatsApp

@@ -12,6 +12,7 @@
     {% for u in consultores %}<option value="{{ u.pk }}">{{ u.first_name|default:u.username }}</option>{% endfor %}</select>
   <select name="carro" aria-label="Carro"><option value="">Carro</option>
     {% for c in carros %}<option value="{{ c.pk }}">{{ c.marca_fmt }} {{ c.modelo_fmt }} {{ c.ano }}</option>{% endfor %}</select>
+  <select name="etiqueta" aria-label="Etiqueta"><option value="">Etiqueta</option>{% for e in etiquetas %}<option value="{{ e.pk }}">{{ e.nome }}</option>{% endfor %}</select>
   <select name="origem" aria-label="Origem"><option value="">Origem</option>{% for v, r in origens %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select>
   </div>
   <button type="button" id="som" class="som" title="Toca um aviso quando chega lead novo"><svg viewBox="0 0 24 24" class="ico"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/><path class="cortado" d="M4 4l16 16"/></svg><span>Som desligado</span></button>

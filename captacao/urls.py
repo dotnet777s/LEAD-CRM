@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views, views_central, views_conversas, views_equipe, views_followup, views_painel, views_publico as pub
+from . import views, views_central, views_conversas, views_equipe, views_followup, views_funil, views_painel, views_publico as pub
 
 app_name = "captacao"
 
@@ -50,6 +50,14 @@ urlpatterns = [
     path("conversas/<int:pk>/etapa/", views_conversas.EtapaView.as_view(), name="conversa_etapa"),
     path("whatsapp/midia/<int:pk>/", views_conversas.MidiaView.as_view(), name="wa_midia"),
     path("whatsapp/", views_central.ConexaoView.as_view(), name="wa_conexao"),
+    path("whatsapp/assinar/", views_central.WebhookAssinarView.as_view(), name="wa_assinar"),
+    path("lead/<int:pk>/etiqueta/<slug:acao>/", views_funil.EtiquetaLeadView.as_view(), name="lead_etiqueta"),
+    path("conversas/<int:pk>/programar/", views_funil.ProgramarView.as_view(), name="conversa_programar"),
+    path("conversas/programada/<int:pk>/cancelar/", views_funil.ProgramadaCancelarView.as_view(), name="programada_cancelar"),
+    path("funil/configurar/", views_funil.FunilConfigView.as_view(), name="funil_config"),
+    path("funil/configurar/<slug:acao>/", views_funil.FunilAcaoView.as_view(), name="funil_acao"),
+    path("funil/configurar/<slug:acao>/<int:pk>/", views_funil.FunilAcaoView.as_view(), name="funil_acao_id"),
+    path("visao-geral/", views_funil.VisaoGeralView.as_view(), name="visao_geral"),
     path("contatos/", views_central.ContatosView.as_view(), name="contatos"),
     path("contatos/exportar/", views_central.ContatosExportarView.as_view(), name="contatos_exportar"),
     path("contatos/importar/", views_central.ContatosImportarView.as_view(), name="contatos_importar"),

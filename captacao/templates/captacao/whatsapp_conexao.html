@@ -4,6 +4,7 @@
 {% block content %}
 <div class="pg">
   <div class="titulo-pg"><div><h1>Conexão do WhatsApp</h1><small>API oficial (WhatsApp Business Platform da Meta)</small></div></div>
+  {% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}{% if erro_acao %}<p class="err">{{ erro_acao }}</p>{% endif %}
   <div class="grid">
     <div class="box"><h2>Situação</h2>
       <p style="font-size:18px;margin:0 0 8px"><b style="color:{% if api and not erro %}var(--gr){% else %}var(--am){% endif %}">{% if api and not erro %}Conectado{% elif erro %}Erro na conexão{% else %}Não conectado{% endif %}</b></p>
@@ -18,6 +19,7 @@
     <div class="box"><h2>Webhook (cadastre na Meta)</h2>
       <p style="margin:0 0 6px">No app da Meta, em WhatsApp &gt; Configuração, informe:</p>
       <dl class="kv"><dt>URL de callback</dt><dd><code style="word-break:break-all">{{ webhook }}</code></dd><dt>Token de verificação</dt><dd>o valor de WHATSAPP_VERIFY_TOKEN</dd><dt>Campos</dt><dd><code>messages</code></dd></dl>
+      {% if gestor %}<form method="post" action="{% url 'captacao:wa_assinar' %}" style="margin:8px 0">{% csrf_token %}<button class="btn sec sm" {% if not api %}disabled{% endif %}>Ativar recebimento de mensagens neste app</button></form>{% endif %}
       <small style="color:var(--mu)">Atenção: uma conta só aponta para um webhook por vez. Ao cadastrar este, o app anterior (Avise Aí) deixa de receber as mensagens novas.</small></div>
   </div>
 </div>
