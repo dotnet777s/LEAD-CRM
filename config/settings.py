@@ -169,6 +169,8 @@ PORTAIS_IMAP_HOST = env("PORTAIS_IMAP_HOST")
 PORTAIS_IMAP_PORTA = int(env("PORTAIS_IMAP_PORTA", "993") or 993)
 PORTAIS_IMAP_USER = env("PORTAIS_IMAP_USER")
 PORTAIS_IMAP_PASS = env("PORTAIS_IMAP_PASS")
+# Portais cujos e-mails viram lead (os demais são lidos e ignorados). Hoje só a OLX; depois: "olx,napista,mobiauto".
+PORTAIS_ATIVOS = tuple(p.strip() for p in (env("PORTAIS_ATIVOS", "olx") or "olx").split(",") if p.strip())
 PORTAIS_IMAP_PASTA = env("PORTAIS_IMAP_PASTA", "INBOX") or "INBOX"
 TELEGRAM_REQUALIFICAR_MINUTOS = int(env("TELEGRAM_REQUALIFICAR_MINUTOS", "10") or 10)   # espera antes de avisar do formulário incompleto
 

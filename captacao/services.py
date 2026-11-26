@@ -107,7 +107,7 @@ def capturar_lead(veiculo, nome, telefone, respostas, tracking, agora=None, parc
 
 
 @transaction.atomic
-def criar_lead_portal(portal, nome, telefone, carro_texto, veiculo, mensagem="", email="", agora=None):
+def criar_lead_portal(portal, nome, telefone, carro_texto, veiculo, mensagem="", email="", agora=None, tipo=""):
     """Contato vindo de um portal. Se o telefone já existe nos últimos 30 dias, só registra o novo contato no histórico
     (e avisa o SDR); senão cria o lead em 'Novo' e avisa. Devolve (lead, criado)."""
     agora = agora or timezone.now()
@@ -120,7 +120,7 @@ def criar_lead_portal(portal, nome, telefone, carro_texto, veiculo, mensagem="",
                  .order_by("-criado_em").first())
     if existente:
         Historico.objects.create(lead=existente, tipo=Historico.Tipo.FORM, criado_em=agora,
-                                 texto=f"Novo contato pelo portal {rotulo}: {carro}"[:500])
+                                 texto=f"Novo contato pelo portal {rotulo}{f' ({tipo})' if tipo else ''}: {carro}"[:500])
         campos = []
         if not existente.portal:
             existente.portal = portal
@@ -139,7 +139,7 @@ def criar_lead_portal(portal, nome, telefone, carro_texto, veiculo, mensagem="",
                                origem=Lead.Origem.PORTAL, portal=portal, email=email, observacao=mensagem,
                                criado_em=agora, etapa_desde=agora)
     Historico.objects.create(lead=lead, tipo=Historico.Tipo.CRIADO, criado_em=agora,
-                             texto=f"Contato pelo portal {rotulo}: {carro}"[:500])
+                             texto=f"Contato pelo portal {rotulo}{f' ({tipo})' if tipo else ''}: {carro}"[:500])
     try:
         telegram.avisar_novo_lead(lead)
     except Exception:  # noqa: BLE001 - aviso nunca impede a criação

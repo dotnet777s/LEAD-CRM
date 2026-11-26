@@ -288,6 +288,7 @@ class PortalMensagem(models.Model):
     assunto = models.CharField(max_length=300, blank=True)
     corpo = models.TextField(blank=True)
     status = models.CharField(max_length=14, choices=Status.choices, default=Status.CRIADO, db_index=True)
+    identificador = models.CharField("Identificador do lead no portal", max_length=80, blank=True, db_index=True)
     erro = models.CharField(max_length=300, blank=True)
     lead = models.ForeignKey(Lead, null=True, blank=True, on_delete=models.SET_NULL, related_name="portal_mensagens")
     criado_em = models.DateTimeField(default=timezone.now, db_index=True)
