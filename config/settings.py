@@ -164,6 +164,9 @@ FINANCIAMENTO_PARCELAS = int(env("FINANCIAMENTO_PARCELAS", "60") or 60)
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN")
 TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", "leadsreceiverbot")
 TELEGRAM_SLA_MINUTOS = int(env("TELEGRAM_SLA_MINUTOS", "5") or 5)
+# Estoque: XML de anúncios do AutoCerto (a URL tem a chave da loja: fica só no .env, nunca no Git).
+AUTOCERTO_URL = env("AUTOCERTO_URL")
+ESTOQUE_SINCRONIZAR_MIN = int(env("ESTOQUE_SINCRONIZAR_MIN", "15") or 15)    # de quanto em quanto tempo o worker atualiza
 # WhatsApp Business Platform (API oficial da Meta). Vazio = desligado (follow-up vira tarefa do SDR).
 WHATSAPP_PHONE_ID = env("WHATSAPP_PHONE_ID")          # ID do número (não é o telefone)
 WHATSAPP_WABA_ID = env("WHATSAPP_WABA_ID")

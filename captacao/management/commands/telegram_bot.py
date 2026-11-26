@@ -2,8 +2,10 @@ import logging
 import time
 
 import requests
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
+from catalogo import autocerto
 from captacao import avisos, campanhas, followup, telegram, whatsapp
 
 log = logging.getLogger(__name__)
@@ -19,7 +21,7 @@ class Command(BaseCommand):
         if not telegram.configurado():
             raise CommandError("Defina TELEGRAM_BOT_TOKEN no .env.")
         self.stdout.write("Bot do Telegram em execução (Ctrl+C para parar).")
-        offset, ultima_verificacao = None, 0
+        offset, ultima_verificacao, ultimo_estoque = None, 0, 0
         while True:
             try:
                 dados = {"timeout": 0 if o["uma_vez"] else 20, "allowed_updates": ["message", "callback_query"]}
@@ -50,6 +52,13 @@ class Command(BaseCommand):
                     except Exception:  # noqa: BLE001
                         log.exception("campanhas falhou")
                     ultima_verificacao = time.time()
+                    if settings.AUTOCERTO_URL and time.time() - ultimo_estoque > settings.ESTOQUE_SINCRONIZAR_MIN * 60:
+                        ultimo_estoque = time.time()
+                        try:
+                            autocerto.sincronizar()
+                            autocerto.aquecer_capas()
+                        except Exception:  # noqa: BLE001 - o catálogo segue com o último estoque bom
+                            log.exception("estoque: falha ao sincronizar com o AutoCerto")
                 enviados = telegram.processar_fila()
                 if o["uma_vez"]:
                     self.stdout.write(f"Ciclo concluído. Enviados: {enviados}")

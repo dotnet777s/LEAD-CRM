@@ -279,12 +279,12 @@ class MidiasTests(Base):
         self.assertIn("Fotos (3)", html)
         self.assertNotIn("Vídeos (", html)
 
-    def test_janela_de_videos_avisa_que_ficam_no_route(self):
+    def test_janela_de_videos_avisa_que_ficam_no_autocerto(self):
         v = novo_veiculo()
         self.client.force_login(get_user_model().objects.create_user("g", password="x12345678", is_staff=True))
         html = self.client.get(f"/carros/{v.pk}/midias/?aba=videos").content.decode()
         self.assertIn("Vídeos (0)", html)
-        self.assertIn("ROUTE", html)
+        self.assertIn("AutoCerto", html)
         self.assertNotIn("Fotos (", html)
 
     def test_recife_e_olinda_aparecem_com_o_local(self):

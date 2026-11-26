@@ -6,6 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
 from django.http import HttpResponseForbidden, HttpResponseRedirect
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
@@ -180,6 +181,9 @@ class CarrosView(LoginRequiredMixin, TemplateView):
             carros.append({"v": v, "url": settings.SITE_URL + caminho, "caminho": caminho, "leads": leads.get(v.pk, 0),
                            "fotos": n_fotos[v.pk], "videos": n_videos[v.pk],
                            "preco": utils.preco_brl(v.valor_venda)})
+        from django.db.models import Max
+        ctx.update(ultima_sync=Veiculo.objects.aggregate(m=Max("sincronizado_em"))["m"], msg=self.request.GET.get("msg", ""),
+                   erro=self.request.GET.get("erro", ""), fonte_ok=bool(settings.AUTOCERTO_URL))
         ctx.update(carros=carros, q=q, utm="utm_source=facebook&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}")
         return ctx
 
@@ -391,3 +395,18 @@ def _ha(delta):
         return f"há {seg // 3600} h"
     d = seg // 86400
     return "há 1 dia" if d == 1 else f"há {d} dias"
+
+
+class SincronizarEstoqueView(LoginRequiredMixin, View):
+    """Atualiza o estoque agora, direto do XML do AutoCerto (o worker também faz isso sozinho a cada 15 min)."""
+    def post(self, request):
+        from catalogo import autocerto
+        from .views import eh_gestor
+        if not eh_gestor(request.user):
+            return HttpResponseForbidden()
+        try:
+            r = autocerto.sincronizar()
+            autocerto.aquecer_capas()
+        except autocerto.ErroEstoque as e:
+            return redirect(f"/carros/?erro={e}")
+        return redirect(f"/carros/?msg=Estoque atualizado: {r['total']} carros ({r['novos']} novos, {r['retirados']} retirados)")

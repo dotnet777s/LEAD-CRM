@@ -1,4 +1,4 @@
-"""Fotos do estoque (somente leitura), gravadas pelo ROUTE no próprio banco (tabela veiculo_foto_arquivo).
+"""Fotos do estoque: vêm do AutoCerto por URL (tabela estoque_foto) e ficam em cache em disco.
 
 As imagens são redimensionadas para WebP sob demanda (larguras fixas, para ninguém poder pedir tamanhos
 aleatórios) e guardadas em disco. Se o ROUTE passar a usar um bucket e preencher `url`, a imagem é baixada de lá.

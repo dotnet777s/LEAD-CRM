@@ -18,10 +18,9 @@ def novo_veiculo(**kw):
 
 
 class FundacaoTests(TestCase):
-    def test_tabelas_do_estoque_sao_nao_gerenciadas(self):
-        self.assertEqual(Veiculo._meta.db_table, "veiculo")
-        # nos testes as tabelas existem (settings_test); em producao a migration e no-op
-        self.assertTrue(settings.CATALOGO_CRIAR_TABELAS)
+    def test_estoque_tem_tabelas_proprias_do_crm(self):
+        self.assertEqual(Veiculo._meta.db_table, "estoque_veiculo")      # não toca nas tabelas do ROUTE
+        self.assertTrue(Veiculo._meta.managed)
 
     def test_lead_liga_ao_veiculo_e_calcula_propriedades(self):
         v = novo_veiculo()

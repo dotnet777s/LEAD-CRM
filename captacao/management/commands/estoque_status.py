@@ -7,7 +7,7 @@ from catalogo.models import FotoVeiculo, Veiculo
 
 
 class Command(BaseCommand):
-    help = "Confere a conexão com o estoque do ROUTE (somente leitura): banco usado, carros disponíveis e fotos."
+    help = "Confere o estoque do CRM (vindo do AutoCerto): banco usado, carros disponíveis e fotos."
 
     def handle(self, *a, **o):
         db = connection.settings_dict

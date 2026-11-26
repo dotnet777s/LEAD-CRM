@@ -4,6 +4,9 @@
 <div class="pg">
 <form class="barra" method="get" style="padding:0 0 12px"><input type="search" name="q" value="{{ q }}" placeholder="Buscar carro ou placa" style="max-width:280px"><button class="btn sec sm">Buscar</button>
 <span style="color:var(--mu);font-size:13px">{{ carros|length }} carros disponíveis · cada um tem a sua página de captura</span></form>
+{% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}{% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+<div class="box" style="margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between"><div><b>Estoque do AutoCerto</b><br><small style="color:var(--mu)">{% if fonte_ok %}Atualizado sozinho a cada 15 minutos{% if ultima_sync %} · última vez {{ ultima_sync|date:"d/m H:i" }}{% endif %}.{% else %}Falta configurar AUTOCERTO_URL no servidor.{% endif %}</small></div>
+{% if eh_gestor %}<form method="post" action="{% url 'captacao:estoque_sincronizar' %}">{% csrf_token %}<button class="btn sec sm" {% if not fonte_ok %}disabled{% endif %}>Atualizar agora</button></form>{% endif %}</div>
 <div class="box" style="margin-bottom:12px"><h2>Parâmetros para o anúncio (Meta)</h2>
 <p style="margin:0 0 8px;color:var(--mu);font-size:14px">Cole em "Parâmetros de URL" do anúncio. Assim o CRM sabe de qual campanha e anúncio veio cada lead.</p>
 <code id="utm" style="word-break:break-all">{{ utm }}</code> <button class="btn sec sm" data-copiar="{{ utm }}">Copiar</button></div>

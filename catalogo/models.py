@@ -1,10 +1,9 @@
 """
-Espelho SOMENTE LEITURA do estoque do ROUTE (tabelas `veiculo`, `veiculo_foto`, `veiculo_foto_arquivo`).
-managed=False: nenhuma migration daqui cria, altera ou apaga tabela do ROUTE.
-Só mapeamos as colunas que o CRM usa. Nunca chame save()/delete() nestes models.
+Estoque do CRM, alimentado pelo XML de anúncios do AutoCerto (veja catalogo/autocerto.py).
 
-O id público do carro no CRM é o `topcrm_id` (inteiro, herdado do sistema antigo); o id de texto do ROUTE
-(`rid`) liga as fotos ao carro.
+São tabelas PRÓPRIAS do CRM (estoque_*, no esquema do CRM). As tabelas do ROUTE (`veiculo`, `veiculo_foto`...) não são mais
+lidas nem alteradas por aqui. O id público do carro (`id`, usado em /v/<id>-slug/) é preservado para os carros que já
+existiam no ROUTE (casados pela placa), para não quebrar links de anúncios.
 """
 from django.db import models
 
@@ -19,33 +18,38 @@ def nome_proprio(txt):
 
 class Veiculo(models.Model):
     DISPONIVEL = "disponivel"
-    EM_LOJA = (DISPONIVEL,)     # Recife e Olinda são vendidos juntos; `unidade` só indica onde o carro está
+    RETIRADO = "retirado"          # saiu do XML do AutoCerto (vendido ou despublicado)
+    EM_LOJA = (DISPONIVEL,)
 
-    id = models.AutoField(primary_key=True, db_column="topcrm_id")
-    rid = models.CharField(max_length=20, db_column="id", unique=True)
+    rid = models.CharField("Id no AutoCerto", max_length=20, unique=True)
     placa = models.CharField(max_length=10, blank=True)
     marca = models.CharField(max_length=60)
     modelo = models.CharField(max_length=80)
-    versao = models.CharField(max_length=80, blank=True, null=True)
-    ano_modelo = models.PositiveIntegerField(db_column="ano")
+    versao = models.CharField(max_length=120, blank=True, null=True)
+    ano_modelo = models.PositiveIntegerField()
     km = models.PositiveIntegerField(null=True, blank=True)
-    valor_venda = models.DecimalField(max_digits=10, decimal_places=2, db_column="preco", null=True)
+    valor_venda = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     fipe = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cor = models.CharField(max_length=30, blank=True, null=True)
     cambio = models.CharField(max_length=30, blank=True, null=True)
     combustivel = models.CharField(max_length=30, blank=True, null=True)
     motor = models.CharField(max_length=30, blank=True, null=True)
+    portas = models.PositiveSmallIntegerField(null=True, blank=True)
+    zero_km = models.BooleanField(default=False)
     opcionais = models.JSONField(default=list, blank=True, null=True)
     itens_serie = models.JSONField(default=list, blank=True, null=True)
-    status = models.CharField(max_length=20)          # disponivel | preparacao | vendido
-    unidade = models.CharField(max_length=20, blank=True, null=True)    # Olinda | Recife
+    observacoes = models.TextField(blank=True, default="")
+    video_url = models.CharField(max_length=300, blank=True, default="")
+    status = models.CharField(max_length=20, default=DISPONIVEL)          # disponivel | retirado
+    unidade = models.CharField(max_length=20, blank=True, null=True)
     data_venda = models.DateField(null=True, blank=True)
     total_fotos = models.IntegerField(default=0)
     atualizado_em = models.DateTimeField(null=True, blank=True)
+    cadastrado_em = models.DateTimeField(null=True, blank=True)
+    sincronizado_em = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        managed = False
-        db_table = "veiculo"
+        db_table = "estoque_veiculo"
         ordering = ["marca", "modelo"]
 
     def __str__(self):
@@ -74,7 +78,7 @@ class Veiculo(models.Model):
 
     @property
     def cambio_fmt(self):
-        """'AUTOMATICO' -> 'Automático'; 'manual de 6 marchas' -> 'Manual'; vazio se o ROUTE não informou."""
+        """'AUTOMATICO' -> 'Automático'; 'manual de 6 marchas' -> 'Manual'; vazio se não informado."""
         c = (self.cambio or "").strip().lower()
         if not c:
             return ""
@@ -93,14 +97,14 @@ class Veiculo(models.Model):
 
     @property
     def local(self):
-        """'Recife', 'Olinda' ou ''."""
+        """'Recife', 'Olinda' ou '' (o AutoCerto não informa a unidade)."""
         return (self.unidade or "").strip().title()
 
 
 class FotoVeiculo(models.Model):
-    """Foto do carro (só leitura). Os bytes ficam em FotoArquivo (ou em `url`, se o ROUTE passar a usar um bucket)."""
-    id = models.CharField(primary_key=True, max_length=20)
-    veiculo_rid = models.CharField(max_length=20, db_column="veiculo_id", db_index=True)
+    """Foto do carro. `url` aponta para a imagem no AutoCerto; os arquivos redimensionados ficam em cache em disco."""
+    id = models.CharField(primary_key=True, max_length=24)
+    veiculo_rid = models.CharField(max_length=20, db_index=True)
     ordem = models.IntegerField(default=0)
     capa = models.BooleanField(default=False)
     largura = models.IntegerField(default=0)
@@ -110,17 +114,15 @@ class FotoVeiculo(models.Model):
     url_miniatura = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
-        db_table = "veiculo_foto"
+        db_table = "estoque_foto"
         ordering = ["ordem", "id"]
 
 
 class FotoArquivo(models.Model):
-    foto = models.OneToOneField(FotoVeiculo, primary_key=True, db_column="foto_id", on_delete=models.DO_NOTHING,
-                                db_constraint=False, related_name="arquivo")
+    """Reservado: bytes da foto guardados no banco (não usado com o AutoCerto, que serve por URL)."""
+    foto = models.OneToOneField(FotoVeiculo, primary_key=True, on_delete=models.CASCADE, related_name="arquivo")
     jpeg = models.BinaryField(null=True)
     miniatura = models.BinaryField(null=True)
 
     class Meta:
-        managed = False
-        db_table = "veiculo_foto_arquivo"
+        db_table = "estoque_foto_arquivo"
