@@ -62,9 +62,9 @@ sudo -u "$APP_USER" "$APP_DIR/.venv/bin/python" "$APP_DIR/manage.py" collectstat
 sudo -u "$APP_USER" "$APP_DIR/.venv/bin/python" "$APP_DIR/manage.py" check --deploy || true
 
 echo "==> Serviços (site + worker Telegram + worker Meta)"
-cp "$APP_DIR"/deploy/adcrm-web.service "$APP_DIR"/deploy/adcrm-telegram.service "$APP_DIR"/deploy/adcrm-meta.service /etc/systemd/system/
+cp "$APP_DIR"/deploy/adcrm-web.service "$APP_DIR"/deploy/adcrm-telegram.service "$APP_DIR"/deploy/adcrm-meta.service "$APP_DIR"/deploy/adcrm-portais.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now adcrm-web adcrm-telegram adcrm-meta
+systemctl enable --now adcrm-web adcrm-telegram adcrm-meta adcrm-portais
 
 echo "==> Caddy"
 sed "s|__DOMINIO__|${DOMINIO}|g" "$APP_DIR/deploy/Caddyfile" > /etc/caddy/Caddyfile

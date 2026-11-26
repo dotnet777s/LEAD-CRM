@@ -1,0 +1,14 @@
+{% for m in mensagens %}
+{% ifchanged m.criado_em|date:"Y-m-d" %}<div class="dia-sep">{{ m.criado_em|date:"d/m/Y" }}</div>{% endifchanged %}
+<div class="bolha {{ m.direcao }}{% if m.status == 'failed' %} falhou{% endif %}">
+  {% if m.midia_id %}
+    {% if m.tipo == 'image' or m.tipo == 'sticker' %}<a href="{% url 'captacao:wa_midia' m.pk %}" target="_blank" rel="noopener"><img src="{% url 'captacao:wa_midia' m.pk %}" alt="Imagem recebida" loading="lazy" width="260"></a>
+    {% elif m.tipo == 'audio' %}<audio controls preload="none" src="{% url 'captacao:wa_midia' m.pk %}"></audio>
+    {% elif m.tipo == 'video' %}<video controls preload="none" width="260" src="{% url 'captacao:wa_midia' m.pk %}"></video>
+    {% else %}<a href="{% url 'captacao:wa_midia' m.pk %}" target="_blank" rel="noopener">📎 Abrir arquivo</a>{% endif %}
+  {% endif %}
+  {% if m.texto and not m.midia_id %}<span class="tx">{{ m.texto }}</span>{% elif m.texto and m.tipo != 'audio' and m.texto != '[imagem]' and m.texto != '[vídeo]' and m.texto != '[figurinha]' and m.texto != '[documento]' %}<span class="tx">{{ m.texto }}</span>{% endif %}
+  {% if m.status == 'failed' and m.erro %}<div class="errom">Não entregue: {{ m.erro }}</div>{% endif %}
+  <div class="meta-b">{% if m.direcao == 'out' and m.usuario %}<span class="quem-b">{{ m.usuario.first_name|default:m.usuario.username }}</span>{% endif %}<span>{{ m.criado_em|date:"H:i" }}</span>{% if m.direcao == 'out' %}<span class="tick{% if m.status == 'read' %} read{% endif %}" title="{{ m.get_status_display }}">{% if m.status == 'read' or m.status == 'delivered' %}✓✓{% elif m.status == 'sent' %}✓{% elif m.status == 'failed' %}!{% else %}…{% endif %}</span>{% endif %}</div>
+</div>
+{% empty %}<div class="c-vazio"><p>Sem mensagens ainda.</p></div>{% endfor %}

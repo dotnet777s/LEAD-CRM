@@ -1,0 +1,37 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Campanhas{% endblock %}
+{% block titulo %}Campanhas{% endblock %}
+{% block content %}
+<div class="pg">
+  <div class="titulo-pg"><div><h1>Campanhas de WhatsApp</h1><small>Envio de um modelo aprovado para um grupo de leads. Hoje: {{ enviados_24h }} de {{ limite }} mensagens nas últimas 24 h.</small></div></div>
+  {% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+  {% if not api %}<p class="aviso-jan" style="margin-bottom:12px">A API do WhatsApp ainda não está conectada: dá para montar campanhas, mas elas só enviam depois da conexão.</p>{% endif %}
+  <div class="lista-c">
+  {% for c in campanhas %}<div class="box"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+      <div><b style="font-size:16px">{{ c.nome }}</b> <span class="badge {% if c.status == 'enviando' %}enviado{% elif c.status == 'pausada' %}pendente{% elif c.status == 'concluida' %}enviado{% endif %}">{{ c.get_status_display }}</span>
+        <div><small style="color:var(--mu)">Modelo: {{ c.modelo.nome }} · criada em {{ c.criada_em|date:"d/m H:i" }}</small></div></div>
+      {% if gestor %}<div style="display:flex;gap:6px">
+        {% if c.status == 'rascunho' or c.status == 'pausada' %}<form method="post" action="{% url 'captacao:campanha_acao' c.pk 'iniciar' %}">{% csrf_token %}<button class="btn sm" {% if not api %}disabled{% endif %}>{% if c.status == 'pausada' %}Retomar{% else %}Iniciar envio{% endif %}</button></form>{% endif %}
+        {% if c.status == 'enviando' %}<form method="post" action="{% url 'captacao:campanha_acao' c.pk 'pausar' %}">{% csrf_token %}<button class="btn sec sm">Pausar</button></form>{% endif %}</div>{% endif %}</div>
+    <div class="prog"><i style="width:{% widthratio c.n.enviados c.n.total 100 %}%"></i></div>
+    <small style="color:var(--mu)">{{ c.n.enviados }} enviadas · {{ c.n.fila }} na fila · {{ c.n.falhas }} falha(s) · {{ c.n.total }} no total</small></div>
+  {% empty %}<div class="vazio-g">Nenhuma campanha ainda.</div>{% endfor %}
+  </div>
+  {% if gestor %}
+  <div class="box" style="margin-top:14px"><h2>Nova campanha</h2>
+    <form method="post" action="{% url 'captacao:campanha_criar' %}" class="cfg" id="f-camp" hx-get="{% url 'captacao:campanha_previa' %}" hx-trigger="change, load" hx-target="#previa" hx-swap="innerHTML">{% csrf_token %}
+      <label class="l">Nome<input type="text" name="nome" maxlength="100" placeholder="ex.: Retomada de quem sumiu"></label>
+      <label class="l">Modelo aprovado<select name="modelo"><option value="">Escolha…</option>{% for m in modelos %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}</select></label>
+      <div class="sec-t">Quem recebe</div>
+      <div class="checks">{% for v, r in etapas %}<label><input type="checkbox" name="etapas" value="{{ v }}"> {{ r }}</label>{% endfor %}</div>
+      <small style="color:var(--mu)">Sem marcar nada: todos os leads em aberto (menos vendidos e perdidos).</small>
+      <div class="linha"><label class="l">Origem<select name="origem"><option value="">Qualquer</option>{% for v, r in origens %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></label>
+        <label class="l">Portal<select name="portal"><option value="">Qualquer</option>{% for v, r in portais %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></label>
+        <label class="l">Parado há (dias)<input type="number" name="dias_parado" min="0" value="0"></label></div>
+      <p id="previa" style="margin:10px 0 0;color:var(--gr)"></p>
+      <button class="btn" style="margin-top:8px">Criar campanha</button>
+      <small style="color:var(--mu);display:block;margin-top:6px">A campanha é criada como rascunho. Quem pediu para não receber mensagens nunca entra.</small>
+    </form></div>
+  {% endif %}
+</div>
+{% endblock %}

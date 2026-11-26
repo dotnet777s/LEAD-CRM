@@ -13,6 +13,7 @@ class Command(BaseCommand):
         parser.add_argument("--intervalo", type=int, default=60, help="Segundos entre leituras no modo --loop.")
 
     def handle(self, *args, **o):
+        avisou = False
         while True:
             try:
                 r = portais.ler_caixa()
@@ -20,7 +21,9 @@ class Command(BaseCommand):
                 self.stderr.write(f"Falha ao ler a caixa: {e}")
                 r = "erro"
             if r is None:
-                self.stdout.write("Leitura desligada (defina PORTAIS_IMAP_HOST, PORTAIS_IMAP_USER e PORTAIS_IMAP_PASS).")
+                if not avisou:
+                    self.stdout.write("Leitura desligada (defina PORTAIS_IMAP_HOST, PORTAIS_IMAP_USER e PORTAIS_IMAP_PASS).")
+                    avisou = True
             elif r != "erro" and any(r):
                 self.stdout.write(f"processados={r[0]} erros={r[1]}")
             if not o["loop"]:

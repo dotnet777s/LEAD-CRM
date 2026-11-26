@@ -1,0 +1,24 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · WhatsApp{% endblock %}
+{% block titulo %}WhatsApp{% endblock %}
+{% block content %}
+<div class="pg">
+  <div class="titulo-pg"><div><h1>Conexão do WhatsApp</h1><small>API oficial (WhatsApp Business Platform da Meta)</small></div></div>
+  <div class="grid">
+    <div class="box"><h2>Situação</h2>
+      <p style="font-size:18px;margin:0 0 8px"><b style="color:{% if api and not erro %}var(--gr){% else %}var(--am){% endif %}">{% if api and not erro %}Conectado{% elif erro %}Erro na conexão{% else %}Não conectado{% endif %}</b></p>
+      {% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+      {% if info %}<dl class="kv"><dt>Número</dt><dd>{{ info.display_phone_number }}</dd><dt>Nome verificado</dt><dd>{{ info.verified_name }}</dd>
+        <dt>Qualidade</dt><dd>{{ info.quality_rating|default:"—" }}</dd><dt>Limite diário</dt><dd>{{ info.messaging_limit_tier|default:"—" }}</dd></dl>{% endif %}
+      {% if not api %}<small style="color:var(--mu)">Enquanto não conectar, o CRM funciona normalmente: as conversas abrem pelo WhatsApp do celular e o follow-up vira tarefa.</small>{% endif %}
+    </div>
+    <div class="box"><h2>Checklist</h2>
+      {% for nome, ok in passos %}<div class="ok-linha"><span class="d {% if ok %}ok{% endif %}"></span><span>{{ nome }}</span></div>{% endfor %}
+      <small style="color:var(--mu)">Os valores ficam no arquivo .env do servidor (nunca aparecem aqui).</small></div>
+    <div class="box"><h2>Webhook (cadastre na Meta)</h2>
+      <p style="margin:0 0 6px">No app da Meta, em WhatsApp &gt; Configuração, informe:</p>
+      <dl class="kv"><dt>URL de callback</dt><dd><code style="word-break:break-all">{{ webhook }}</code></dd><dt>Token de verificação</dt><dd>o valor de WHATSAPP_VERIFY_TOKEN</dd><dt>Campos</dt><dd><code>messages</code></dd></dl>
+      <small style="color:var(--mu)">Atenção: uma conta só aponta para um webhook por vez. Ao cadastrar este, o app anterior (Avise Aí) deixa de receber as mensagens novas.</small></div>
+  </div>
+</div>
+{% endblock %}

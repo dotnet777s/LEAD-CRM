@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views, views_equipe, views_followup, views_painel, views_publico as pub
+from . import views, views_central, views_conversas, views_equipe, views_followup, views_painel, views_publico as pub
 
 app_name = "captacao"
 
@@ -38,6 +38,30 @@ urlpatterns = [
     path("followup/configurar/", views_followup.FollowUpConfigView.as_view(), name="followup_config"),
     path("followup/<int:pk>/<slug:acao>/", views_followup.FollowUpAcaoView.as_view(), name="followup_acao"),
     path("portais/", views_followup.PortaisView.as_view(), name="portais"),
+    path("conversas/", views_conversas.ConversasView.as_view(), name="conversas"),
+    path("conversas/lista/", views_conversas.ListaView.as_view(), name="conversas_lista"),
+    path("conversas/badge/", views_conversas.BadgeView.as_view(), name="conversas_badge"),
+    path("conversas/<int:pk>/", views_conversas.ConversaView.as_view(), name="conversa"),
+    path("conversas/<int:pk>/mensagens/", views_conversas.MensagensView.as_view(), name="conversa_mensagens"),
+    path("conversas/<int:pk>/enviar/", views_conversas.EnviarView.as_view(), name="conversa_enviar"),
+    path("conversas/<int:pk>/modelo/", views_conversas.ModeloEnvioView.as_view(), name="conversa_modelo"),
+    path("conversas/<int:pk>/carro/", views_conversas.CarroEnvioView.as_view(), name="conversa_carro"),
+    path("conversas/<int:pk>/nota/", views_conversas.NotaInternaView.as_view(), name="conversa_nota"),
+    path("conversas/<int:pk>/etapa/", views_conversas.EtapaView.as_view(), name="conversa_etapa"),
+    path("whatsapp/midia/<int:pk>/", views_conversas.MidiaView.as_view(), name="wa_midia"),
+    path("whatsapp/", views_central.ConexaoView.as_view(), name="wa_conexao"),
+    path("contatos/", views_central.ContatosView.as_view(), name="contatos"),
+    path("contatos/exportar/", views_central.ContatosExportarView.as_view(), name="contatos_exportar"),
+    path("contatos/importar/", views_central.ContatosImportarView.as_view(), name="contatos_importar"),
+    path("agenda/", views_central.AgendaView.as_view(), name="agenda"),
+    path("lead/<int:pk>/visita/<slug:resultado>/", views_central.VisitaResultadoView.as_view(), name="visita_resultado"),
+    path("modelos/", views_central.ModelosView.as_view(), name="modelos"),
+    path("modelos/rapida/<int:pk>/excluir/", views_central.RapidaExcluirView.as_view(), name="rapida_excluir"),
+    path("modelos/<slug:acao>/", views_central.ModelosAcaoView.as_view(), name="modelos_acao"),
+    path("campanhas/", views_central.CampanhasView.as_view(), name="campanhas"),
+    path("campanhas/previa/", views_central.CampanhaPreviaView.as_view(), name="campanha_previa"),
+    path("campanhas/criar/", views_central.CampanhaCriarView.as_view(), name="campanha_criar"),
+    path("campanhas/<int:pk>/<slug:acao>/", views_central.CampanhaAcaoView.as_view(), name="campanha_acao"),
     path("whatsapp/webhook/", views_followup.webhook_whatsapp, name="wa_webhook"),
     path("painel/", views_painel.PainelView.as_view(), name="painel"),
     path("painel/formulario/", views_painel.FunilFormView.as_view(), name="funil_form"),

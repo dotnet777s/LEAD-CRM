@@ -60,8 +60,10 @@ class Lead(models.Model):
     carro_texto = models.CharField("Carro de interesse", max_length=150, blank=True,
                                    help_text="Cópia do nome/preço no momento da captura.")
     origem = models.CharField(max_length=12, choices=Origem.choices, default=Origem.META_LP, db_index=True)
-    portal = models.CharField(max_length=10, choices=Portal.choices, blank=True, db_index=True)
-    email = models.EmailField(blank=True)
+    # db_default: o código antigo (servidor ainda na versão anterior) continua inserindo leads sem estes campos
+    portal = models.CharField(max_length=10, choices=Portal.choices, blank=True, db_default="", db_index=True)
+    email = models.EmailField(blank=True, db_default="")
+    nao_contatar = models.BooleanField("Não quer receber mensagens", default=False, db_default=False)
     classe = models.CharField(max_length=1, choices=Classe.choices, default=Classe.B)
     etapa = models.CharField(max_length=12, choices=Etapa.choices, default=Etapa.NOVO, db_index=True)
     etapa_desde = models.DateTimeField(default=timezone.now)
@@ -386,7 +388,76 @@ class WhatsAppMensagem(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.RECEBIDA)
     erro = models.CharField(max_length=300, blank=True)
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    midia_id = models.CharField(max_length=200, blank=True)      # id da mídia na Meta (imagem, áudio, documento...)
+    midia_tipo = models.CharField(max_length=100, blank=True)    # mime type
+    lida = models.BooleanField(default=True, db_index=True)      # só as mensagens de ENTRADA nascem como não lidas
     criado_em = models.DateTimeField(default=timezone.now, db_index=True)
 
     class Meta:
         ordering = ["criado_em", "id"]
+
+
+class RespostaRapida(models.Model):
+    """Textos prontos do atendimento (ex.: endereço da loja, documentos para financiamento)."""
+    titulo = models.CharField(max_length=60)
+    texto = models.TextField(max_length=1500)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "titulo"]
+
+
+class ModeloWhatsApp(models.Model):
+    """Template de mensagem da Meta (necessário para falar fora da janela de 24 h e para campanhas)."""
+    nome = models.CharField(max_length=100)
+    idioma = models.CharField(max_length=10, default="pt_BR")
+    categoria = models.CharField(max_length=20, blank=True)       # UTILITY, MARKETING, AUTHENTICATION
+    status = models.CharField(max_length=20, blank=True)          # APPROVED, PENDING, REJECTED...
+    corpo = models.TextField(blank=True)
+    n_variaveis = models.PositiveSmallIntegerField(default=0)
+    atualizado_em = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["nome"]
+        unique_together = [("nome", "idioma")]
+
+    @property
+    def aprovado(self):
+        return self.status == "APPROVED"
+
+
+class Campanha(models.Model):
+    """Disparo de um template para um grupo de leads (ex.: quem ficou sem resposta nos últimos 30 dias)."""
+
+    class Status(models.TextChoices):
+        RASCUNHO = "rascunho", "Rascunho"
+        ENVIANDO = "enviando", "Enviando"
+        PAUSADA = "pausada", "Pausada"
+        CONCLUIDA = "concluida", "Concluída"
+
+    nome = models.CharField(max_length=100)
+    modelo = models.ForeignKey(ModeloWhatsApp, on_delete=models.PROTECT, related_name="campanhas")
+    filtro = models.JSONField(default=dict, blank=True)           # etapa, origem, portal, dias_sem_contato
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.RASCUNHO, db_index=True)
+    criada_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    criada_em = models.DateTimeField(default=timezone.now)
+    iniciada_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criada_em"]
+
+
+class CampanhaEnvio(models.Model):
+    class Status(models.TextChoices):
+        PENDENTE = "pendente", "Na fila"
+        ENVIADO = "enviado", "Enviado"
+        FALHOU = "falhou", "Falhou"
+
+    campanha = models.ForeignKey(Campanha, related_name="envios", on_delete=models.CASCADE)
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="envios_campanha")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDENTE, db_index=True)
+    erro = models.CharField(max_length=300, blank=True)
+    enviado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [("campanha", "lead")]

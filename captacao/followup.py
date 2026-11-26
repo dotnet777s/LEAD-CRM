@@ -86,7 +86,7 @@ def iniciar(lead, agora=None):
     """Inicia a sequência (ignora se já há uma em andamento, se o lead já fechou ou se está desligado)."""
     agora = agora or timezone.now()
     cfg = FollowUpConfig.obter()
-    if not cfg.ativo or lead.etapa in ETAPAS_QUE_ENCERRAM or ativo_do_lead(lead):
+    if not cfg.ativo or lead.nao_contatar or lead.etapa in ETAPAS_QUE_ENCERRAM or ativo_do_lead(lead):
         return None
     passos = passos_ativos()
     if not passos:

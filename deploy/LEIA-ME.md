@@ -42,3 +42,16 @@ bash /opt/adcrm/deploy/atualizar.sh
 - O DNS do domínio fica na Cloudflare com o proxy ligado. A Cloudflare entrega o HTTPS; o trecho até este servidor é HTTP.
 - O ideal é o registro **A** `contato` apontar **direto** para o IP deste servidor. Se houver um repasse por outra máquina, ela deve preservar o cabeçalho `Host` (ou o `ALLOWED_HOSTS` precisa listar o IP).
 - O app usa `CF-Connecting-IP` como IP do visitante (limite de envios e qualidade dos eventos da Meta). Por isso o ideal é aceitar conexões só da Cloudflare (firewall) para ninguém forjar esse cabeçalho.
+
+## Leads dos portais (OLX) por e-mail
+1. Crie uma caixa só para isso (ex.: `leads@topcarpe.com.br`) e, no painel da OLX, informe-a como destino dos leads.
+2. No `/opt/adcrm/.env`: `PORTAIS_IMAP_HOST`, `PORTAIS_IMAP_USER`, `PORTAIS_IMAP_PASS` (Gmail: ative o IMAP e use senha de app) e `PORTAIS_ATIVOS=olx`.
+3. `systemctl restart adcrm-portais` e acompanhe com `journalctl -u adcrm-portais -f`. A tela **Portais** do CRM mostra cada e-mail lido.
+
+## WhatsApp (API oficial da Meta)
+1. No `.env`: `WHATSAPP_PHONE_ID`, `WHATSAPP_WABA_ID`, `WHATSAPP_TOKEN` (usuário do sistema, permanente), `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` (texto que você inventa) e, se quiser, `WHATSAPP_LIMITE_DIARIO`.
+2. `systemctl restart adcrm-web adcrm-telegram`.
+3. Na Meta (app > WhatsApp > Configuração): URL de callback `https://contato.topcarpe.com.br/whatsapp/webhook/`, o mesmo token de verificação, e assine o campo **messages**.
+   Atenção: a conta só tem um webhook por vez; ao trocar, o Avise Aí deixa de receber as mensagens novas.
+4. No CRM: **WhatsApp** (confere a conexão), **Modelos** (sincronize ou crie os templates e espere a aprovação), **Follow-up > Configurar** (preencha o nome do template de cada tentativa e, se quiser, ligue o envio automático) e **Campanhas**.
+5. Conversas, follow-up e campanhas só enviam pela API depois dos passos acima; antes disso o CRM continua funcionando com o WhatsApp do celular.

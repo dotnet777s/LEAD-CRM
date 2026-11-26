@@ -109,4 +109,51 @@
 
   var som = d.getElementById('som'); if (som) rotuloSom(som);
   d.addEventListener('click', function (e) { var f = e.target.closest('#filtrar'); if (!f) return; var barra = d.getElementById('filtros'); var aberto = barra.classList.toggle('abrir'); f.setAttribute('aria-expanded', aberto); });
+
+  // ---- menu lateral (celular) ----
+  var app = d.querySelector('.app');
+  d.addEventListener('click', function (e) {
+    if (e.target.closest('#menu-btn')) app.classList.toggle('menu-aberto');
+    else if (e.target.closest('#veu')) app.classList.remove('menu-aberto');
+  });
+
+  // ---- conversas ----
+  var chat = d.getElementById('chat');
+  function rolarFim(el, forcar) {
+    if (!el) return;
+    if (forcar || el.scrollHeight - el.scrollTop - el.clientHeight < 140) el.scrollTop = el.scrollHeight;
+  }
+  d.body.addEventListener('htmx:beforeSwap', function (e) {
+    var t = e.detail.target; if (t && t.id === 'c-msgs') t._perto = t.scrollHeight - t.scrollTop - t.clientHeight < 140;
+  });
+  d.body.addEventListener('htmx:afterSwap', function (e) {
+    var t = e.detail.target; if (!t) return;
+    if (t.id === 'c-conv') {
+      if (chat) chat.classList.add('em-conversa');
+      rolarFim(d.getElementById('c-msgs'), true);
+      var ta = d.querySelector('#c-form textarea'); if (ta && !ta.disabled && matchMedia('(hover:hover)').matches) ta.focus();
+      var m = d.querySelector('#c-conv .c-topo h2');
+      d.querySelectorAll('.c-item').forEach(function (b) { b.classList.remove('ativo'); });
+    } else if (t.id === 'c-msgs') { rolarFim(t, !!t._perto); }
+  });
+  d.addEventListener('keydown', function (e) {
+    var ta = e.target.closest && e.target.closest('#c-form textarea');
+    if (ta && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (ta.value.trim()) htmx.trigger(ta.form, 'submit'); }
+  });
+  d.addEventListener('change', function (e) {
+    var s = e.target.closest('#c-rapidas'); if (!s || !s.value) return;
+    var ta = d.querySelector('#c-form textarea');
+    if (ta && !ta.disabled) { ta.value = s.value; ta.focus(); } else { try { navigator.clipboard.writeText(s.value); mostrar('Texto copiado'); } catch (x) {} }
+    s.value = '';
+  });
+  d.addEventListener('input', function (e) {
+    var ta = e.target.closest('#c-form textarea'); if (!ta) return; ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
+  });
+  d.addEventListener('click', function (e) {
+    var it = e.target.closest('.c-item'); if (!it) return;
+    d.querySelectorAll('.c-item').forEach(function (b) { b.classList.toggle('ativo', b === it); });
+    it.classList.remove('nl'); var un = it.querySelector('.un'); if (un) un.remove();
+    try { history.replaceState(null, '', '/conversas/?lead=' + it.dataset.lead); } catch (x) {}
+  });
+  d.addEventListener('DOMContentLoaded', function () { rolarFim(d.getElementById('c-msgs'), true); });
 })();

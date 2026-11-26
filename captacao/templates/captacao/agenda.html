@@ -1,0 +1,23 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Agenda{% endblock %}
+{% block titulo %}Agenda{% endblock %}
+{% block content %}
+<div class="pg">
+  <div class="titulo-pg"><div><h1>Agenda de visitas</h1><small>{{ ini|date:"d/m" }} a {{ fim|date:"d/m/Y" }} · {{ total }} visita(s)</small></div>
+    <div style="display:flex;gap:6px"><a class="btn sec sm" href="?s={{ s|add:'-1' }}">← Semana anterior</a><a class="btn sec sm" href="?s=0">Hoje</a><a class="btn sec sm" href="?s={{ s|add:'1' }}">Próxima →</a></div></div>
+  {% if atrasadas %}<div class="box" style="margin-bottom:12px;border-color:#5a2220"><h2 style="color:var(--rd)">Visitas que já passaram: o cliente veio?</h2>
+    {% for l in atrasadas %}<div class="vis-i"><b>{{ l.nome }}</b><small>{{ l.visita_em|date:"d/m H:i" }} · {{ l.carro_texto|truncatechars:40 }}</small>
+      <div style="display:flex;gap:6px;margin-top:6px"><form method="post" action="{% url 'captacao:visita_resultado' l.pk 'compareceu' %}">{% csrf_token %}<button class="btn sm">Compareceu</button></form>
+      <form method="post" action="{% url 'captacao:visita_resultado' l.pk 'faltou' %}">{% csrf_token %}<button class="btn sec sm">Não veio</button></form></div></div>{% endfor %}</div>{% endif %}
+  <div class="agenda">
+  {% for d in dias %}
+    <div class="dia{% if d.hoje %} hoje{% endif %}"><h4>{{ d.data|date:"D d/m" }}</h4>
+      {% for l in d.visitas %}<div class="vis-i"><b>{{ l.visita_em|date:"H:i" }} · {{ l.nome|truncatechars:20 }}</b><small>{{ l.carro_texto|truncatechars:34 }}</small>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><a class="btn sec sm" href="{% url 'captacao:conversas' %}?lead={{ l.pk }}">Conversa</a><a class="btn sec sm" target="_blank" rel="noopener" href="{{ l.whatsapp_url }}">WhatsApp</a></div></div>
+      {% empty %}<small style="color:#556">—</small>{% endfor %}
+    </div>
+  {% endfor %}
+  </div>
+  <small style="color:var(--mu);display:block;margin-top:10px">Para marcar uma visita, abra o lead e mova para “Visita agendada”, informando o dia e a hora.</small>
+</div>
+{% endblock %}

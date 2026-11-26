@@ -15,10 +15,12 @@ from django.db import transaction
 from django.utils import timezone
 
 from . import followup, telegram, utils
-from .models import Historico, Lead, WhatsAppMensagem
+from .models import Historico, Lead, ModeloWhatsApp, WhatsAppMensagem
 
 log = logging.getLogger(__name__)
 JANELA = timedelta(hours=24)
+MIDIAS = ("image", "audio", "video", "document", "sticker")
+PEDIDOS_DE_SAIDA = {"sair", "parar", "pare", "cancelar", "stop", "nao quero receber", "não quero receber"}
 
 
 class WhatsAppErro(Exception):
@@ -164,8 +166,19 @@ def _entrada(m, nome_perfil, agora):
         Historico.objects.create(lead=lead, tipo=Historico.Tipo.CRIADO, criado_em=agora, texto="Cliente chamou direto no WhatsApp")
         novo = True
     texto = _texto_da_mensagem(m)
-    msg = WhatsAppMensagem.objects.create(lead=lead, telefone=telefone, direcao="in", tipo=m.get("type", "text"), texto=texto,
-                                          wamid=wamid, status=WhatsAppMensagem.Status.RECEBIDA, criado_em=agora)
+    tipo = m.get("type", "text")
+    midia = m.get(tipo) if isinstance(m.get(tipo), dict) else {}
+    if midia.get("caption"):
+        texto = f"{texto} {midia['caption']}".strip()
+    com_midia = tipo in MIDIAS
+    msg = WhatsAppMensagem.objects.create(lead=lead, telefone=telefone, direcao="in", tipo=tipo, texto=texto, wamid=wamid,
+                                          status=WhatsAppMensagem.Status.RECEBIDA, criado_em=agora, lida=False,
+                                          midia_id=(midia.get("id") or "") if com_midia else "",
+                                          midia_tipo=(midia.get("mime_type") or "")[:100] if com_midia else "")
+    if tipo == "text" and texto.strip().lower().strip("!. ") in PEDIDOS_DE_SAIDA and not lead.nao_contatar:
+        lead.nao_contatar = True
+        lead.save(update_fields=["nao_contatar", "atualizado_em"])
+        Historico.objects.create(lead=lead, tipo=Historico.Tipo.NOTA, criado_em=agora, texto="Cliente pediu para não receber mais mensagens")
     parou = followup.cliente_respondeu(lead, agora=agora)
     try:
         if novo:
@@ -199,3 +212,113 @@ def processar_webhook(payload, agora=None):
             for s in v.get("statuses", []):
                 _status(s)
     return n
+
+
+# ---------------------------------------------------------------- mídia, imagens e leitura
+def baixar_midia(media_id):
+    """Baixa uma mídia recebida (a Meta exige o token). Devolve (bytes, mime)."""
+    if not configurado():
+        raise WhatsAppErro("API do WhatsApp não configurada.")
+    h = {"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}"}
+    r = requests.get(f"https://graph.facebook.com/{settings.WHATSAPP_API_VERSION}/{media_id}", headers=h, timeout=20)
+    dados = r.json() if r.status_code < 400 else {}
+    if not dados.get("url"):
+        raise WhatsAppErro("Mídia indisponível (expirou ou foi removida).")
+    arq = requests.get(dados["url"], headers=h, timeout=40)
+    if arq.status_code >= 400:
+        raise WhatsAppErro("Não foi possível baixar a mídia.")
+    return arq.content, dados.get("mime_type", "application/octet-stream")
+
+
+def enviar_imagem(lead, link, legenda="", usuario=None):
+    """Imagem por link público (ex.: foto do carro). Só dentro da janela de 24 h."""
+    if not configurado():
+        raise WhatsAppErro("API do WhatsApp não configurada.")
+    if not janela_aberta(lead.telefone):
+        raise JanelaFechada("Conversa fora da janela de 24 h: use um template aprovado.")
+    wamid = _post({"to": lead.telefone, "type": "image", "image": {"link": link, "caption": legenda[:1000]}})
+    return WhatsAppMensagem.objects.create(lead=lead, telefone=lead.telefone, direcao="out", tipo="image", texto=legenda or "[imagem]",
+                                           wamid=wamid, status=WhatsAppMensagem.Status.ENVIADA, usuario=usuario)
+
+
+def confirmar_leitura(wamid):
+    """Avisa a Meta que a loja leu a mensagem (o cliente vê o 'azul'). Melhor esforço: falha não atrapalha."""
+    if not (configurado() and wamid):
+        return
+    try:
+        _post({"status": "read", "message_id": wamid})
+    except WhatsAppErro:
+        pass
+
+
+# ---------------------------------------------------------------- modelos (templates) da Meta
+def _corpo_e_variaveis(componentes):
+    import re
+    corpo = next((c.get("text", "") for c in componentes if c.get("type") == "BODY"), "")
+    return corpo, len(set(re.findall(r"\{\{(\d+)\}\}", corpo)))
+
+
+def _erro_meta(r):
+    e = (r.json() or {}).get("error") or {}
+    return e.get("error_user_msg") or e.get("message") or f"HTTP {r.status_code}"
+
+
+def sincronizar_modelos():
+    """Traz da Meta os templates da conta (nome, status de aprovação, texto). Devolve quantos foram atualizados."""
+    if not (configurado() and settings.WHATSAPP_WABA_ID):
+        raise WhatsAppErro("Falta WHATSAPP_WABA_ID e/ou a conexão da API.")
+    h = {"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}"}
+    url = f"https://graph.facebook.com/{settings.WHATSAPP_API_VERSION}/{settings.WHATSAPP_WABA_ID}/message_templates"
+    params = {"limit": 100, "fields": "name,language,category,status,components"}
+    n = 0
+    while url:
+        r = requests.get(url, headers=h, params=params, timeout=20)
+        if r.status_code >= 400:
+            raise WhatsAppErro(_erro_meta(r))
+        dados = r.json()
+        for t in dados.get("data", []):
+            corpo, nv = _corpo_e_variaveis(t.get("components", []))
+            ModeloWhatsApp.objects.update_or_create(
+                nome=t["name"], idioma=t.get("language", "pt_BR"),
+                defaults=dict(categoria=t.get("category", ""), status=t.get("status", ""), corpo=corpo, n_variaveis=nv,
+                              atualizado_em=timezone.now()))
+            n += 1
+        url, params = (dados.get("paging") or {}).get("next"), None
+    return n
+
+
+def criar_modelo(nome, categoria, corpo, exemplos=(), idioma="pt_BR"):
+    """Envia um template novo para aprovação da Meta (a aprovação leva de minutos a horas)."""
+    if not (configurado() and settings.WHATSAPP_WABA_ID):
+        raise WhatsAppErro("Falta WHATSAPP_WABA_ID e/ou a conexão da API.")
+    componente = {"type": "BODY", "text": corpo}
+    if exemplos:
+        componente["example"] = {"body_text": [list(exemplos)]}
+    r = requests.post(f"https://graph.facebook.com/{settings.WHATSAPP_API_VERSION}/{settings.WHATSAPP_WABA_ID}/message_templates",
+                      headers={"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}"}, timeout=20,
+                      json={"name": nome, "language": idioma, "category": categoria, "components": [componente]})
+    if r.status_code >= 400:
+        raise WhatsAppErro(_erro_meta(r))
+    ModeloWhatsApp.objects.update_or_create(nome=nome, idioma=idioma, defaults=dict(
+        categoria=categoria, status=r.json().get("status", "PENDING"), corpo=corpo, n_variaveis=len(exemplos),
+        atualizado_em=timezone.now()))
+    return True
+
+
+def enviar_modelo(lead, modelo, usuario=None):
+    """Envia um ModeloWhatsApp ao lead. {{1}} vira o primeiro nome."""
+    primeiro = (lead.nome or "").split()[0].title() if lead.nome else "tudo bem"
+    params = ([primeiro] + [""] * (modelo.n_variaveis - 1)) if modelo.n_variaveis else []
+    return enviar_template(lead, modelo.nome, params, modelo.idioma, usuario, texto_ref=modelo.corpo.replace("{{1}}", primeiro))
+
+
+def info_numero():
+    """Dados do número na Meta (nome verificado, qualidade, limite diário). Devolve dict ou levanta WhatsAppErro."""
+    if not configurado():
+        raise WhatsAppErro("API do WhatsApp não configurada.")
+    r = requests.get(f"https://graph.facebook.com/{settings.WHATSAPP_API_VERSION}/{settings.WHATSAPP_PHONE_ID}", timeout=20,
+                     headers={"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}"},
+                     params={"fields": "display_phone_number,verified_name,quality_rating,messaging_limit_tier,code_verification_status"})
+    if r.status_code >= 400:
+        raise WhatsAppErro(_erro_meta(r))
+    return r.json()

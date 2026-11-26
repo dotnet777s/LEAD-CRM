@@ -4,7 +4,7 @@ import time
 import requests
 from django.core.management.base import BaseCommand, CommandError
 
-from captacao import telegram, whatsapp
+from captacao import campanhas, telegram, whatsapp
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +41,10 @@ class Command(BaseCommand):
                         whatsapp.rodar_followup_automatico()     # só age com a API conectada e o envio automático ligado
                     except Exception:  # noqa: BLE001
                         log.exception("followup automático falhou")
+                    try:
+                        campanhas.rodar_lote()
+                    except Exception:  # noqa: BLE001
+                        log.exception("campanhas falhou")
                     ultima_verificacao = time.time()
                 enviados = telegram.processar_fila()
                 if o["uma_vez"]:

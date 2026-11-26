@@ -170,6 +170,7 @@ WHATSAPP_WABA_ID = env("WHATSAPP_WABA_ID")
 WHATSAPP_TOKEN = env("WHATSAPP_TOKEN")                # token permanente do usuário do sistema
 WHATSAPP_APP_SECRET = env("WHATSAPP_APP_SECRET")      # valida a assinatura do webhook
 WHATSAPP_VERIFY_TOKEN = env("WHATSAPP_VERIFY_TOKEN")  # texto que você escolhe e informa na Meta ao cadastrar o webhook
+WHATSAPP_LIMITE_DIARIO = int(env("WHATSAPP_LIMITE_DIARIO", "250") or 250)   # mensagens de campanha por 24 h (tier da conta)
 WHATSAPP_API_VERSION = env("WHATSAPP_API_VERSION", "v21.0") or "v21.0"
 # Caixa de e-mail que recebe os leads dos portais (Napista, Mobiauto, OLX). Vazio = leitura desligada.
 PORTAIS_IMAP_HOST = env("PORTAIS_IMAP_HOST")

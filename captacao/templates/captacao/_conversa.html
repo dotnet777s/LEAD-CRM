@@ -1,0 +1,44 @@
+<div class="c-topo"><button type="button" class="menu-btn voltar" onclick="document.getElementById('chat').classList.remove('em-conversa')" aria-label="Voltar">←</button>
+  <span class="av">{{ lead.nome|slice:":1"|upper }}</span>
+  <div style="min-width:0;flex:1"><h2>{{ lead.nome|truncatechars:34 }}</h2><small>{{ lead.telefone_formatado }}{% if lead.portal %} · {{ lead.get_portal_display }}{% endif %}{% if lead.carro_texto %} · {{ lead.carro_texto|truncatechars:40 }}{% endif %}</small></div>
+  <button class="btn sec sm" hx-get="{% url 'captacao:lead' lead.pk %}" hx-target="#dlg-box">Ficha</button>
+</div>
+<div class="c-msgs" id="c-msgs" hx-get="{% url 'captacao:conversa_mensagens' lead.pk %}" hx-trigger="every 5s" hx-swap="innerHTML">{% include "captacao/_mensagens.html" %}</div>
+<div class="c-comp">
+  {% if lead.nao_contatar %}<div class="aviso-jan">Este cliente pediu para não receber mensagens. Respeite o pedido.</div>{% endif %}
+  {% if erro %}<div class="err" style="margin:0">{{ erro }}</div>{% endif %}
+  {% if not api %}<div class="aviso-jan">A API do WhatsApp ainda não está conectada. Use o botão abaixo para abrir a conversa no WhatsApp do celular.
+    <a class="btn sm" style="margin-left:6px" target="_blank" rel="noopener" href="{{ lead.whatsapp_url }}">Abrir WhatsApp</a></div>
+  {% elif not janela %}<div class="aviso-jan">Passaram 24 h desde a última mensagem do cliente: só dá para enviar um <b>modelo aprovado</b>. Quando ele responder, a conversa livre volta.</div>{% endif %}
+  {% if api %}
+  <form hx-post="{% url 'captacao:conversa_enviar' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" class="linha1" id="c-form">
+    <textarea name="texto" rows="1" placeholder="{% if janela %}Escreva uma mensagem…  (Enter envia, Shift+Enter quebra a linha){% else %}Fora da janela de 24 h: escolha um modelo abaixo{% endif %}" maxlength="1500" {% if not janela or lead.nao_contatar %}disabled{% endif %}></textarea>
+    <button class="btn" {% if not janela or lead.nao_contatar %}disabled{% endif %}>Enviar</button>
+  </form>
+  <div class="c-ferr">
+    <select id="c-rapidas" aria-label="Respostas rápidas"><option value="">Respostas rápidas</option>{% for r in rapidas %}<option value="{{ r.texto }}">{{ r.titulo }}</option>{% endfor %}</select>
+    <form hx-post="{% url 'captacao:conversa_modelo' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" style="display:flex;gap:6px">
+      <select name="modelo" aria-label="Modelo"><option value="">Modelos aprovados</option>{% for m in modelos %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}</select><button class="btn sec sm" {% if lead.nao_contatar %}disabled{% endif %}>Enviar modelo</button></form>
+    <form hx-post="{% url 'captacao:conversa_carro' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" style="display:flex;gap:6px">
+      <select name="carro" aria-label="Carro"><option value="">Enviar um carro</option>{% for c in carros %}<option value="{{ c.pk }}">{{ c.marca_fmt }} {{ c.modelo_fmt }} {{ c.ano }}</option>{% endfor %}</select><button class="btn sec sm" {% if not janela %}disabled{% endif %}>Enviar foto</button></form>
+  </div>
+  {% else %}
+  <div class="c-ferr"><select id="c-rapidas" aria-label="Respostas rápidas"><option value="">Respostas rápidas (copiar)</option>{% for r in rapidas %}<option value="{{ r.texto }}">{{ r.titulo }}</option>{% endfor %}</select></div>
+  {% endif %}
+  <form hx-post="{% url 'captacao:conversa_nota' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" style="display:flex;gap:6px">
+    <input type="text" name="texto" placeholder="Nota interna (o cliente não vê)" maxlength="500" autocomplete="off"><button class="btn sec sm">Anotar</button></form>
+</div>
+<aside class="c-info" id="c-info" hx-swap-oob="true">
+  <h3>{{ lead.nome }}</h3><small style="color:var(--mu)">{{ lead.telefone_formatado }}{% if lead.email %} · {{ lead.email }}{% endif %}</small>
+  <p style="margin:10px 0 0"><a class="btn full sm" target="_blank" rel="noopener" href="{{ lead.whatsapp_url }}">Abrir no WhatsApp do celular</a></p>
+  <div class="sec-t">Etapa</div>
+  <div class="etp">{% for val, nome in funil %}{% if val == 'perdido' %}<button type="button" class="{% if val == lead.etapa %}atual{% endif %}" hx-get="{% url 'captacao:mover' lead.pk %}?etapa=perdido" hx-target="#dlg-box">{{ nome }}</button>
+    {% elif val == 'visita' or val == 'vendido' %}<button type="button" class="{% if val == lead.etapa %}atual{% endif %}" hx-get="{% url 'captacao:mover' lead.pk %}?etapa={{ val }}" hx-target="#dlg-box">{{ nome }}</button>
+    {% else %}<button type="button" class="{% if val == lead.etapa %}atual{% endif %}" hx-post="{% url 'captacao:conversa_etapa' lead.pk %}" hx-vals='{"etapa":"{{ val }}"}' hx-target="#c-conv" hx-swap="innerHTML">{{ nome }}</button>{% endif %}{% endfor %}</div>
+  <div class="sec-t">Interesse</div><div>{{ lead.carro_texto|default:"Sem carro definido" }}</div>
+  <div class="sec-t">Origem</div><div>{% if lead.portal %}Portal {{ lead.get_portal_display }}{% else %}{{ lead.get_origem_display }}{% endif %}{% if lead.utm_content %} · {{ lead.utm_content }}{% endif %}</div>
+  <div class="sec-t">Consultor</div><div>{% if lead.vendedor %}{{ lead.vendedor.first_name|default:lead.vendedor.username }}{% else %}<span style="color:var(--am)">Sem consultor</span>{% endif %}</div>
+  <div class="sec-t">Follow-up</div>
+  {% if fu %}<div>Tentativa {{ fu.pos }}/{{ fu.total }}{% if fu.status == 'pausado' %} · pausado{% elif fu.proximo_em %} · {{ fu.proximo_em|date:"d/m H:i" }}{% endif %}</div>
+  {% else %}<div style="color:var(--mu)">Nenhum em andamento</div>{% endif %}
+</aside>

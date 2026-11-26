@@ -29,7 +29,11 @@ class LoginObrigatorioMiddleware:
 
 
 def contexto_crm(request):
-    """Disponibiliza `eh_gestor` em todos os templates (menu Equipe)."""
-    from .views import eh_gestor
+    """Disponibiliza `eh_gestor` e os contadores do menu lateral (conversas não lidas, follow-ups para agora)."""
     u = getattr(request, "user", None)
-    return {"eh_gestor": bool(u and u.is_authenticated and eh_gestor(u))}
+    if not (u and u.is_authenticated) or request.path_info.startswith(PUBLICOS):
+        return {"eh_gestor": False}
+    from . import followup
+    from .views import eh_gestor
+    from .views_conversas import total_nao_lidas
+    return {"eh_gestor": eh_gestor(u), "menu_nao_lidas": total_nao_lidas(u), "menu_followup": followup.contagens()["agora"]}

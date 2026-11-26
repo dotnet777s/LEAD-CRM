@@ -1,0 +1,36 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Contatos{% endblock %}
+{% block titulo %}Contatos{% endblock %}
+{% block content %}
+<div class="pg">
+  <div class="titulo-pg"><div><h1>Contatos</h1><small>{{ total }} contato(s)</small></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn sec sm" hx-get="{% url 'captacao:lead_novo' %}" hx-target="#dlg-box">Novo contato</button>
+      {% if gestor %}<a class="btn sec sm" href="{% url 'captacao:contatos_exportar' %}?{{ request.GET.urlencode }}">Exportar CSV</a>{% endif %}
+      <form method="post" action="{% url 'captacao:contatos_importar' %}" enctype="multipart/form-data" style="display:flex;gap:6px">{% csrf_token %}
+        <label class="btn sec sm" style="cursor:pointer">Importar CSV<input type="file" name="arquivo" accept=".csv,text/csv" hidden onchange="this.form.submit()"></label></form>
+    </div></div>
+  {% if importado %}<p class="ok-msg">{{ importado }} contato(s) importado(s){% if ignorados != '0' %}; {{ ignorados }} ignorado(s) (telefone inválido ou já cadastrado){% endif %}.</p>{% endif %}
+  <form class="filtros-l" method="get">
+    <input type="search" name="q" value="{{ q }}" placeholder="Nome, telefone ou e-mail">
+    <select name="origem"><option value="">Origem</option>{% for v, r in origens %}<option value="{{ v }}" {% if v == origem %}selected{% endif %}>{{ r }}</option>{% endfor %}</select>
+    <select name="etapa"><option value="">Etapa</option>{% for v, r in etapas %}<option value="{{ v }}" {% if v == etapa %}selected{% endif %}>{{ r }}</option>{% endfor %}</select>
+    <label class="chk" style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="nc" value="1" style="width:auto" {% if nc %}checked{% endif %}> Não quer mensagens</label>
+    <button class="btn sec sm">Filtrar</button>
+  </form>
+  <div class="box" style="padding:6px 10px;overflow-x:auto"><table class="t">
+    <tr><th>Nome</th><th>Telefone</th><th>Origem</th><th>Etapa</th><th>Carro</th><th></th></tr>
+    {% for c in contatos %}
+    <tr><td><button class="nome" style="background:none;border:0;padding:0;font-weight:700;cursor:pointer;text-align:left" hx-get="{% url 'captacao:lead' c.pk %}" hx-target="#dlg-box">{{ c.nome|truncatechars:30 }}</button>{% if c.nao_contatar %} <span class="badge erro">não contatar</span>{% endif %}</td>
+      <td>{{ c.telefone_formatado }}</td><td>{% if c.portal %}{{ c.get_portal_display }}{% else %}{{ c.get_origem_display }}{% endif %}</td><td>{{ c.get_etapa_display }}</td>
+      <td style="color:var(--mu)">{{ c.carro_texto|truncatechars:34 }}</td>
+      <td style="text-align:right;white-space:nowrap"><a class="btn sec sm" href="{% url 'captacao:conversas' %}?lead={{ c.pk }}">Conversa</a></td></tr>
+    {% empty %}<tr><td colspan="6" style="color:var(--mu)">Nenhum contato encontrado.</td></tr>{% endfor %}
+  </table></div>
+  <div style="display:flex;gap:8px;margin-top:10px;justify-content:center">
+    {% if pag > 1 %}<a class="btn sec sm" href="?{% for k, v in request.GET.items %}{% if k != 'p' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}p={{ pag|add:'-1' }}">← Anterior</a>{% endif %}
+    {% if tem_mais %}<a class="btn sec sm" href="?{% for k, v in request.GET.items %}{% if k != 'p' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}p={{ pag|add:'1' }}">Próxima →</a>{% endif %}
+  </div>
+  <small style="color:var(--mu);display:block;margin-top:10px">Importar: CSV com as colunas <b>nome</b> e <b>telefone</b> (e, se quiser, <b>email</b>). Telefones já cadastrados são ignorados.</small>
+</div>
+{% endblock %}
