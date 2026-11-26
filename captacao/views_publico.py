@@ -385,6 +385,29 @@ FAIXAS_PRECO = [("ate50", "Até R$ 50 mil", 0, 50000), ("50a70", "R$ 50 a 70 mil
                 ("70a90", "R$ 70 a 90 mil", 70000, 90000), ("acima90", "Acima de R$ 90 mil", 90000, 10**9)]
 
 
+# O estoque não traz a carroceria: classificamos pelo modelo (e "sedan" no texto da versão, quando houver).
+CATEGORIAS = [("hatch", "Hatchs"), ("sedan", "Sedans"), ("suv", "SUVs"), ("minivan", "Minivans")]
+_CARROCERIA = {
+    "hatch": {"onix", "mobi", "argo", "ka", "hb20", "march", "yaris", "208", "308", "sandero", "polo", "dolphin mini", "gol", "uno", "fox", "up",
+              "kwid", "celta", "palio", "fit", "city hatch", "i30", "c3", "ka hatch", "etios", "bravo", "punto"},
+    "sedan": {"prisma", "cronos", "civic", "sentra", "logan", "corolla", "versa", "virtus", "voyage", "city", "hb20s", "onix plus", "cobalt",
+              "siena", "grand siena", "jetta", "cruze", "fusion", "accord"},
+    "suv": {"tracker", "c4 cactus", "cactus", "sportage", "2008", "captur", "corolla cross", "creta", "t-cross", "nivus", "kicks", "hr-v", "hrv",
+            "compass", "renegade", "duster", "ecosport", "pulse", "fastback", "tiguan", "ix35", "tucson", "kuga", "seltos", "bolt", "atto 3"},
+    "minivan": {"spin", "zafira", "livina", "grand livina", "idea", "doblo", "meriva"},
+}
+
+
+def categoria_do_veiculo(modelo, versao=""):
+    chave = _sem_acento_minusculo(modelo).strip()
+    if "sedan" in _sem_acento_minusculo(versao) and chave in {"ka", "yaris", "onix", "hb20", "city"}:
+        return "sedan"
+    for cat, modelos in _CARROCERIA.items():
+        if chave in modelos:
+            return cat
+    return ""
+
+
 def _sem_acento_minusculo(txt):
     return utils.sem_acento(txt or "").lower()
 
@@ -413,10 +436,12 @@ def _catalogo_dados():
             "cor": v.cor_fmt, "cambio": v.cambio_fmt, "local": v.local, "preco": float(v.valor_venda),
             "preco_fmt": utils.preco_brl(v.valor_venda), "parcela_fmt": utils.preco_brl(parcela) if parcela else "",
             "fipe_abaixo": _abaixo_da_fipe(v), "foto": capa.pk, "n_fotos": v.total_fotos,
+            "categoria": categoria_do_veiculo(v.modelo_fmt, v.versao_fmt),
             "busca": _sem_acento_minusculo(f"{nome} {v.versao_fmt} {v.cor_fmt} {v.ano} {v.cambio_fmt}"),
             "alt": f"{nome} {v.versao_fmt} {v.ano}".replace("  ", " ").strip(),
         })
     marcas = Counter(i["marca"] for i in itens)
+    cats = Counter(i["categoria"] for i in itens if i["categoria"])
     cambios = Counter(i["cambio"] for i in itens if i["cambio"])
     faixas = []
     for chave_f, rotulo, de, ate in FAIXAS_PRECO:
@@ -429,6 +454,7 @@ def _catalogo_dados():
                                "url": settings.SITE_URL + i["url"]} for n, i in enumerate(itens)]}
     dados = {"itens": itens, "total": len(itens), "marcas": sorted(marcas.items(), key=lambda x: (-x[1], x[0])),
              "cambios": sorted(cambios.items()), "faixas": faixas,
+             "categorias": [(c, rot, cats[c]) for c, rot in CATEGORIAS if cats.get(c)],
              "og_foto": itens[0]["foto"] if itens else None,
              "ld": json.dumps(ld, ensure_ascii=False).replace("<", "\\u003c")}
     cache.set(chave, dados, CACHE_SEGUNDOS)

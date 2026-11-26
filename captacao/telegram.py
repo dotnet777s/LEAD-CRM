@@ -137,7 +137,7 @@ def texto_lead(lead, titulo):
     if perfil:
         linhas += ["💬 <b>Perfil do cliente</b>", f"• Quer: {quer}"] + perfil + [""]
         resumo = " · ".join(partes)
-    origem = lead.get_origem_display() + (f" · {lead.utm_campaign}" if lead.utm_campaign else "")
+    origem = (f"Portal {lead.get_portal_display()}" if lead.portal else lead.get_origem_display()) + (f" · {lead.utm_campaign}" if lead.utm_campaign else "")
     linhas.append(f"📣 {esc(origem)}")
     if lead.utm_content:
         linhas.append(f"🎯 Anúncio: {esc(lead.utm_content)}")
@@ -166,6 +166,20 @@ def avisar_novo_lead(lead):
     n = 0
     for v in _chats():
         _, criada = enfileirar(v.chat_id, texto_lead(lead, "Novo lead"), botoes_lead(lead), lead, "novo", f"novo:{lead.pk}:{v.chat_id}")
+        n += criada
+    return n
+
+
+def avisar_retorno_portal(lead, portal, carro):
+    """Quem já era lead chamou de novo por um portal: o SDR precisa saber (o card não é duplicado)."""
+    if not configurado():
+        return 0
+    texto = (f"🔁 <b>LEAD VOLTOU PELO PORTAL {esc(portal.upper())}</b>\n\n👤 <b>{esc(lead.nome)}</b>\n"
+             f"📱 {esc(lead.telefone_formatado)}\n🚗 {esc(carro)}\n📍 Etapa atual: {esc(lead.get_etapa_display())}")
+    n = 0
+    chave = timezone.now().strftime("%Y%m%d%H%M")
+    for v in _chats():
+        _, criada = enfileirar(v.chat_id, texto, botoes_lead(lead), lead, "retorno", f"retorno:{lead.pk}:{v.chat_id}:{chave}")
         n += criada
     return n
 

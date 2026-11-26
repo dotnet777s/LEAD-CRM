@@ -106,6 +106,47 @@ def capturar_lead(veiculo, nome, telefone, respostas, tracking, agora=None, parc
     return lead, True
 
 
+@transaction.atomic
+def criar_lead_portal(portal, nome, telefone, carro_texto, veiculo, mensagem="", email="", agora=None):
+    """Contato vindo de um portal. Se o telefone já existe nos últimos 30 dias, só registra o novo contato no histórico
+    (e avisa o SDR); senão cria o lead em 'Novo' e avisa. Devolve (lead, criado)."""
+    agora = agora or timezone.now()
+    rotulo = Lead.Portal(portal).label
+    carro = carro_texto
+    if veiculo:
+        carro = f"{veiculo.marca_fmt} {veiculo.modelo_fmt} {veiculo.ano} · {utils.preco_brl(veiculo.valor_venda)}"
+    existente = (Lead.objects.select_for_update()
+                 .filter(telefone=telefone, criado_em__gte=agora - timedelta(days=JANELA_DEDUP_DIAS))
+                 .order_by("-criado_em").first())
+    if existente:
+        Historico.objects.create(lead=existente, tipo=Historico.Tipo.FORM, criado_em=agora,
+                                 texto=f"Novo contato pelo portal {rotulo}: {carro}"[:500])
+        campos = []
+        if not existente.portal:
+            existente.portal = portal
+            campos.append("portal")
+        if email and not existente.email:
+            existente.email = email
+            campos.append("email")
+        if campos:
+            existente.save(update_fields=campos + ["atualizado_em"])
+        try:
+            telegram.avisar_retorno_portal(existente, rotulo, carro)
+        except Exception:  # noqa: BLE001
+            pass
+        return existente, False
+    lead = Lead.objects.create(nome=nome[:120], telefone=telefone, veiculo=veiculo, carro_texto=carro[:150],
+                               origem=Lead.Origem.PORTAL, portal=portal, email=email, observacao=mensagem,
+                               criado_em=agora, etapa_desde=agora)
+    Historico.objects.create(lead=lead, tipo=Historico.Tipo.CRIADO, criado_em=agora,
+                             texto=f"Contato pelo portal {rotulo}: {carro}"[:500])
+    try:
+        telegram.avisar_novo_lead(lead)
+    except Exception:  # noqa: BLE001 - aviso nunca impede a criação
+        pass
+    return lead, True
+
+
 def criar_lead_manual(nome, telefone, veiculo=None, origem=Lead.Origem.WHATSAPP, usuario=None, observacao=""):
     """Cadastro rápido (WhatsApp direto, portais, loja). Não dispara eventos de site (sem fbp/fbc)."""
     carro = f"{veiculo.marca_fmt} {veiculo.modelo_fmt} {veiculo.ano} · {utils.preco_brl(veiculo.valor_venda)}" if veiculo else ""

@@ -37,6 +37,11 @@ class Lead(models.Model):
         INDICACAO = "indicacao", "Indicação"
         OUTRO = "outro", "Outro"
 
+    class Portal(models.TextChoices):
+        NAPISTA = "napista", "Napista"
+        MOBIAUTO = "mobiauto", "Mobiauto"
+        OLX = "olx", "OLX"
+
     class MotivoPerda(models.TextChoices):
         PRECO = "preco", "Preço"
         CREDITO = "credito_negado", "Crédito negado"
@@ -55,6 +60,8 @@ class Lead(models.Model):
     carro_texto = models.CharField("Carro de interesse", max_length=150, blank=True,
                                    help_text="Cópia do nome/preço no momento da captura.")
     origem = models.CharField(max_length=12, choices=Origem.choices, default=Origem.META_LP, db_index=True)
+    portal = models.CharField(max_length=10, choices=Portal.choices, blank=True, db_index=True)
+    email = models.EmailField(blank=True)
     classe = models.CharField(max_length=1, choices=Classe.choices, default=Classe.B)
     etapa = models.CharField(max_length=12, choices=Etapa.choices, default=Etapa.NOVO, db_index=True)
     etapa_desde = models.DateTimeField(default=timezone.now)
@@ -264,3 +271,26 @@ class EventoFunil(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=["criado_em", "etapa"])]
+
+
+class PortalMensagem(models.Model):
+    """Registro de cada e-mail lido da caixa dos portais (evita processar duas vezes e permite revisar o que falhou)."""
+
+    class Status(models.TextChoices):
+        CRIADO = "criado", "Lead criado"
+        ATUALIZADO = "atualizado", "Lead já existia"
+        SEM_TELEFONE = "sem_telefone", "Sem telefone (revisar)"
+        IGNORADO = "ignorado", "Não é de portal"
+
+    message_id = models.CharField(max_length=250, unique=True)
+    portal = models.CharField(max_length=10, choices=Lead.Portal.choices, blank=True)
+    remetente = models.CharField(max_length=250, blank=True)
+    assunto = models.CharField(max_length=300, blank=True)
+    corpo = models.TextField(blank=True)
+    status = models.CharField(max_length=14, choices=Status.choices, default=Status.CRIADO, db_index=True)
+    erro = models.CharField(max_length=300, blank=True)
+    lead = models.ForeignKey(Lead, null=True, blank=True, on_delete=models.SET_NULL, related_name="portal_mensagens")
+    criado_em = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ["-criado_em"]

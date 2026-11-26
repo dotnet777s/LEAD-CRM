@@ -22,8 +22,8 @@ class CatalogoTests(Base):
             self.assertNotIn(f">{nome}<", html)
         self.assertIn(f"/v/{a.pk}-", html)
         self.assertIn(f"/v/{b.pk}-", html)
-        self.assertIn("Olinda", html)
-        self.assertIn("Recife", html)
+        self.assertNotIn("Recife", html)      # a unidade não aparece no catálogo
+        self.assertNotIn("abaixo da FIPE", html)
         self.assertIn('data-marca="chevrolet"', html)
         self.assertIn("R$ 85.000", html)
 

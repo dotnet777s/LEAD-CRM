@@ -164,6 +164,12 @@ FINANCIAMENTO_PARCELAS = int(env("FINANCIAMENTO_PARCELAS", "60") or 60)
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN")
 TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", "leadsreceiverbot")
 TELEGRAM_SLA_MINUTOS = int(env("TELEGRAM_SLA_MINUTOS", "5") or 5)
+# Caixa de e-mail que recebe os leads dos portais (Napista, Mobiauto, OLX). Vazio = leitura desligada.
+PORTAIS_IMAP_HOST = env("PORTAIS_IMAP_HOST")
+PORTAIS_IMAP_PORTA = int(env("PORTAIS_IMAP_PORTA", "993") or 993)
+PORTAIS_IMAP_USER = env("PORTAIS_IMAP_USER")
+PORTAIS_IMAP_PASS = env("PORTAIS_IMAP_PASS")
+PORTAIS_IMAP_PASTA = env("PORTAIS_IMAP_PASTA", "INBOX") or "INBOX"
 TELEGRAM_REQUALIFICAR_MINUTOS = int(env("TELEGRAM_REQUALIFICAR_MINUTOS", "10") or 10)   # espera antes de avisar do formulário incompleto
 
 
