@@ -15,20 +15,20 @@ from django.views.generic import TemplateView
 
 from catalogo.models import Veiculo
 
-from . import fotos, followup, funil, services, utils, whatsapp
+from . import audio, fotos, followup, funil, services, utils, whatsapp
 from .models import Etiqueta, FollowUp, Historico, Lead, MensagemProgramada, ModeloWhatsApp, RespostaRapida, WhatsAppMensagem
 from .views import Base, eh_gestor, leads_visiveis, trigger
 
 ABAS = [("todas", "Todas as mensagens"), ("meus", "Meus atendimentos"), ("portais", "Portais"), ("arquivadas", "Arquivadas")]
 FILTROS = [("todas", "Todas"), ("nao_lidas", "Não lidas"), ("minhas", "Minhas"), ("agendados", "Agendados"), ("programadas", "Programadas"),
-           ("loja", "Esperando cliente"), ("cliente", "Cliente esperando"), ("sem_humano", "Sem humano")]
+           ("loja", "Esperando cliente"), ("cliente", "Cliente esperando"), ("sem_humano", "Sem humano"), ("sem_conversa", "Sem conversa")]
 LIMITE_ARQUIVO = 16 * 1024 * 1024
 
 
 def _conversas(user, filtro="todas", q="", tag="", aba="todas"):
     msgs = WhatsAppMensagem.objects.filter(lead=OuterRef("pk")).order_by("-criado_em", "-id")
     humano = WhatsAppMensagem.objects.filter(lead=OuterRef("pk"), direcao="out", usuario__isnull=False)
-    qs = (leads_visiveis(user).filter(mensagens_wa__isnull=False).distinct()
+    qs = (leads_visiveis(user).filter(mensagens_wa__isnull=(filtro == "sem_conversa")).distinct()
           .annotate(ultima=Subquery(msgs.values("criado_em")[:1]), ultima_dir=Subquery(msgs.values("direcao")[:1]),
                     ultimo_texto=Subquery(msgs.values("texto")[:1]),
                     ultima_entrada=Subquery(msgs.filter(direcao="in").values("criado_em")[:1]),
@@ -53,6 +53,8 @@ def _conversas(user, filtro="todas", q="", tag="", aba="todas"):
         qs = qs.filter(etapa="visita")
     elif filtro == "sem_humano":
         qs = qs.filter(tem_humano=False)
+    elif filtro == "sem_conversa":          # leads (ex.: da OLX) que ainda não trocaram nenhuma mensagem
+        qs = qs.exclude(etapa__in=funil.fechadas()).exclude(nao_contatar=True)
     if tag.isdigit():
         qs = qs.filter(etiquetas__pk=int(tag))
     q = (q or "").strip()
@@ -202,11 +204,13 @@ class EnviarArquivoView(Base, View):
             return _resposta(request, lead, "Escolha um arquivo.")
         if arq.size > LIMITE_ARQUIVO:
             return _resposta(request, lead, "O arquivo passa de 16 MB.")
+        conteudo, nome, mime = arq.read(), arq.name, arq.content_type or "application/octet-stream"
         try:
-            whatsapp.enviar_arquivo(lead, arq.read(), arq.name, arq.content_type or "application/octet-stream",
-                                    (request.POST.get("legenda") or "")[:900], request.user)
+            if request.POST.get("gravado"):                 # gravação do microfone: converte para OGG/Opus (mensagem de voz)
+                conteudo, nome, mime = audio.para_ogg_opus(conteudo, mime), "audio.ogg", "audio/ogg"
+            whatsapp.enviar_arquivo(lead, conteudo, nome, mime, (request.POST.get("legenda") or "")[:900], request.user)
             services.marcar_atendimento(lead, request.user)
-        except whatsapp.WhatsAppErro as e:
+        except (whatsapp.WhatsAppErro, audio.ErroAudio) as e:
             return _resposta(request, lead, str(e))
         return _resposta(request, lead)
 

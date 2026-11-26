@@ -3,7 +3,7 @@
 {% block titulo %}Agenda{% endblock %}
 {% block content %}
 <div class="pg">
-  <div class="subabas" style="padding:0 0 10px"><a href="{% url 'captacao:agenda' %}">Agenda</a><a class="on" href="{% url 'captacao:agenda_cadastros' %}">Profissionais e atividades</a></div>
+  <div class="subabas" style="padding:0 0 10px"><a href="{% url 'captacao:agenda' %}">Agenda</a><a class="on" href="{% url 'captacao:agenda_cadastros' %}">Profissionais e atividades</a><a href="{% url 'captacao:agenda_mensagens' %}">Mensagens ao cliente</a></div>
   <div class="grid">
     <div class="box"><h2>Profissionais</h2><small style="color:var(--mu)">Quem atende as visitas. O CRM impede dois compromissos no mesmo horário para a mesma pessoa.</small>
       <ul class="hist">{% for p in profissionais %}<li style="display:flex;justify-content:space-between;gap:8px;{% if not p.ativo %}opacity:.5{% endif %}"><span>{{ p.nome }}</span>

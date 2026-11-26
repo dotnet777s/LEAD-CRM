@@ -121,9 +121,13 @@ class AgendaView(Base, TemplateView):
         fim = ini + timedelta(days=7)
         leads = (leads_visiveis(self.request.user).filter(visita_em__date__gte=ini, visita_em__date__lt=fim)
                  .exclude(etapa__in=[Lead.Etapa.PERDIDO]).order_by("visita_em"))
-        agend = list(Agendamento.objects.select_related("lead", "profissional", "atividade")
+        agend = list(Agendamento.objects.select_related("lead", "profissional", "atividade").prefetch_related("mensagens")
                      .filter(lead__in=leads_visiveis(self.request.user), inicio__date__gte=ini, inicio__date__lt=fim).exclude(status="cancelado"))
         com_agend = {(a.lead_id, a.inicio) for a in agend}
+        from . import agendamentos
+        for a in agend:
+            for m in a.mensagens.all():
+                m.link = agendamentos.link_manual(a, m.tipo)
         dias = []
         for i in range(7):
             d = ini + timedelta(days=i)

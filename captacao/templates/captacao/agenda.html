@@ -3,7 +3,7 @@
 {% block titulo %}Agenda{% endblock %}
 {% block content %}
 <div class="pg">
-  <div class="subabas" style="padding:0 0 10px"><a class="on" href="{% url 'captacao:agenda' %}">Agenda</a><a href="{% url 'captacao:agenda_cadastros' %}">Profissionais e atividades</a></div>
+  <div class="subabas" style="padding:0 0 10px"><a class="on" href="{% url 'captacao:agenda' %}">Agenda</a><a href="{% url 'captacao:agenda_cadastros' %}">Profissionais e atividades</a><a href="{% url 'captacao:agenda_mensagens' %}">Mensagens ao cliente</a></div>
   {% if erro %}<p class="err">{{ erro }}</p>{% endif %}
   <details class="dprog" style="margin-bottom:12px" {% if lead_pre %}open{% endif %}><summary>Novo agendamento</summary>
     <form method="post" action="{% url 'captacao:agendamento_novo' %}" class="cfg" style="margin-top:8px">{% csrf_token %}
@@ -23,6 +23,8 @@
   {% for d in dias %}
     <div class="dia{% if d.hoje %} hoje{% endif %}"><h4>{{ d.data|date:"D d/m" }}</h4>
       {% for a in d.agendamentos %}<div class="vis-i"><b>{{ a.inicio|date:"H:i" }} · {{ a.lead.nome|truncatechars:18 }}</b><small>{{ a.atividade.nome|default:"Visita" }}{% if a.profissional %} · {{ a.profissional.nome }}{% endif %} · {{ a.get_status_display }}</small>
+        <div class="msgs-ag">{% for m in a.mensagens.all %}<span class="mini-t {% if m.status == 'enviada' %}jan{% elif m.status == 'falhou' %}exp{% endif %}" title="{{ m.get_tipo_display }} · {{ m.enviar_em|date:'d/m H:i' }}{% if m.erro %} · {{ m.erro }}{% endif %}">{{ m.get_tipo_display }}: {{ m.get_status_display }}</span>
+          {% if m.status == 'falhou' or m.status == 'pendente' %}<a class="mini-t" target="_blank" rel="noopener" href="{{ m.link }}" title="Enviar pelo WhatsApp do celular">↗ celular</a>{% endif %}{% endfor %}</div>
         <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">{% if a.status == 'agendado' %}<form method="post" action="{% url 'captacao:agendamento_status' a.pk 'confirmado' %}">{% csrf_token %}<button class="btn sec sm">Confirmar</button></form>{% endif %}
           {% if a.status == 'agendado' or a.status == 'confirmado' %}<form method="post" action="{% url 'captacao:agendamento_status' a.pk 'realizado' %}">{% csrf_token %}<button class="btn sm">Realizado</button></form>
           <form method="post" action="{% url 'captacao:agendamento_status' a.pk 'faltou' %}">{% csrf_token %}<button class="btn sec sm">Faltou</button></form>

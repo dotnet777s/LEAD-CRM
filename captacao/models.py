@@ -672,3 +672,52 @@ class EtapaFunil(models.Model):
 
     def __str__(self):
         return self.nome
+
+
+class AgendaConfig(models.Model):
+    """Mensagens automáticas do agendamento (uma linha só). Texto livre vai dentro da janela de 24 h; fora dela, o modelo aprovado."""
+    confirmar = models.BooleanField("Confirmar o agendamento assim que for marcado", default=True)
+    lembrete_24h = models.BooleanField("Lembrete 1 dia antes", default=True)
+    lembrete_2h = models.BooleanField("Lembrete 2 horas antes", default=True)
+    pos_visita = models.BooleanField("Agradecer depois da visita", default=True)
+    txt_confirmacao = models.TextField(default="Olá, {nome}! Sua visita à TopCar Veículos está agendada para {dia}, {data}, às {hora}. "
+                                               "Endereço: {endereco}. Qualquer imprevisto, é só avisar por aqui.")
+    txt_lembrete = models.TextField(default="Olá, {nome}! Lembrando da sua visita à TopCar Veículos {quando}, às {hora}. "
+                                            "Endereço: {endereco}. Te esperamos!")
+    txt_pos = models.TextField(default="Olá, {nome}! Obrigado pela visita à TopCar Veículos. Se ficou alguma dúvida ou quiser simular "
+                                       "o pagamento, é só me chamar por aqui.")
+    modelo_confirmacao = models.ForeignKey("ModeloWhatsApp", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    modelo_lembrete = models.ForeignKey("ModeloWhatsApp", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    modelo_pos = models.ForeignKey("ModeloWhatsApp", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+
+    @classmethod
+    def obter(cls):
+        c, _ = cls.objects.get_or_create(pk=1)
+        return c
+
+
+class AgendamentoMensagem(models.Model):
+    """Cada mensagem automática de um agendamento (confirmação, lembretes e agradecimento) e o que aconteceu com ela."""
+
+    class Tipo(models.TextChoices):
+        CONFIRMACAO = "confirmacao", "Confirmação"
+        LEMBRETE_24H = "lembrete_24h", "Lembrete (1 dia antes)"
+        LEMBRETE_2H = "lembrete_2h", "Lembrete (2 h antes)"
+        POS = "pos", "Agradecimento"
+
+    class Status(models.TextChoices):
+        PENDENTE = "pendente", "Programada"
+        ENVIADA = "enviada", "Enviada"
+        FALHOU = "falhou", "Não enviada"
+        CANCELADA = "cancelada", "Cancelada"
+
+    agendamento = models.ForeignKey(Agendamento, related_name="mensagens", on_delete=models.CASCADE)
+    tipo = models.CharField(max_length=14, choices=Tipo.choices)
+    enviar_em = models.DateTimeField(db_index=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDENTE, db_index=True)
+    erro = models.CharField(max_length=300, blank=True)
+    enviada_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["enviar_em"]
+        unique_together = [("agendamento", "tipo")]

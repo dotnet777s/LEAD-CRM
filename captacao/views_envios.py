@@ -12,8 +12,8 @@ from django.views.generic import TemplateView
 
 from catalogo.models import Veiculo
 
-from . import avisos, campanhas, funil, modelos, services, utils, whatsapp
-from .models import (Agendamento, Atividade, Aviso, Campanha, CampanhaEnvio, Etiqueta, Lead, ModeloWhatsApp, Profissional)
+from . import agendamentos, avisos, campanhas, funil, modelos, services, utils, whatsapp
+from .models import (AgendaConfig, Agendamento, AgendamentoMensagem, Atividade, Aviso, Campanha, CampanhaEnvio, Etiqueta, Lead, ModeloWhatsApp, Profissional)
 from .views import Base, eh_gestor, leads_visiveis
 
 
@@ -241,6 +241,8 @@ class AgendamentoNovoView(Base, View):
                 lead.save(update_fields=["visita_em", "atualizado_em"])
         except services.RegraErro:
             pass
+        agendamentos.programar(a)
+        agendamentos.rodar()            # a confirmação sai na hora (com a API conectada)
         services.adicionar_nota(lead, f"Agendado: {ativ.nome if ativ else 'visita'} em {timezone.localtime(inicio):%d/%m %H:%M}"
                                 f"{' com ' + prof.nome if prof else ''}", request.user)
         return redirect("captacao:agenda")
@@ -253,6 +255,8 @@ class AgendamentoStatusView(Base, View):
             return HttpResponse(status=404)
         a.status = status
         a.save(update_fields=["status"])
+        if status in ("cancelado", "faltou"):
+            agendamentos.cancelar_pendentes(a, f"Agendamento {a.get_status_display().lower()}.")
         try:
             if status == "realizado" and a.lead.etapa == Lead.Etapa.VISITA:
                 services.mudar_etapa(a.lead, Lead.Etapa.COMPARECEU, request.user)
@@ -287,3 +291,43 @@ class AniversarioView(Base, View):
         lead.aniversario = d
         lead.save(update_fields=["aniversario", "atualizado_em"])
         return HttpResponse(status=204)
+
+
+class AgendaMensagensView(Base, TemplateView):
+    """Configuração das mensagens automáticas do agendamento."""
+    template_name = "captacao/agenda_mensagens.html"
+
+    def get_context_data(self, **kw):
+        ctx = super().get_context_data(**kw)
+        ctx.update(cfg=AgendaConfig.obter(), modelos=ModeloWhatsApp.objects.filter(status="APPROVED"), gestor=eh_gestor(self.request.user),
+                   msg=self.request.GET.get("msg", ""), api=whatsapp.configurado(), variaveis=modelos.VARIAVEIS)
+        return ctx
+
+    def post(self, request):
+        if not eh_gestor(request.user):
+            return HttpResponseForbidden()
+        p, c = request.POST, AgendaConfig.obter()
+        c.confirmar, c.lembrete_24h, c.lembrete_2h, c.pos_visita = ("confirmar" in p, "lembrete_24h" in p, "lembrete_2h" in p, "pos_visita" in p)
+        c.txt_confirmacao = (p.get("txt_confirmacao") or c.txt_confirmacao).strip()[:900]
+        c.txt_lembrete = (p.get("txt_lembrete") or c.txt_lembrete).strip()[:900]
+        c.txt_pos = (p.get("txt_pos") or c.txt_pos).strip()[:900]
+        for campo in ("modelo_confirmacao", "modelo_lembrete", "modelo_pos"):
+            v = p.get(campo, "")
+            setattr(c, campo, ModeloWhatsApp.objects.filter(pk=v, status="APPROVED").first() if v.isdigit() else None)
+        c.save()
+        return redirect("/agenda/mensagens/?msg=Mensagens do agendamento salvas")
+
+
+class AgendamentoMensagemAcaoView(Base, View):
+    """'reenviar' tenta pela API agora; o link do WhatsApp (manual) fica na própria agenda."""
+    def post(self, request, pk, acao):
+        m = get_object_or_404(AgendamentoMensagem, pk=pk, agendamento__lead__in=leads_visiveis(request.user))
+        if acao == "reenviar" and m.status in ("falhou", "pendente"):
+            m.status = "pendente"
+            agendamentos.enviar(m)
+        elif acao == "marcar_enviada":                        # a equipe mandou pelo celular
+            m.status, m.enviada_em, m.erro = "enviada", timezone.now(), ""
+            m.save(update_fields=["status", "enviada_em", "erro"])
+        else:
+            return HttpResponse(status=400)
+        return redirect(request.META.get("HTTP_REFERER") or "/agenda/")

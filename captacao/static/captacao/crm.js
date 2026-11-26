@@ -186,4 +186,72 @@
     // fecha menus (pop) ao clicar fora
     d.querySelectorAll('details.pop[open]').forEach(function (p) { if (!p.contains(e.target)) p.open = false; });
   });
+
+  // ---- anexos: escolher, ver prévia, legenda e enviar (também arrastando ou colando) ----
+  function mostrarPrevia(f) {
+    var prev = d.getElementById('anexo-prev'); if (!prev || !f) return;
+    d.getElementById('ap-nome').textContent = f.name;
+    d.getElementById('ap-tam').textContent = ' · ' + (f.size > 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB');
+    var th = d.getElementById('ap-thumb'); th.innerHTML = '';
+    if (/^image\//.test(f.type)) { var im = d.createElement('img'); im.src = URL.createObjectURL(f); im.alt = ''; th.appendChild(im); }
+    else th.textContent = /^video\//.test(f.type) ? '🎬' : /^audio\//.test(f.type) ? '🎵' : '📄';
+    prev.hidden = false; var l = prev.querySelector('input[type=text]'); if (l) l.focus();
+  }
+  function fecharPrevia() { var p = d.getElementById('anexo-prev'); if (p) p.hidden = true; var i = d.getElementById('in-anexo'); if (i) i.value = ''; }
+  function escolherArquivo(file) {
+    var i = d.getElementById('in-anexo'); if (!i || !file) return;
+    var dt = new DataTransfer(); dt.items.add(file); i.files = dt.files; mostrarPrevia(file);
+  }
+  d.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-anexo]');
+    if (b) { var i = d.getElementById('in-anexo'); i.accept = b.dataset.anexo; i.click(); var p = b.closest('details'); if (p) p.open = false; return; }
+    if (e.target.closest('#ap-cancelar')) fecharPrevia();
+  });
+  d.addEventListener('change', function (e) { if (e.target.id === 'in-anexo' && e.target.files[0]) mostrarPrevia(e.target.files[0]); });
+  d.addEventListener('dragover', function (e) { if (e.target.closest && e.target.closest('#c-msgs')) e.preventDefault(); });
+  d.addEventListener('drop', function (e) { if (e.target.closest && e.target.closest('#c-msgs') && e.dataTransfer.files[0]) { e.preventDefault(); escolherArquivo(e.dataTransfer.files[0]); } });
+  d.addEventListener('paste', function (e) {
+    var arq = e.clipboardData && [].slice.call(e.clipboardData.files || [])[0];
+    if (arq && d.getElementById('in-anexo')) { e.preventDefault(); escolherArquivo(arq); }
+  });
+  d.body.addEventListener('htmx:afterSwap', function (e) { if (e.detail.target && e.detail.target.id === 'c-conv') fecharPrevia(); });
+
+  // ---- gravar áudio (mensagem de voz) ----
+  var rec = null, trechos = [], tempo = 0, relogio = null, fluxo = null;
+  function pararRelogio() { clearInterval(relogio); relogio = null; }
+  function encerrarGravacao() {
+    pararRelogio(); if (fluxo) fluxo.getTracks().forEach(function (t) { t.stop(); }); fluxo = null;
+    var g = d.getElementById('gravando'), l = d.getElementById('linha-comp'); if (g) g.hidden = true; if (l) l.hidden = false;
+  }
+  d.addEventListener('click', function (e) {
+    if (e.target.closest('#mic')) {
+      if (!navigator.mediaDevices || !window.MediaRecorder) { mostrar('Este navegador não grava áudio. Use o Chrome, Edge ou Firefox (em endereço https).'); return; }
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
+        fluxo = s; trechos = []; tempo = 0;
+        var tipo = ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].filter(function (t) { return MediaRecorder.isTypeSupported(t); })[0] || '';
+        rec = tipo ? new MediaRecorder(s, { mimeType: tipo }) : new MediaRecorder(s);
+        rec.ondataavailable = function (ev) { if (ev.data && ev.data.size) trechos.push(ev.data); };
+        rec.start(250);
+        d.getElementById('linha-comp').hidden = true; d.getElementById('gravando').hidden = false;
+        d.getElementById('rec-tempo').textContent = '0:00';
+        relogio = setInterval(function () { tempo++; d.getElementById('rec-tempo').textContent = Math.floor(tempo / 60) + ':' + ('0' + (tempo % 60)).slice(-2); if (tempo >= 300) d.getElementById('rec-enviar').click(); }, 1000);
+      }).catch(function () { mostrar('Permita o uso do microfone para gravar o áudio.'); });
+      return;
+    }
+    if (e.target.closest('#rec-cancelar')) { if (rec && rec.state !== 'inactive') { rec.onstop = null; rec.stop(); } trechos = []; encerrarGravacao(); return; }
+    if (e.target.closest('#rec-enviar')) {
+      if (!rec || rec.state === 'inactive') return;
+      var form = d.getElementById('f-anexo'); var url = form ? form.getAttribute('hx-post') : null;
+      rec.onstop = function () {
+        var blob = new Blob(trechos, { type: rec.mimeType || 'audio/webm' }); trechos = []; encerrarGravacao();
+        if (blob.size < 800) { mostrar('Áudio muito curto.'); return; }
+        var fd = new FormData(); fd.append('arquivo', blob, 'audio.webm'); fd.append('gravado', '1');
+        fetch(url, { method: 'POST', body: fd, headers: { 'X-CSRFToken': csrf() }, credentials: 'same-origin' }).then(function (r) { return r.text(); }).then(function (html) {
+          var alvo = d.getElementById('c-conv'); alvo.innerHTML = html; if (window.htmx) htmx.process(alvo); rolarFim(d.getElementById('c-msgs'), true);
+          htmx.trigger(d.body, 'conversasAtualizar');
+        }).catch(function () { mostrar('Não foi possível enviar o áudio.'); });
+      };
+      rec.stop();
+    }
+  });
 })();

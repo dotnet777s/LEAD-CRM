@@ -48,20 +48,23 @@
   {% if not api %}<div class="aviso-jan">A API do WhatsApp ainda não está conectada. <a class="btn sm" style="margin-left:6px" target="_blank" rel="noopener" href="{{ lead.whatsapp_url }}">Abrir no WhatsApp do celular</a></div>
   {% elif not janela %}<div class="aviso-jan">Passaram 24 h desde a última mensagem do cliente: só dá para enviar um <b>modelo aprovado</b> (use “Mais ferramentas”). Quando ele responder, a conversa livre volta.</div>{% endif %}
   {% if api %}
-  <div class="linha-comp">
+  <form id="f-anexo" hx-post="{% url 'captacao:conversa_arquivo' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" hx-encoding="multipart/form-data">
+    <input type="file" name="arquivo" id="in-anexo" hidden>
+    <div id="anexo-prev" class="anexo-prev" hidden><div class="ap-info"><span id="ap-thumb"></span><div><b id="ap-nome"></b><small id="ap-tam"></small></div></div>
+      <input type="text" name="legenda" placeholder="Adicionar legenda (opcional)" maxlength="900" autocomplete="off"><button class="btn sm">Enviar</button><button type="button" class="btn sec sm" id="ap-cancelar">Cancelar</button></div></form>
+  <div id="gravando" class="gravando" hidden><span class="rec-dot"></span><b id="rec-tempo">0:00</b><span style="flex:1;color:var(--mu)">Gravando…</span><button type="button" class="btn sec sm" id="rec-cancelar">Cancelar</button><button type="button" class="btn sm" id="rec-enviar">Enviar áudio</button></div>
+  <div class="linha-comp" id="linha-comp">
     <details class="pop anexo"><summary title="Anexar">＋</summary>
       <div class="pop-box menu-anexo">
-        <form hx-post="{% url 'captacao:conversa_arquivo' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" hx-encoding="multipart/form-data">
-          <label>📷 Foto ou vídeo<input type="file" name="arquivo" accept="image/*,video/*" hidden onchange="htmx.trigger(this.form,'submit')"></label></form>
-        <form hx-post="{% url 'captacao:conversa_arquivo' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" hx-encoding="multipart/form-data">
-          <label>📄 Documento<input type="file" name="arquivo" hidden onchange="htmx.trigger(this.form,'submit')"></label></form>
-        <form hx-post="{% url 'captacao:conversa_arquivo' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" hx-encoding="multipart/form-data">
-          <label>🎵 Áudio<input type="file" name="arquivo" accept="audio/*" hidden onchange="htmx.trigger(this.form,'submit')"></label></form>
+        <button type="button" data-anexo="image/*,video/*">📷 Fotos e vídeos</button>
+        <button type="button" data-anexo=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,application/*">📄 Documento</button>
+        <button type="button" data-anexo="audio/*">🎵 Áudio (arquivo)</button>
       </div></details>
     <details class="pop emoji"><summary title="Emoji">😊</summary><div class="pop-box grade-emoji">{% for e in "😊😁😂🙏👍👏🔥🚗🔑💰📅✅😉🤝📍⭐🎉" %}<button type="button" data-emoji="{{ e }}">{{ e }}</button>{% endfor %}</div></details>
     <form hx-post="{% url 'captacao:conversa_enviar' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" id="c-form">
       <textarea name="texto" rows="1" placeholder="{% if janela %}Digite uma mensagem...{% else %}Fora da janela de 24 h: use um modelo{% endif %}" maxlength="1500" {% if not janela or lead.nao_contatar %}disabled{% endif %}></textarea>
-      <button class="enviar" title="Enviar" {% if not janela or lead.nao_contatar %}disabled{% endif %}>➤</button></form>
+      <button class="enviar" title="Enviar" {% if not janela or lead.nao_contatar %}disabled{% endif %}>➤</button>
+      <button type="button" class="mic" id="mic" title="Gravar áudio" {% if not janela or lead.nao_contatar %}disabled{% endif %}>🎤</button></form>
   </div>
   {% endif %}
   <details class="mais-ferr" {% if programadas %}open{% endif %}><summary>Mais ferramentas</summary>

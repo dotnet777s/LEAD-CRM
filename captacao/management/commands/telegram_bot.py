@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from catalogo import autocerto
-from captacao import avisos, campanhas, followup, telegram, whatsapp
+from captacao import agendamentos, avisos, campanhas, followup, telegram, whatsapp
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +48,7 @@ class Command(BaseCommand):
                         whatsapp.enviar_programadas()
                         campanhas.rodar_automaticas()
                         avisos.rodar()
+                        agendamentos.rodar()
                         campanhas.rodar_lote()
                     except Exception:  # noqa: BLE001
                         log.exception("campanhas falhou")
