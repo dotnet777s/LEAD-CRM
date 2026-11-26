@@ -1,5 +1,6 @@
 """CRM interno: Kanban, detalhe do lead, cadastro rápido e eventos Meta."""
 import json
+from types import SimpleNamespace
 from datetime import timedelta
 
 from django.conf import settings
@@ -15,11 +16,10 @@ from django.views.generic import TemplateView
 
 from catalogo.models import Veiculo
 
-from . import followup, services, utils, whatsapp
+from . import followup, funil, services, utils, whatsapp
 from .forms import LeadManualForm
 from .models import Etiqueta, EventoMeta, Lead
 
-COM_FORM = (Lead.Etapa.VISITA, Lead.Etapa.VENDIDO, Lead.Etapa.PERDIDO)   # etapas que pedem dados extras
 LIMITE_COLUNA = 60
 DIAS_FECHADOS = 30
 
@@ -73,8 +73,10 @@ def preparar_card(lead, agora):
     lead.tempo_txt = (f"{seg // 60} min" if seg < 3600 else f"{seg // 3600} h" if seg < 86400 else f"{seg // 86400} d")
     lead.sla = ("ok" if seg < 300 else "warn" if seg < 1800 else "late") if lead.etapa == Lead.Etapa.NOVO else ""
     prox = lead.proxima_etapa
-    lead.prox = Lead.Etapa(prox) if prox else None
-    lead.prox_form = prox in COM_FORM if prox else False
+    e = funil.mapa().get(prox) if prox else None
+    lead.prox = SimpleNamespace(value=e.chave, label=e.nome) if e else None
+    lead.prox_form = funil.com_form(prox) if prox else False
+    lead.etapa_nome = funil.nome(lead.etapa)
     lead.retorno_atrasado = bool(lead.proximo_contato and lead.proximo_contato < agora)
     return lead
 
@@ -112,9 +114,10 @@ class QuadroView(Base, View):
         corte = agora - timedelta(days=DIAS_FECHADOS)
         fus = {f.lead_id: f for f in followup.FollowUp.objects.filter(status__in=["ativo", "pausado"])}
         colunas = []
-        for etapa in Lead.ABERTAS + [Lead.Etapa.VENDIDO, Lead.Etapa.PERDIDO]:
+        for e in funil.todas():
+            etapa = e.chave
             qs = base.filter(etapa=etapa)
-            if etapa in (Lead.Etapa.VENDIDO, Lead.Etapa.PERDIDO):
+            if e.tipo != "normal":
                 qs = qs.filter(etapa_desde__gte=corte)
             total = qs.count()
             ordem = "criado_em" if etapa == Lead.Etapa.NOVO else "-etapa_desde"
@@ -124,10 +127,10 @@ class QuadroView(Base, View):
                 if l.fu:
                     l.fu_devido = bool(l.fu.status == "ativo" and l.fu.proximo_em and l.fu.proximo_em <= agora)
                     l.fu_pos = followup.posicao(l.fu)
-            colunas.append({"etapa": etapa.value, "nome": etapa.label, "total": total, "cards": cards})
+            colunas.append({"etapa": etapa, "nome": e.nome, "cor": e.cor, "total": total, "cards": cards})
         ultimo_novo = base.filter(etapa=Lead.Etapa.NOVO).order_by("-id").values_list("id", flat=True).first() or 0
         return render(request, "captacao/_quadro.html", {
-            "colunas": colunas, "ultimo_novo": ultimo_novo, "com_form": [e.value for e in COM_FORM]})
+            "colunas": colunas, "ultimo_novo": ultimo_novo, "com_form": [c for c in funil.chaves() if funil.com_form(c)]})
 
 
 # ---- detalhe e ações --------------------------------------------------------------------------
@@ -140,13 +143,13 @@ def render_detalhe(request, lead, erro_wa=""):
         fu.texto = followup.montar_mensagem(fu, usuario=request.user)
     return render(request, "captacao/_detalhe.html", {
         "lead": lead, "gestor": eh_gestor(request.user), "etapas": Lead.Etapa,
-        "etapas_funil": [(e.value, e.label) for e in Lead.Etapa],
+        "etapas_funil": funil.choices(),
         "historico": lead.historico.select_related("usuario")[:40],
         "eventos": lead.eventos_meta.all()[:10], "interacoes": lead.interacoes.all()[:5],
         "resumo": services.resumo_respostas(lead.respostas) if lead.respostas else "",
         "mensagem": mensagem_inicial(lead, request.user),
         "consultores": get_user_model().objects.filter(is_active=True).order_by("first_name", "username"),
-        "com_form": [e.value for e in COM_FORM],
+        "com_form": [c for c in funil.chaves() if funil.com_form(c)],
         "etiquetas_todas": Etiqueta.objects.all(), "fu": fu, "ultimo_fu": lead.followups.exclude(status__in=["ativo", "pausado"]).order_by("-id").first(),
         "conversa": list(lead.mensagens_wa.order_by("-criado_em")[:20])[::-1], "wa_ligado": whatsapp.configurado(),
         "wa_janela": whatsapp.configurado() and whatsapp.janela_aberta(lead.telefone), "erro_wa": erro_wa})
@@ -202,14 +205,14 @@ class MoverView(Base, View):
                       .order_by("marca", "modelo"))
         ini = timezone.localtime(lead.visita_em) if lead.visita_em else timezone.localtime() + timedelta(days=1)
         r = render(request, "captacao/_mover.html", {
-            "lead": lead, "etapa": etapa, "etapa_nome": Lead.Etapa(etapa).label, "erro": erro, "carros": carros,
+            "lead": lead, "etapa": etapa, "etapa_nome": funil.nome(etapa), "erro": erro, "carros": carros,
             "motivos": Lead.MotivoPerda.choices, "visita_sugerida": ini.strftime("%Y-%m-%dT%H:%M"),
             "valor_sugerido": (lead.veiculo.valor_venda if lead.veiculo else "")})
         return r
 
     def get(self, request, pk):
         etapa = request.GET.get("etapa", "")
-        if etapa not in [e.value for e in COM_FORM]:
+        if not funil.com_form(etapa):
             return HttpResponse(status=400)
         return self._form(request, self.lead(request, pk), etapa)
 
@@ -243,7 +246,7 @@ class MoverDiretoView(Base, View):
     def post(self, request, pk):
         lead = self.lead(request, pk)
         etapa = request.POST.get("etapa", "")
-        if etapa in [e.value for e in COM_FORM]:
+        if funil.com_form(etapa):
             return HttpResponse(status=400)
         try:
             services.mudar_etapa(lead, etapa, request.user)

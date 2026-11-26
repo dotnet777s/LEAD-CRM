@@ -1,14 +1,16 @@
-<div class="c-filtros">{% for k, nome in filtros %}<button type="button" class="{% if k == filtro %}on{% endif %}" hx-get="{% url 'captacao:conversas_lista' %}?f={{ k }}&lead={{ ativo }}&q={{ q|urlencode }}&tag={{ tag }}" hx-target="#c-lista-box">{{ nome }}</button>{% endfor %}</div>
+<div class="c-filtros">{% for k, nome in filtros %}<button type="button" class="{% if k == filtro %}on{% endif %}" hx-get="{% url 'captacao:conversas_lista' %}?f={{ k }}&aba={{ aba }}&lead={{ ativo }}&q={{ q|urlencode }}&tag={{ tag }}" hx-target="#c-lista-box">{{ nome }}</button>{% endfor %}</div>
 <div class="c-itens">
 {% for l in itens %}
-<button type="button" class="c-item{% if l.nao_lidas %} nl{% endif %}{% if l.pk|stringformat:'s' == ativo %} ativo{% endif %}"
+<button type="button" class="c-item{% if l.nao_lidas or l.marcada_nao_lida %} nl{% endif %}{% if l.pk|stringformat:'s' == ativo %} ativo{% endif %}" style="--etp:{{ l.cor_etapa }}"
         hx-get="{% url 'captacao:conversa' l.pk %}" hx-target="#c-conv" hx-swap="innerHTML" data-lead="{{ l.pk }}">
-  <span class="av">{{ l.nome|slice:":1"|upper }}</span>
+  <span class="av-col"><span class="av" style="background:{{ l.cor_av }}22;color:{{ l.cor_av }};border:1px solid {{ l.cor_av }}66">{{ l.nome|slice:":1"|upper }}</span>
+    {% if l.restante %}<span class="rel {% if l.urgente %}urg{% endif %}" title="A janela de 24 h fecha em {{ l.restante }}">⏰ {{ l.restante }}</span>{% endif %}</span>
   <span class="c-meio">
-    <span class="c-linha"><span class="c-nome">{{ l.nome|truncatechars:26 }}</span><span class="c-hora">{{ l.ultima|date:"H:i" }}</span></span>
-    <span class="c-linha"><span class="c-prev">{% if l.ultima_dir == 'out' %}Você: {% endif %}{{ l.ultimo_texto|truncatechars:42 }}</span>{% if l.nao_lidas %}<span class="un">{{ l.nao_lidas }}</span>{% endif %}</span>
-    <span class="c-prev">{% if l.portal %}<span class="mini-t jan">{{ l.get_portal_display }}</span>{% endif %}<span class="mini-t {% if l.janela %}jan{% else %}exp{% endif %}">{% if l.janela %}janela aberta{% else %}só modelo{% endif %}</span><span class="mini-t">{{ l.get_etapa_display }}</span>{% for e in l.etiquetas.all|slice:":2" %}<span class="etq mini" style="--c:{{ e.cor }}">{{ e.nome }}</span>{% endfor %}</span>
+    <span class="c-linha"><span class="c-nome">{% if l.fixada %}📌 {% endif %}{{ l.nome|truncatechars:24 }}</span><span class="c-hora {% if l.hoje %}hoje{% endif %}">{% if l.hoje %}{{ l.ultima|date:"H:i" }}{% else %}{{ l.ultima|date:"d/m" }}{% endif %}</span></span>
+    <span class="c-linha"><span class="c-prev"><i class="quem {{ l.ultima_dir }}">{% if l.ultima_dir == 'out' %}✓✓{% else %}👤{% endif %}</i> {{ l.ultimo_texto|truncatechars:40 }}</span>{% if l.nao_lidas %}<span class="un">{{ l.nao_lidas }}</span>{% elif l.marcada_nao_lida %}<span class="un">•</span>{% endif %}</span>
+    <span class="chips-c"><span class="chip-et" style="--c:{{ l.cor_etapa }}">▽ {{ l.nome_etapa }}</span><span class="chip-at">{% if l.vendedor %}👤 {{ l.vendedor.first_name|default:l.vendedor.username }}{% else %}👤 Atendimento{% endif %}</span>
+      {% for e in l.etiquetas.all|slice:":2" %}<span class="etq mini" style="--c:{{ e.cor }}">{{ e.nome }}</span>{% endfor %}{% if l.portal %}<span class="etq mini" style="--c:#7c3aed">{{ l.get_portal_display }}</span>{% endif %}</span>
   </span>
 </button>
-{% empty %}<div class="vazio-g" style="margin:14px">Nenhuma conversa {% if filtro != 'todas' or q %}com esse filtro{% else %}ainda{% endif %}.</div>{% endfor %}
+{% empty %}<div class="vazio-g" style="margin:14px">Nenhuma conversa {% if filtro != 'todas' or q or aba != 'todas' %}com esse filtro{% else %}ainda{% endif %}.</div>{% endfor %}
 </div>

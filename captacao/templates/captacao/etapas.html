@@ -1,0 +1,43 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Etapas do funil{% endblock %}
+{% block titulo %}Etapas do funil{% endblock %}
+{% block head %}<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>{% endblock %}
+{% block content %}
+<div class="pg" style="max-width:760px">
+  <div class="titulo-pg"><div><h1>Configurar funil de leads</h1><small>Monte as etapas do seu funil, arraste para reordenar e defina como o lead chega em cada uma: por etiqueta, por palavras-chave ou por arquivo.</small></div>
+    <a class="btn sec sm" href="{% url 'captacao:funil_config' %}">Etiquetas e regras</a></div>
+  {% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}{% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+  <div class="funil-v">
+    <div class="et-card fixa"><b>Sem classificação</b><small>Ainda sem sinal: não viram catálogo, não simularam nem agendaram</small></div>
+    <div id="lista-etapas">
+    {% for it in itens %}
+      <div class="seta">↓</div>
+      <div class="et-card {% if it.e.tipo != 'normal' %}fixa-fim{% endif %}" data-id="{{ it.e.pk }}" style="--c:{{ it.e.cor }}">
+        {% if it.e.tipo == 'normal' %}<span class="alca" title="Arraste para reordenar">⋮⋮</span>{% endif %}
+        <a href="{% url 'captacao:etapa_editar' it.e.pk %}" class="nome-et">{{ it.e.nome }}{% if it.e.tag %} <i class="mini-tag" style="--c:{{ it.e.tag.cor }}">{{ it.e.tag.nome }}</i>{% endif %}{% if it.e.lateral %} <i class="mini-tag">lateral</i>{% endif %}</a>
+        <span class="cnt">{{ it.n }} · {{ it.pct }}%</span>
+        <a class="eng" href="{% url 'captacao:etapa_editar' it.e.pk %}" title="Configurar etapa e palavras-chave">⚙</a>
+        <div class="barra-et"><i style="width:{{ it.pct }}%"></i></div>
+      </div>
+    {% endfor %}
+    </div>
+  </div>
+  {% if gestor %}
+  <form method="post" action="{% url 'captacao:etapa_nova' %}" class="box cfg" style="margin-top:14px">{% csrf_token %}
+    <h2>Adicionar etapa</h2><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input type="text" name="nome" placeholder="Nome da nova etapa" maxlength="40" required style="max-width:280px">
+      <div class="paleta">{% for c in paleta %}<label><input type="radio" name="cor" value="{{ c }}" {% if forloop.first %}checked{% endif %}><i style="background:{{ c }}"></i></label>{% endfor %}</div>
+      <button class="btn">Adicionar etapa</button></div>
+    <small style="color:var(--mu)">As etapas Novo, Em atendimento, Qualificado, Visita agendada, Vendido e Perdido são usadas pelo CRM (eventos da Meta, formulários e painel): dá para renomear e mudar a cor, mas não apagar.</small></form>
+  {% endif %}
+</div>
+{% if gestor %}<script>
+(function(){var el=document.getElementById('lista-etapas');if(!el||!window.Sortable)return;
+Sortable.create(el,{handle:'.alca',draggable:'.et-card:not(.fixa-fim)',animation:150,onEnd:function(){
+ var ids=[].slice.call(el.querySelectorAll('.et-card')).map(function(c){return c.dataset.id;});
+ var b=new URLSearchParams();ids.forEach(function(i){b.append('ids',i);});
+ fetch('{% url "captacao:etapa_reordenar" %}',{method:'POST',body:b,headers:{'X-CSRFToken':'{{ csrf_token }}'}});
+ el.querySelectorAll('.seta').forEach(function(s){s.remove();});
+ el.querySelectorAll('.et-card').forEach(function(c){var s=document.createElement('div');s.className='seta';s.textContent='↓';el.insertBefore(s,c);});}});})();
+</script>{% endif %}
+{% endblock %}

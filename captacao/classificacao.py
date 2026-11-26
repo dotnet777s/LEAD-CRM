@@ -9,12 +9,9 @@ import re
 
 from django.db import transaction
 
-from . import campanhas, services, utils
+from . import campanhas, funil, services, utils
 from .models import Etiqueta, Historico, Lead, RegraClassificacao
 
-ORDEM = [Lead.Etapa.NOVO, Lead.Etapa.REQUALIFICAR, Lead.Etapa.ATENDIMENTO, Lead.Etapa.SEM_ESTOQUE, Lead.Etapa.QUALIFICADO,
-         Lead.Etapa.VISITA, Lead.Etapa.COMPARECEU, Lead.Etapa.NEGOCIACAO]
-FECHADAS = (Lead.Etapa.VENDIDO, Lead.Etapa.PERDIDO)
 
 ETIQUETAS_PADRAO = [
     ("Interessado", "#2ee66b", False), ("Financiamento", "#5ab0ff", False), ("Troca", "#f5b942", False),
@@ -59,7 +56,7 @@ def etiquetar(lead, nome, texto_historico=""):
     if not e or lead.etiquetas.filter(pk=e.pk).exists():
         return False
     lead.etiquetas.add(e)
-    campanhas.ao_etiquetar(lead, e)
+    etiqueta_adicionada(lead, e)
     if texto_historico:
         Historico.objects.create(lead=lead, tipo=Historico.Tipo.NOTA, texto=texto_historico[:500])
     return True
@@ -86,13 +83,62 @@ def _casa(texto, palavra):
 
 
 def pode_avancar(lead, destino):
-    if lead.etapa in FECHADAS:
+    """A etapa só avança (pela ordem do funil). 'Perdido' pode vir de qualquer etapa aberta; nada mexe em quem já foi vendido."""
+    m = funil.mapa()
+    atual, alvo = m.get(lead.etapa), m.get(destino)
+    if not atual or not alvo or atual.tipo != "normal":
         return False
-    if destino == Lead.Etapa.PERDIDO:
+    if alvo.tipo == "perdido":
         return True
-    if destino not in ORDEM or lead.etapa not in ORDEM:
+    return alvo.tipo == "normal" and funil.rank(destino) > funil.rank(lead.etapa)
+
+
+def _grupo_casa(grupo, texto):
+    palavras = [p for p in (_norm(x) for x in grupo.get("palavras", [])) if p]
+    if not palavras:
         return False
-    return ORDEM.index(destino) > ORDEM.index(lead.etapa)
+    achou = [_casa(texto, p) for p in palavras]
+    return all(achou) if grupo.get("todas") else any(achou)
+
+
+def etapa_por_palavras(texto):
+    """Etapa cujos grupos de palavras-chave casam com o texto (a mais avançada do funil, se houver mais de uma)."""
+    t = _norm(texto)
+    if not t:
+        return None
+    casam = [e for e in funil.todas() if any(_grupo_casa(g, t) for g in (e.grupos or []))]
+    return max(casam, key=lambda e: funil.rank(e.chave)) if casam else None
+
+
+def testar(texto):
+    """'Teste rápido' da tela do funil: onde a mensagem cairia hoje (sem mexer em nenhum lead)."""
+    garantir_padroes()
+    t = _norm(texto)
+    regras = [r for r in RegraClassificacao.objects.filter(ativa=True).select_related("etiqueta") if any(_casa(t, p) for p in _palavras(r))]
+    return {"etapa": etapa_por_palavras(texto), "regras": regras, "etiquetas": [r.etiqueta for r in regras if r.etiqueta_id]}
+
+
+def etiqueta_adicionada(lead, etiqueta):
+    """Toda vez que uma etiqueta é posta no lead (à mão ou por regra): entra nas réguas e, se a etapa tem essa etiqueta
+    como gatilho, o lead é movido para ela (como no Avise Aí: 'Definir por tag')."""
+    campanhas.ao_etiquetar(lead, etiqueta)
+    alvo = next((e for e in funil.todas() if e.tag_id == etiqueta.pk), None)
+    if alvo and alvo.chave != lead.etapa and lead.etapa not in funil.fechadas():
+        try:
+            if funil.com_form(alvo.chave):
+                return
+            services.mudar_etapa(lead, alvo.chave, None)
+            Historico.objects.create(lead=lead, tipo=Historico.Tipo.NOTA, texto=f"Funil automático: etiqueta “{etiqueta.nome}”")
+        except services.RegraErro:
+            pass
+
+
+def arquivo_recebido(lead):
+    """O cliente mandou um arquivo/foto: leva para a etapa marcada com 'definir por arquivo' (só avança)."""
+    alvo = next((e for e in funil.todas() if e.por_arquivo), None)
+    if alvo and pode_avancar(lead, alvo.chave) and not funil.com_form(alvo.chave):
+        services.mudar_etapa(lead, alvo.chave, None)
+        Historico.objects.create(lead=lead, tipo=Historico.Tipo.NOTA, texto="Funil automático: o cliente enviou um arquivo")
 
 
 @transaction.atomic
@@ -109,13 +155,18 @@ def aplicar_regras(lead, texto):
         dispararam.append(regra.nome)
         if regra.etiqueta_id and not lead.etiquetas.filter(pk=regra.etiqueta_id).exists():
             lead.etiquetas.add(regra.etiqueta)
-            campanhas.ao_etiquetar(lead, regra.etiqueta)
+            etiqueta_adicionada(lead, regra.etiqueta)
         if regra.etapa and pode_avancar(lead, regra.etapa):
             try:
                 services.mudar_etapa(lead, regra.etapa, None, motivo_perda=regra.motivo_perda)
                 Historico.objects.create(lead=lead, tipo=Historico.Tipo.NOTA, texto=f"Funil automático: regra “{regra.nome}”"[:500])
             except services.RegraErro:
                 pass
+    alvo = etapa_por_palavras(texto)
+    if alvo and pode_avancar(lead, alvo.chave) and not funil.com_form(alvo.chave):
+        services.mudar_etapa(lead, alvo.chave, None)
+        Historico.objects.create(lead=lead, tipo=Historico.Tipo.NOTA, texto=f"Funil automático: palavras da etapa “{alvo.nome}”")
+        dispararam.append(f"etapa {alvo.nome}")
     return dispararam
 
 

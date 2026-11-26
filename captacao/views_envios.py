@@ -12,7 +12,7 @@ from django.views.generic import TemplateView
 
 from catalogo.models import Veiculo
 
-from . import avisos, campanhas, modelos, services, utils, whatsapp
+from . import avisos, campanhas, funil, modelos, services, utils, whatsapp
 from .models import (Agendamento, Atividade, Aviso, Campanha, CampanhaEnvio, Etiqueta, Lead, ModeloWhatsApp, Profissional)
 from .views import Base, eh_gestor, leads_visiveis
 
@@ -121,7 +121,7 @@ class CampanhaTiposView(Base, TemplateView):
 class CampanhaNovaView(Base, View):
     def _ctx(self, request, tipo, erro=""):
         return {"tipo": tipo, "titulo": next(t[1] for t in TIPOS if t[0] == tipo), "desc": next(t[2] for t in TIPOS if t[0] == tipo), "erro": erro,
-                "modelos": ModeloWhatsApp.objects.filter(status="APPROVED"), "etiquetas": Etiqueta.objects.all(), "etapas": Lead.Etapa.choices,
+                "modelos": ModeloWhatsApp.objects.filter(status="APPROVED"), "etiquetas": Etiqueta.objects.all(), "etapas": funil.choices(),
                 "origens": Lead.Origem.choices, "portais": Lead.Portal.choices, "carros": Veiculo.objects.filter(status__in=Veiculo.EM_LOJA).order_by("marca", "modelo"),
                 "variaveis": modelos.VARIAVEIS, "passos": range(1, 7), "dados": request.POST}
 

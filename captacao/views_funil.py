@@ -10,8 +10,8 @@ from django.utils.dateparse import parse_datetime
 from django.views import View
 from django.views.generic import TemplateView
 
-from . import campanhas, classificacao, services, utils, whatsapp
-from .models import Etiqueta, Lead, MensagemProgramada, RegraClassificacao, WhatsAppMensagem
+from . import campanhas, classificacao, funil, services, utils, whatsapp
+from .models import Etiqueta, EtapaFunil, Lead, MensagemProgramada, RegraClassificacao, WhatsAppMensagem
 from .views import Base, eh_gestor, leads_visiveis, render_detalhe, trigger
 from .views_conversas import _resposta
 
@@ -26,7 +26,7 @@ class EtiquetaLeadView(Base, View):
         e = Etiqueta.objects.filter(pk=request.POST.get("etiqueta", "")).first() if request.POST.get("etiqueta", "").isdigit() else None
         if e and acao == "add":
             lead.etiquetas.add(e)
-            campanhas.ao_etiquetar(lead, e)
+            classificacao.etiqueta_adicionada(lead, e)
         elif e and acao == "remove":
             lead.etiquetas.remove(e)
         elif acao not in ("add", "remove"):
@@ -68,15 +68,15 @@ class FunilConfigView(Base, TemplateView):
         classificacao.garantir_padroes()
         ctx = super().get_context_data(**kw)
         ctx.update(etiquetas=Etiqueta.objects.annotate(n=Count("leads")), regras=RegraClassificacao.objects.select_related("etiqueta"),
-                   etapas=Lead.Etapa.choices, motivos=Lead.MotivoPerda.choices, gestor=eh_gestor(self.request.user),
-                   msg=self.request.GET.get("msg", ""), etapas_resumo=_resumo_etapas(self.request.user))
+                   etapas=funil.choices(), motivos=Lead.MotivoPerda.choices, gestor=eh_gestor(self.request.user),
+                   msg=self.request.GET.get("msg", ""), etapas_resumo=_resumo_etapas(self.request.user), paleta=funil.PALETA)
         return ctx
 
 
 def _resumo_etapas(user):
     contagem = dict(leads_visiveis(user).values_list("etapa").annotate(n=Count("id")))
     total = sum(contagem.values()) or 1
-    return [{"nome": rotulo, "n": contagem.get(v, 0), "pct": round(100 * contagem.get(v, 0) / total)} for v, rotulo in Lead.Etapa.choices]
+    return [{"nome": rotulo, "n": contagem.get(v, 0), "pct": round(100 * contagem.get(v, 0) / total)} for v, rotulo in funil.choices()]
 
 
 class FunilAcaoView(Base, View):
@@ -93,13 +93,14 @@ class FunilAcaoView(Base, View):
             Etiqueta.objects.filter(pk=pk).delete()
         elif acao == "etiqueta_editar":
             e = get_object_or_404(Etiqueta, pk=pk)
+            e.nome = (p.get("nome") or e.nome).strip()[:40]
             e.bloqueia_followup = "bloqueia" in p
             if (p.get("cor") or "").startswith("#") and len(p.get("cor")) == 7:
                 e.cor = p["cor"]
             e.save()
         elif acao == "regra":
             nome, palavras = (p.get("nome") or "").strip()[:60], (p.get("palavras") or "").strip()
-            etapa = p.get("etapa") if p.get("etapa") in Lead.Etapa.values else ""
+            etapa = p.get("etapa") if p.get("etapa") in funil.chaves() else ""
             motivo = p.get("motivo_perda") if p.get("motivo_perda") in Lead.MotivoPerda.values else ""
             if etapa == Lead.Etapa.PERDIDO and not motivo:
                 return redirect("/funil/configurar/?msg=Para levar a Perdido, escolha o motivo.")
@@ -145,8 +146,8 @@ class VisaoGeralView(Base, TemplateView):
         leads = list(leads_visiveis(self.request.user).filter(criado_em__gte=ini).prefetch_related("etiquetas"))
         total = len(leads)
         etapas = Counter(l.etapa for l in leads)
-        funil = [{"nome": rotulo, "n": etapas.get(v, 0), "pct": round(100 * etapas.get(v, 0) / total) if total else 0}
-                 for v, rotulo in Lead.Etapa.choices]
+        por_etapa = [{"nome": rotulo, "n": etapas.get(v, 0), "pct": round(100 * etapas.get(v, 0) / total) if total else 0}
+                 for v, rotulo in funil.choices()]
         ufs = Counter(UF_POR_DDD.get(int(l.telefone[2:4]), "?") for l in leads if l.telefone[:2] == "55" and l.telefone[2:4].isdigit())
         origem = Counter((l.get_portal_display() if l.portal else l.get_origem_display()) for l in leads)
         dia_sem = Counter(timezone.localtime(l.criado_em).weekday() for l in leads)
@@ -159,7 +160,7 @@ class VisaoGeralView(Base, TemplateView):
         sem_resposta = sum(1 for l in leads if l.pk not in com_humano)
         tempos = [(l.primeira_resposta_em - l.criado_em).total_seconds() / 60 for l in leads if l.primeira_resposta_em]
         ctx.update(
-            dias=dias, total=total, funil=funil, sem_humano=sem_resposta, vendidos=etapas.get("vendido", 0), perdidos=etapas.get("perdido", 0),
+            dias=dias, total=total, funil=por_etapa, sem_humano=sem_resposta, vendidos=etapas.get("vendido", 0), perdidos=etapas.get("perdido", 0),
             por_dia=round(total / dias, 1), tempo_medio=round(sum(tempos) / len(tempos)) if tempos else None,
             ufs=_barras(ufs.most_common(10)), origens=_barras(origem.most_common(8)), carros=_barras(carros.most_common(10)),
             etiquetas=_barras(etiquetas.most_common(10)), semana=_barras([(DIAS[i], dia_sem.get(i, 0)) for i in range(7)]),
@@ -170,3 +171,97 @@ class VisaoGeralView(Base, TemplateView):
 def _barras(pares):
     m = max((n for _, n in pares), default=0) or 1
     return [{"nome": k, "n": n, "pct": max(2, round(100 * n / m)) if n else 0} for k, n in pares]
+
+
+# ---------------------------------------------------------------- etapas do funil (editáveis)
+class EtapasView(Base, TemplateView):
+    template_name = "captacao/etapas.html"
+
+    def get_context_data(self, **kw):
+        ctx = super().get_context_data(**kw)
+        cont = funil.contagens()
+        total = sum(cont.values()) or 1
+        itens = [{"e": e, "n": cont.get(e.chave, 0), "pct": round(100 * cont.get(e.chave, 0) / total)} for e in funil.todas()]
+        ctx.update(itens=itens, total=sum(cont.values()), paleta=funil.PALETA, gestor=eh_gestor(self.request.user),
+                   msg=self.request.GET.get("msg", ""), erro=self.request.GET.get("erro", ""))
+        return ctx
+
+
+class EtapaNovaView(Base, View):
+    def post(self, request):
+        if not eh_gestor(request.user):
+            return HttpResponseForbidden()
+        nome = (request.POST.get("nome") or "").strip()
+        cor = request.POST.get("cor") if (request.POST.get("cor") or "").startswith("#") and len(request.POST.get("cor")) == 7 else "#3b82f6"
+        if not nome:
+            return redirect("/funil/etapas/?erro=Dê um nome à etapa.")
+        e = funil.criar(nome, cor)
+        return redirect(f"/funil/etapas/{e.pk}/")
+
+
+class EtapaReordenarView(Base, View):
+    def post(self, request):
+        if not eh_gestor(request.user):
+            return HttpResponseForbidden()
+        ids = [int(i) for i in request.POST.getlist("ids") if i.isdigit()]
+        fechadas = [e.pk for e in funil.todas() if e.tipo != "normal"]
+        funil.reordenar([i for i in ids if i not in fechadas] + [i for i in fechadas])     # vendido/perdido ficam sempre no fim
+        return HttpResponse(status=204)
+
+
+class EtapaEditarView(Base, TemplateView):
+    template_name = "captacao/etapa_editar.html"
+
+    def _etapa(self, pk):
+        funil.garantir_padroes()
+        return get_object_or_404(EtapaFunil, pk=pk)
+
+    def get_context_data(self, pk, **kw):
+        ctx = super().get_context_data(**kw)
+        e = self._etapa(pk)
+        grupos = list(e.grupos or [])
+        while len(grupos) < 3:
+            grupos.append({"palavras": [], "todas": False})
+        ctx.update(e=e, grupos=[{"i": i, "palavras": ", ".join(g.get("palavras", [])), "todas": g.get("todas")} for i, g in enumerate(grupos)],
+                   etiquetas=Etiqueta.objects.all(), paleta=funil.PALETA, n=Lead.objects.filter(etapa=e.chave).count(),
+                   outras=[x for x in funil.todas() if x.pk != e.pk], gestor=eh_gestor(self.request.user),
+                   msg=self.request.GET.get("msg", ""), erro=self.request.GET.get("erro", ""))
+        return ctx
+
+    def post(self, request, pk):
+        if not eh_gestor(request.user):
+            return HttpResponseForbidden()
+        e = self._etapa(pk)
+        p = request.POST
+        e.nome = (p.get("nome") or e.nome).strip()[:40]
+        if (p.get("cor") or "").startswith("#") and len(p["cor"]) == 7:
+            e.cor = p["cor"]
+        e.tag = Etiqueta.objects.filter(pk=p.get("tag", "")).first() if p.get("tag", "").isdigit() else None
+        e.por_arquivo = "por_arquivo" in p
+        grupos = []
+        for i in range(0, 12):
+            palavras = [w.strip() for w in (p.get(f"g{i}_palavras") or "").split(",") if w.strip()]
+            if palavras:
+                grupos.append({"palavras": palavras[:30], "todas": f"g{i}_todas" in p})
+        e.grupos = grupos if e.tipo == "normal" else []
+        e.save()
+        funil.invalidar()
+        return redirect(f"/funil/etapas/{e.pk}/?msg=Etapa salva")
+
+
+class EtapaApagarView(Base, View):
+    def post(self, request, pk):
+        if not eh_gestor(request.user):
+            return HttpResponseForbidden()
+        e = get_object_or_404(EtapaFunil, pk=pk)
+        try:
+            funil.apagar(e, request.POST.get("destino", ""))
+        except ValueError as erro:
+            return redirect(f"/funil/etapas/{pk}/?erro={erro}")
+        return redirect("/funil/etapas/?msg=Etapa apagada")
+
+
+class TesteRapidoView(Base, View):
+    def get(self, request):
+        r = classificacao.testar(request.GET.get("texto", ""))
+        return render(request, "captacao/_teste_funil.html", r)

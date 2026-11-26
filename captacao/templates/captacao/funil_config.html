@@ -28,12 +28,21 @@
   </div>
 
   <div class="box" style="margin-top:12px"><h2>Etiquetas</h2>
-    <div class="etqs" style="margin-bottom:8px">{% for e in etiquetas %}<span class="etq" style="--c:{{ e.cor }}">{{ e.nome }} · {{ e.n }}{% if e.bloqueia_followup %} · sem follow-up{% endif %}
-      {% if gestor %}<form method="post" action="{% url 'captacao:funil_acao_id' 'etiqueta_excluir' e.pk %}" style="display:inline" onsubmit="return confirm('Excluir a etiqueta {{ e.nome|escapejs }}?')">{% csrf_token %}<button title="Excluir">×</button></form>{% endif %}</span>{% endfor %}</div>
-    {% if gestor %}<form method="post" action="{% url 'captacao:funil_acao' 'etiqueta' %}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">{% csrf_token %}
-      <input type="text" name="nome" placeholder="Nova etiqueta" maxlength="40" required style="max-width:220px"><input type="color" name="cor" value="#2ee66b" style="width:48px;padding:2px">
-      <label class="chk" style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="bloqueia" style="width:auto"> Impede o follow-up</label><button class="btn sec sm">Criar etiqueta</button></form>{% endif %}
-    <small style="color:var(--mu);display:block;margin-top:6px">Etiquetas de origem (OLX, Anúncio pago...) entram sozinhas. “Impede o follow-up” serve para quem não deve receber a sequência.</small>
+    <small style="color:var(--mu)">Etiquetas coloridas para organizar os contatos. Uma etapa do funil pode ser ligada a uma etiqueta (em “Etapas do funil”): marcou a etiqueta, o lead muda de etapa sozinho.</small>
+    <div class="lista-tags">{% for e in etiquetas %}
+      <form method="post" action="{% url 'captacao:funil_acao_id' 'etiqueta_editar' e.pk %}" class="tag-linha">{% csrf_token %}
+        <input type="color" name="cor" value="{{ e.cor }}" title="Cor" style="width:40px;padding:2px">
+        <input type="text" name="nome" value="{{ e.nome }}" maxlength="40">
+        <small style="color:var(--mu);white-space:nowrap">{{ e.n }} contato(s)</small>
+        <label class="chk" style="display:flex;gap:5px;align-items:center;white-space:nowrap;font-size:12.5px"><input type="checkbox" name="bloqueia" style="width:auto" {% if e.bloqueia_followup %}checked{% endif %}> sem follow-up</label>
+        {% if gestor %}<button class="btn sec sm">Salvar</button>
+        <button class="btn red sm" formaction="{% url 'captacao:funil_acao_id' 'etiqueta_excluir' e.pk %}" onclick="return confirm('Excluir a etiqueta {{ e.nome|escapejs }}?')">Excluir</button>{% endif %}
+      </form>{% endfor %}</div>
+    {% if gestor %}<form method="post" action="{% url 'captacao:funil_acao' 'etiqueta' %}" class="tag-linha" style="margin-top:10px;border-top:1px solid var(--bd);padding-top:10px">{% csrf_token %}
+      <div class="paleta">{% for c in paleta %}<label><input type="radio" name="cor" value="{{ c }}" {% if forloop.first %}checked{% endif %}><i style="background:{{ c }}"></i></label>{% endfor %}</div>
+      <input type="text" name="nome" placeholder="Nova etiqueta" maxlength="40" required style="max-width:240px">
+      <label class="chk" style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" name="bloqueia" style="width:auto"> Impede o follow-up</label><button class="btn sm">Criar etiqueta</button></form>{% endif %}
+    <small style="color:var(--mu);display:block;margin-top:6px">Etiquetas de origem (OLX, Anúncio pago...) entram sozinhas. “Sem follow-up” serve para quem não deve receber a sequência.</small>
   </div>
 </div>
 {% endblock %}

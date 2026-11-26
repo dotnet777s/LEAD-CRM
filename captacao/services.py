@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
-from . import followup, meta, telegram, utils
+from . import followup, funil, meta, telegram, utils
 from .models import EventoMeta, Historico, Interacao, Lead
 
 JANELA_DEDUP_DIAS = 30
@@ -169,7 +169,7 @@ def criar_lead_manual(nome, telefone, veiculo=None, origem=Lead.Origem.WHATSAPP,
 @transaction.atomic
 def mudar_etapa(lead, nova, usuario=None, motivo_perda="", veiculo_vendido=None, valor_venda=None, visita_em=None):
     """Única porta para trocar a etapa. Grava histórico e enfileira o evento da Meta (uma vez por lead)."""
-    if nova not in Lead.Etapa.values:
+    if nova not in funil.chaves():
         raise RegraErro("Etapa inválida.")
     if nova == lead.etapa:
         return False

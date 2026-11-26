@@ -2,7 +2,7 @@
 <div class="abas">{% for c in colunas %}<button type="button" data-etapa="{{ c.etapa }}">{{ c.nome }}<b>{{ c.total }}</b></button>{% endfor %}</div>
 <div class="quadro" data-com-form="{{ com_form|join:',' }}">
 {% for c in colunas %}
-<section class="col" data-etapa="{{ c.etapa }}" aria-label="{{ c.nome }}">
+<section class="col" data-etapa="{{ c.etapa }}" aria-label="{{ c.nome }}" style="border-top-color:{{ c.cor }}">
   <h3>{{ c.nome }} <span>{{ c.total }}</span></h3>
   <div class="lista" data-etapa="{{ c.etapa }}">
   {% for l in c.cards %}

@@ -4,17 +4,16 @@
 {% block content %}
 <div class="chat" id="chat" data-lead="{{ lead_id }}">
   <section class="c-lista">
-    <div class="cab"><h1>Conversas</h1>
-      <input type="search" id="c-busca" placeholder="Buscar nome ou telefone" autocomplete="off"
-             hx-get="{% url 'captacao:conversas_lista' %}" hx-trigger="input delay:300ms" hx-target="#c-lista-box" hx-include="#c-estado" name="q"></div>
-    <form id="c-estado" style="padding:0 14px 8px"><input type="hidden" name="f" value="{{ filtro }}"><input type="hidden" name="lead" value="{{ lead_id }}">
+    <div class="abas-c">{% for k, nome in abas %}<button type="button" class="{% if k == aba %}on{% endif %}" hx-get="{% url 'captacao:conversas_lista' %}?aba={{ k }}&f={{ filtro }}&lead={{ lead_id }}&tag={{ tag }}" hx-target="#c-lista-box">{{ nome }}</button>{% endfor %}</div>
+    <div class="busca-c"><input type="search" id="c-busca" placeholder="Buscar..." autocomplete="off" hx-get="{% url 'captacao:conversas_lista' %}" hx-trigger="input delay:300ms" hx-target="#c-lista-box" hx-include="#c-estado" name="q">
+      <button type="button" class="mais" title="Nova conversa" hx-get="{% url 'captacao:conversa_nova' %}" hx-target="#dlg-box">+</button></div>
+    <form id="c-estado"><input type="hidden" name="f" value="{{ filtro }}"><input type="hidden" name="aba" value="{{ aba }}"><input type="hidden" name="lead" value="{{ lead_id }}">
       <select name="tag" hx-get="{% url 'captacao:conversas_lista' %}" hx-trigger="change" hx-target="#c-lista-box" hx-include="#c-estado" aria-label="Etiqueta"><option value="">Todas as etiquetas</option>{% for e in etiquetas %}<option value="{{ e.pk }}" {% if tag == e.pk|stringformat:"s" %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}</select></form>
-    <div id="c-lista-box" hx-get="{% url 'captacao:conversas_lista' %}?f={{ filtro }}&lead={{ lead_id }}" hx-trigger="load, every 15s, conversasAtualizar from:body" hx-swap="innerHTML"></div>
+    <div id="c-lista-box" hx-get="{% url 'captacao:conversas_lista' %}?f={{ filtro }}&aba={{ aba }}&lead={{ lead_id }}&tag={{ tag }}" hx-trigger="load, every 15s, conversasAtualizar from:body" hx-swap="innerHTML"></div>
   </section>
   <section class="c-conv" id="c-conv">
     {% if lead_id %}<div hx-get="{% url 'captacao:conversa' lead_id %}" hx-trigger="load" hx-target="#c-conv" hx-swap="innerHTML"></div>
-    {% else %}<div class="c-vazio"><svg class="i"><use href="#s-chat"/></svg><p>Selecione uma conversa<br><small>{% if not api %}A API do WhatsApp ainda não está conectada: as conversas aparecem aqui assim que for.{% endif %}</small></p></div>{% endif %}
+    {% else %}<div class="c-vazio"><svg class="i"><use href="#s-chat"/></svg><h3>Mensagens</h3><p>Selecione uma conversa para visualizar{% if not api %}<br><small>A API do WhatsApp ainda não está conectada: as conversas aparecem aqui assim que for.</small>{% endif %}</p></div>{% endif %}
   </section>
-  <aside class="c-info" id="c-info"></aside>
 </div>
 {% endblock %}

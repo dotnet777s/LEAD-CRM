@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
 
-from . import campanhas, followup, modelos, services, utils, whatsapp
+from . import campanhas, followup, funil, modelos, services, utils, whatsapp
 from .models import Agendamento, Atividade, Campanha, Etiqueta, Historico, Lead, ModeloWhatsApp, Profissional, RespostaRapida
 from .views import Base, eh_gestor, leads_visiveis, trigger
 
@@ -31,7 +31,7 @@ def _filtrar_contatos(user, p):
         qs = qs.filter(cond)
     if p.get("origem") in Lead.Origem.values:
         qs = qs.filter(origem=p["origem"])
-    if p.get("etapa") in Lead.Etapa.values:
+    if p.get("etapa") in funil.chaves():
         qs = qs.filter(etapa=p["etapa"])
     if (p.get("etiqueta") or "").isdigit():
         qs = qs.filter(etiquetas__pk=int(p["etiqueta"]))
@@ -55,7 +55,7 @@ class ContatosView(Base, TemplateView):
         ctx.update(contatos=qs[(pag - 1) * PAGINA: pag * PAGINA], total=total, pag=pag, tem_mais=total > pag * PAGINA,
                    q=p.get("q", ""), origem=p.get("origem", ""), etapa=p.get("etapa", ""), nc=p.get("nc", ""),
                    etiquetas=Etiqueta.objects.all(), etiqueta=p.get("etiqueta", ""),
-                   origens=Lead.Origem.choices, etapas=Lead.Etapa.choices, importado=p.get("importado"), ignorados=p.get("ignorados"),
+                   origens=Lead.Origem.choices, etapas=funil.choices(), importado=p.get("importado"), ignorados=p.get("ignorados"),
                    gestor=eh_gestor(self.request.user))
         return ctx
 
@@ -135,7 +135,8 @@ class AgendaView(Base, TemplateView):
         ctx.update(dias=dias, ini=ini, fim=fim - timedelta(days=1), s=desloc, atrasadas=atrasadas,
                    total=sum(len(d["visitas"]) + len(d["agendamentos"]) for d in dias),
                    profissionais=Profissional.objects.filter(ativo=True), atividades=Atividade.objects.filter(ativa=True),
-                   contatos=leads_visiveis(self.request.user).exclude(telefone="").order_by("nome")[:600], erro=self.request.GET.get("erro", ""))
+                   contatos=leads_visiveis(self.request.user).exclude(telefone="").order_by("nome")[:600], erro=self.request.GET.get("erro", ""),
+                   lead_pre=self.request.GET.get("lead", ""))
         return ctx
 
 
@@ -231,7 +232,7 @@ class CampanhasView(Base, TemplateView):
         for c in lista:
             c.n = campanhas.numeros(c)
         ctx.update(campanhas=lista, modelos=ModeloWhatsApp.objects.filter(status="APPROVED"), api=whatsapp.configurado(),
-                   etapas=Lead.Etapa.choices, etiquetas=Etiqueta.objects.all(), origens=Lead.Origem.choices, portais=Lead.Portal.choices, gestor=eh_gestor(self.request.user),
+                   etapas=funil.choices(), etiquetas=Etiqueta.objects.all(), origens=Lead.Origem.choices, portais=Lead.Portal.choices, gestor=eh_gestor(self.request.user),
                    enviados_24h=campanhas.enviados_24h(), limite=settings.WHATSAPP_LIMITE_DIARIO, erro=self.request.GET.get("erro", ""))
         return ctx
 

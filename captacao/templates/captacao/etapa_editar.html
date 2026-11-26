@@ -1,0 +1,34 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · {{ e.nome }}{% endblock %}
+{% block titulo %}Etapa{% endblock %}
+{% block content %}
+<div class="pg" style="max-width:760px">
+  <div class="titulo-pg"><div><h1 style="display:flex;align-items:center;gap:10px"><i class="bola" style="background:{{ e.cor }}"></i>{{ e.nome }}</h1><small>{{ n }} lead(s) nesta etapa{% if e.sistema %} · etapa usada pelo CRM{% endif %}</small></div><a class="btn sec sm" href="{% url 'captacao:etapas' %}">Voltar ao funil</a></div>
+  {% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}{% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+  <form method="post" class="cfg">{% csrf_token %}
+    <div class="box"><h2>Nome e cor</h2>
+      <label class="l">Nome da etapa<input type="text" name="nome" value="{{ e.nome }}" maxlength="40" required></label>
+      <div class="sec-t">Defina uma cor</div><small style="color:var(--mu)">Aparece no funil e nas colunas do Kanban.</small>
+      <div class="paleta">{% for c in paleta %}<label><input type="radio" name="cor" value="{{ c }}" {% if c == e.cor %}checked{% endif %}><i style="background:{{ c }}"></i></label>{% endfor %}
+        <label class="outra">Outra <input type="color" name="cor_livre" value="{{ e.cor }}" oninput="this.form.cor.value=this.value"></label></div></div>
+    {% if e.tipo == 'normal' %}
+    <div class="box" style="margin-top:10px"><h2>Definir por etiqueta</h2><small style="color:var(--mu)">Quando o atendente marcar esta etiqueta numa conversa, o lead é movido para esta etapa automaticamente.</small>
+      <select name="tag" style="margin-top:8px"><option value="">(nenhuma)</option>{% for t in etiquetas %}<option value="{{ t.pk }}" {% if e.tag_id == t.pk %}selected{% endif %}>{{ t.nome }}</option>{% endfor %}</select></div>
+    <div class="box" style="margin-top:10px"><h2>Definir por palavras-chave</h2><small style="color:var(--mu)">Quando essas palavras aparecem nas mensagens do cliente, o lead é classificado nesta etapa (só avança no funil). Separe as palavras por vírgula.</small>
+      {% for g in grupos %}<div class="grupo"><input type="text" name="g{{ g.i }}_palavras" value="{{ g.palavras }}" placeholder="Grupo {{ forloop.counter }}: ex.: financiar, parcela, entrada"><label class="chk"><input type="checkbox" name="g{{ g.i }}_todas" {% if g.todas %}checked{% endif %}> exigir todas</label></div>{% endfor %}
+      <small style="color:var(--mu)">Para mais grupos, salve e volte: sempre aparece uma linha em branco.</small></div>
+    <div class="box" style="margin-top:10px"><label class="chk" style="display:flex;gap:10px;align-items:center"><input type="checkbox" name="por_arquivo" {% if e.por_arquivo %}checked{% endif %} style="width:auto">
+      <span><b>Definir por arquivo</b><br><small style="color:var(--mu)">Quando o cliente enviar um arquivo ou uma foto, o lead é movido para esta etapa automaticamente.</small></span></label></div>
+    {% else %}<p style="color:var(--mu);margin-top:10px">Etapas de fechamento (venda e perda) são definidas pelo botão “Convertido”/“Perdido” e pelas regras do CRM.</p>{% endif %}
+    {% if gestor %}<button class="btn" style="margin-top:12px">Salvar etapa</button>{% endif %}
+  </form>
+  <div class="box" style="margin-top:12px"><h2>Teste rápido</h2><small style="color:var(--mu)">Escreva algo como o cliente escreveria e veja em que etapa a mensagem cairia hoje.</small>
+    <div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="t-texto" placeholder="Ex.: quanto custa o Onix 2020?"><button type="button" class="btn sec" hx-get="{% url 'captacao:etapa_testar' %}" hx-include="#t-texto" hx-vals='js:{texto: document.getElementById("t-texto").value}' hx-target="#t-res">Testar</button></div>
+    <div id="t-res" style="margin-top:8px"></div></div>
+  {% if gestor and not e.sistema %}
+  <form method="post" action="{% url 'captacao:etapa_apagar' e.pk %}" class="box" style="margin-top:12px;border-color:#5a2220" onsubmit="return confirm('Apagar esta etapa? Os leads serão levados para a etapa escolhida.')">{% csrf_token %}
+    <h2 style="color:var(--rd)">Apagar etapa</h2><small style="color:var(--mu)">Os {{ n }} lead(s) desta etapa serão levados para:</small>
+    <div style="display:flex;gap:8px;margin-top:8px"><select name="destino">{% for o in outras %}<option value="{{ o.chave }}">{{ o.nome }}</option>{% endfor %}</select><button class="btn red">Apagar etapa</button></div></form>
+  {% endif %}
+</div>
+{% endblock %}

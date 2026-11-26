@@ -1,11 +1,13 @@
-"""Conversas: a caixa de entrada do WhatsApp dentro do CRM (lista, conversa, resposta, modelos, fotos do carro, notas)."""
+"""Conversas: a caixa de entrada do WhatsApp dentro do CRM (no estilo do Avise Aí): lista com abas e filtros,
+conversa com barra de ações, funil na própria conversa, anexos, simulação de parcela, localização e notas."""
 import io
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db.models import Count, OuterRef, Q, Subquery
-from django.http import FileResponse, Http404, HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.db.models import Count, Exists, OuterRef, Q, Subquery
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
@@ -13,22 +15,32 @@ from django.views.generic import TemplateView
 
 from catalogo.models import Veiculo
 
-from . import fotos, followup, services, utils, whatsapp
-from .models import Etiqueta, Historico, Lead, MensagemProgramada, ModeloWhatsApp, RespostaRapida, WhatsAppMensagem
+from . import fotos, followup, funil, services, utils, whatsapp
+from .models import Etiqueta, FollowUp, Historico, Lead, MensagemProgramada, ModeloWhatsApp, RespostaRapida, WhatsAppMensagem
 from .views import Base, eh_gestor, leads_visiveis, trigger
 
-FILTROS = [("todas", "Todas"), ("nao_lidas", "Não lidas"), ("minhas", "Minhas"), ("cliente", "Cliente esperando"),
-           ("loja", "Esperando cliente"), ("programadas", "Programadas")]
+ABAS = [("todas", "Todas as mensagens"), ("meus", "Meus atendimentos"), ("portais", "Portais"), ("arquivadas", "Arquivadas")]
+FILTROS = [("todas", "Todas"), ("nao_lidas", "Não lidas"), ("minhas", "Minhas"), ("agendados", "Agendados"), ("programadas", "Programadas"),
+           ("loja", "Esperando cliente"), ("cliente", "Cliente esperando"), ("sem_humano", "Sem humano")]
+LIMITE_ARQUIVO = 16 * 1024 * 1024
 
 
-def _conversas(user, filtro="todas", q="", tag=""):
+def _conversas(user, filtro="todas", q="", tag="", aba="todas"):
     msgs = WhatsAppMensagem.objects.filter(lead=OuterRef("pk")).order_by("-criado_em", "-id")
+    humano = WhatsAppMensagem.objects.filter(lead=OuterRef("pk"), direcao="out", usuario__isnull=False)
     qs = (leads_visiveis(user).filter(mensagens_wa__isnull=False).distinct()
           .annotate(ultima=Subquery(msgs.values("criado_em")[:1]), ultima_dir=Subquery(msgs.values("direcao")[:1]),
                     ultimo_texto=Subquery(msgs.values("texto")[:1]),
-                    nao_lidas=Count("mensagens_wa", filter=Q(mensagens_wa__direcao="in", mensagens_wa__lida=False))))
+                    ultima_entrada=Subquery(msgs.filter(direcao="in").values("criado_em")[:1]),
+                    nao_lidas=Count("mensagens_wa", filter=Q(mensagens_wa__direcao="in", mensagens_wa__lida=False)),
+                    tem_humano=Exists(humano)))
+    qs = qs.filter(arquivada=True) if aba == "arquivadas" else qs.filter(arquivada=False)
+    if aba == "meus":
+        qs = qs.filter(vendedor=user)
+    elif aba == "portais":
+        qs = qs.filter(portal__gt="")
     if filtro == "nao_lidas":
-        qs = qs.filter(nao_lidas__gt=0)
+        qs = qs.filter(Q(nao_lidas__gt=0) | Q(marcada_nao_lida=True))
     elif filtro == "minhas":
         qs = qs.filter(vendedor=user)
     elif filtro == "cliente":
@@ -37,6 +49,10 @@ def _conversas(user, filtro="todas", q="", tag=""):
         qs = qs.filter(ultima_dir="out")
     elif filtro == "programadas":
         qs = qs.filter(programadas__status="pendente")
+    elif filtro == "agendados":
+        qs = qs.filter(etapa="visita")
+    elif filtro == "sem_humano":
+        qs = qs.filter(tem_humano=False)
     if tag.isdigit():
         qs = qs.filter(etiquetas__pk=int(tag))
     q = (q or "").strip()
@@ -46,11 +62,23 @@ def _conversas(user, filtro="todas", q="", tag=""):
         if dig:
             cond |= Q(telefone__contains=dig)
         qs = qs.filter(cond)
-    return qs.order_by("-ultima")[:200]
+    return qs.prefetch_related("etiquetas").select_related("vendedor").order_by("-fixada", "-ultima")[:200]
 
 
 def total_nao_lidas(user):
     return (WhatsAppMensagem.objects.filter(direcao="in", lida=False, lead__in=leads_visiveis(user)).values("lead").distinct().count())
+
+
+def _restante(ultima_entrada, agora=None):
+    """Tempo que falta para fechar a janela de 24 h: (texto 'HHhMM', segundos) ou (None, 0)."""
+    agora = agora or timezone.now()
+    if not ultima_entrada:
+        return None, 0
+    falta = whatsapp.JANELA - (agora - ultima_entrada)
+    seg = int(falta.total_seconds())
+    if seg <= 0:
+        return None, 0
+    return f"{seg // 3600}h{(seg % 3600) // 60:02d}", seg
 
 
 class ConversasView(Base, TemplateView):
@@ -58,21 +86,49 @@ class ConversasView(Base, TemplateView):
 
     def get_context_data(self, **kw):
         ctx = super().get_context_data(**kw)
-        ctx.update(filtros=FILTROS, filtro=self.request.GET.get("f", "todas"), lead_id=self.request.GET.get("lead", ""),
-                   etiquetas=Etiqueta.objects.all(), tag=self.request.GET.get("tag", ""),
-                   api=whatsapp.configurado())
+        g = self.request.GET
+        ctx.update(filtros=FILTROS, filtro=g.get("f", "todas"), abas=ABAS, aba=g.get("aba", "todas"), lead_id=g.get("lead", ""),
+                   etiquetas=Etiqueta.objects.all(), tag=g.get("tag", ""), api=whatsapp.configurado())
         return ctx
 
 
 class ListaView(Base, View):
     def get(self, request):
-        filtro = request.GET.get("f", "todas")
+        g = request.GET
+        filtro, aba = g.get("f", "todas"), g.get("aba", "todas")
         agora = timezone.now()
-        itens = list(_conversas(request.user, filtro, request.GET.get("q", ""), request.GET.get("tag", "")))
+        itens = list(_conversas(request.user, filtro, g.get("q", ""), g.get("tag", ""), aba))
         for l in itens:
-            l.janela = (agora - l.ultima) < whatsapp.JANELA if l.ultima else False
+            l.janela = bool(l.ultima_entrada and (agora - l.ultima_entrada) < whatsapp.JANELA)
+            l.restante, seg = _restante(l.ultima_entrada, agora)
+            l.urgente = 0 < seg < 7200
+            l.hoje = timezone.localtime(l.ultima).date() == timezone.localdate() if l.ultima else True
+            l.cor_etapa = funil.cor(l.etapa)
+            l.nome_etapa = funil.nome(l.etapa)
+            l.cor_av = AVATARES[l.pk % len(AVATARES)]
         return render(request, "captacao/_conversas_lista.html", {
-            "itens": itens, "filtro": filtro, "filtros": FILTROS, "tag": request.GET.get("tag", ""), "ativo": request.GET.get("lead", ""), "q": request.GET.get("q", "")})
+            "itens": itens, "filtro": filtro, "filtros": FILTROS, "abas": ABAS, "aba": aba, "tag": g.get("tag", ""),
+            "ativo": g.get("lead", ""), "q": g.get("q", "")})
+
+
+AVATARES = ["#ec4899", "#a855f7", "#22c55e", "#3b82f6", "#f59e0b", "#14b8a6", "#ef4444", "#6366f1"]
+
+
+def _eventos_e_mensagens(lead, msgs):
+    """Mensagens + eventos do funil (mudança de etapa, atendente, notas) na ordem do tempo, como no Avise Aí."""
+    itens = [{"t": "msg", "m": m, "quando": m.criado_em} for m in msgs]
+    if msgs:
+        ini = msgs[0].criado_em
+        for h in lead.historico.select_related("usuario").filter(criado_em__gte=ini, tipo__in=[Historico.Tipo.ETAPA, Historico.Tipo.NOTA,
+                                                                                               Historico.Tipo.CONSULTOR])[:60]:
+            if h.tipo == Historico.Tipo.ETAPA:
+                txt = f"Etapa: {funil.nome(h.de_etapa)} → {funil.nome(h.para_etapa)}"
+            else:
+                txt = h.texto
+            quem = (h.usuario.first_name or h.usuario.username) if h.usuario else ""
+            itens.append({"t": "ev", "texto": txt, "quem": quem, "quando": h.criado_em})
+    itens.sort(key=lambda i: i["quando"])
+    return itens
 
 
 def _contexto_conversa(request, lead, erro=""):
@@ -80,11 +136,16 @@ def _contexto_conversa(request, lead, erro=""):
     fu = followup.ativo_do_lead(lead)
     if fu:
         fu.pos, fu.total = followup.posicao(fu)
-    return {"lead": lead, "mensagens": msgs, "api": whatsapp.configurado(), "janela": whatsapp.janela_aberta(lead.telefone),
+    ultima_in = lead.mensagens_wa.filter(direcao="in").order_by("-criado_em").values_list("criado_em", flat=True).first()
+    restante, seg = _restante(ultima_in)
+    etapa = funil.mapa().get(lead.etapa)
+    return {"lead": lead, "itens": _eventos_e_mensagens(lead, msgs), "api": whatsapp.configurado(), "janela": seg > 0,
+            "restante": restante, "urgente": 0 < seg < 7200,
             "rapidas": RespostaRapida.objects.all(), "modelos": ModeloWhatsApp.objects.filter(status="APPROVED"),
             "carros": Veiculo.objects.filter(status__in=Veiculo.EM_LOJA, total_fotos__gt=0).order_by("marca", "modelo"),
-            "erro": erro, "etiquetas_todas": Etiqueta.objects.all(), "programadas": lead.programadas.filter(status="pendente"), "fu": fu, "etapas": Lead.Etapa, "funil": [(e.value, e.label) for e in Lead.FUNIL] + [("perdido", "Perdido")],
-            "consultores": get_user_model().objects.filter(is_active=True),
+            "erro": erro, "etiquetas_todas": Etiqueta.objects.all(), "programadas": lead.programadas.filter(status="pendente"), "fu": fu,
+            "etapas_lista": funil.todas(), "etapa_atual": etapa, "cor_av": AVATARES[lead.pk % len(AVATARES)],
+            "atendentes": get_user_model().objects.filter(is_active=True).order_by("first_name", "username"),
             "gestor": eh_gestor(request.user)}
 
 
@@ -93,6 +154,9 @@ def _marcar_lidas(lead):
     if nao:
         lead.mensagens_wa.filter(direcao="in", lida=False).update(lida=True)
         whatsapp.confirmar_leitura(nao[-1].wamid)
+    if lead.marcada_nao_lida:
+        lead.marcada_nao_lida = False
+        lead.save(update_fields=["marcada_nao_lida"])
 
 
 class ConversaView(Base, View):
@@ -107,8 +171,7 @@ class MensagensView(Base, View):
     def get(self, request, pk):
         lead = self.lead(request, pk)
         _marcar_lidas(lead)
-        ctx = _contexto_conversa(request, lead)
-        return render(request, "captacao/_mensagens.html", ctx)
+        return render(request, "captacao/_mensagens.html", _contexto_conversa(request, lead))
 
 
 def _resposta(request, lead, erro=""):
@@ -124,6 +187,24 @@ class EnviarView(Base, View):
             return _resposta(request, lead)
         try:
             whatsapp.enviar_texto(lead, texto, request.user)
+            services.marcar_atendimento(lead, request.user)
+        except whatsapp.WhatsAppErro as e:
+            return _resposta(request, lead, str(e))
+        return _resposta(request, lead)
+
+
+class EnviarArquivoView(Base, View):
+    """Anexo (foto, vídeo, áudio ou documento) enviado pelo CRM, dentro da janela de 24 h."""
+    def post(self, request, pk):
+        lead = self.lead(request, pk)
+        arq = request.FILES.get("arquivo")
+        if not arq:
+            return _resposta(request, lead, "Escolha um arquivo.")
+        if arq.size > LIMITE_ARQUIVO:
+            return _resposta(request, lead, "O arquivo passa de 16 MB.")
+        try:
+            whatsapp.enviar_arquivo(lead, arq.read(), arq.name, arq.content_type or "application/octet-stream",
+                                    (request.POST.get("legenda") or "")[:900], request.user)
             services.marcar_atendimento(lead, request.user)
         except whatsapp.WhatsAppErro as e:
             return _resposta(request, lead, str(e))
@@ -181,11 +262,11 @@ class NotaInternaView(Base, View):
 
 
 class EtapaView(Base, View):
-    """Muda a etapa pelo painel da conversa (etapas que pedem dados extras abrem a ficha completa)."""
+    """Muda a etapa pela própria conversa (etapas que pedem dados extras abrem o formulário)."""
     def post(self, request, pk):
         lead = self.lead(request, pk)
         etapa = request.POST.get("etapa", "")
-        if etapa in ("visita", "vendido", "perdido"):
+        if funil.com_form(etapa):
             return HttpResponse(status=400)
         try:
             services.mudar_etapa(lead, etapa, request.user)
@@ -194,8 +275,91 @@ class EtapaView(Base, View):
         return _resposta(request, lead)
 
 
+# ---- barra de ações da conversa -----------------------------------------------------------------
+class AcaoConversaView(Base, View):
+    """acao = atendente | fixar | nao_lida | finalizar | comentario | pausar_followup | renomear"""
+    def post(self, request, pk, acao):
+        lead = self.lead(request, pk)
+        p = request.POST
+        if acao == "atendente":
+            novo = get_user_model().objects.filter(pk=p.get("atendente", "")).first() if p.get("atendente", "").isdigit() else None
+            if not eh_gestor(request.user) and novo and novo.pk != request.user.pk:
+                novo = request.user
+            services.trocar_consultor(lead, novo, request.user)
+        elif acao == "fixar":
+            lead.fixada = not lead.fixada
+            lead.save(update_fields=["fixada", "atualizado_em"])
+        elif acao == "nao_lida":
+            lead.marcada_nao_lida = True
+            lead.save(update_fields=["marcada_nao_lida"])
+            return HttpResponse(status=204, headers={"HX-Trigger": "conversasAtualizar"})
+        elif acao == "finalizar":
+            lead.arquivada = not lead.arquivada
+            lead.save(update_fields=["arquivada", "atualizado_em"])
+            services.adicionar_nota(lead, "Conversa finalizada" if lead.arquivada else "Conversa reaberta", request.user)
+        elif acao == "comentario":
+            lead.comentario_fixo = (p.get("texto") or "").strip()[:300]
+            lead.save(update_fields=["comentario_fixo", "atualizado_em"])
+        elif acao == "renomear":
+            nome = (p.get("nome") or "").strip()[:120]
+            if nome:
+                lead.nome = nome
+                lead.save(update_fields=["nome", "atualizado_em"])
+        elif acao == "pausar_followup":
+            fu = lead.followups.filter(status__in=["ativo", "pausado"]).first()
+            if fu:
+                (followup.retomar if fu.status == "pausado" else followup.pausar)(fu, request.user)
+        else:
+            return HttpResponse(status=404)
+        return _resposta(request, lead)
+
+
+class SimularView(Base, View):
+    """Texto pronto com a simulação de parcela do carro do lead (vai para a caixa de mensagem para revisar e enviar)."""
+    def get(self, request, pk):
+        lead = self.lead(request, pk)
+        v = lead.veiculo
+        if not v or not v.valor_venda:
+            return JsonResponse({"texto": "", "erro": "Defina o carro de interesse na ficha para simular a parcela."})
+        parcela, entrada = utils.parcela_estimada(v.valor_venda, settings.FINANCIAMENTO_ENTRADA_PCT, settings.FINANCIAMENTO_PARCELAS,
+                                                  settings.FINANCIAMENTO_TAXA_AM)
+        carro = f"{v.marca_fmt} {v.modelo_fmt} {v.ano}"
+        texto = (f"Simulação do {carro} ({utils.preco_brl(v.valor_venda)}): entrada de {utils.preco_brl(entrada)} "
+                 f"({settings.FINANCIAMENTO_ENTRADA_PCT}%) e {settings.FINANCIAMENTO_PARCELAS}x de {utils.preco_brl(parcela)}*. "
+                 "*Valores estimados, sujeitos à análise de crédito. Posso preparar uma simulação com a entrada que você preferir.")
+        return JsonResponse({"texto": texto})
+
+
+class LocalizacaoView(Base, View):
+    def get(self, request, pk):
+        self.lead(request, pk)
+        loja = settings.LOJA
+        return JsonResponse({"texto": f"Estamos na {loja.get('endereco', '')}. Como chegar: {loja.get('mapa_url', '')}\n{loja.get('horario', '')}".strip()})
+
+
+class NovaConversaView(Base, View):
+    """Botão '+': abre uma conversa com um contato existente ou cria o contato pelo número."""
+    def get(self, request):
+        return render(request, "captacao/_nova_conversa.html", {"erro": ""})
+
+    def post(self, request):
+        p = request.POST
+        tel = utils.normalizar_telefone(p.get("telefone", ""))
+        nome = (p.get("nome") or "").strip()
+        if not tel:
+            return render(request, "captacao/_nova_conversa.html", {"erro": "Informe um telefone válido com DDD.", "dados": p})
+        lead = Lead.objects.filter(telefone=tel).order_by("-criado_em").first()
+        if not lead:
+            if not nome:
+                return render(request, "captacao/_nova_conversa.html", {"erro": "Informe o nome do contato.", "dados": p})
+            lead = services.criar_lead_manual(nome, tel, None, Lead.Origem.WHATSAPP, request.user)
+        r = HttpResponse(status=204)
+        r["HX-Redirect"] = f"/conversas/?lead={lead.pk}"
+        return r
+
+
 class MidiaView(Base, View):
-    """Mostra a imagem/áudio/documento que o cliente mandou (baixado da Meta na hora, só para quem está logado)."""
+    """Mostra a imagem/áudio/documento da conversa (baixado da Meta na hora, só para quem está logado)."""
     def get(self, request, pk):
         m = get_object_or_404(WhatsAppMensagem, pk=pk, lead__in=leads_visiveis(request.user))
         if not m.midia_id:

@@ -1,0 +1,9 @@
+<button class="link fechar" onclick="document.getElementById('dlg').close()" aria-label="Fechar">✕</button>
+<h2 style="margin:0 0 10px">Nova conversa</h2>
+<form hx-post="{% url 'captacao:conversa_nova' %}" hx-target="#dlg-box" class="cfg">
+  {% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+  <label class="l">Telefone com DDD<input type="tel" name="telefone" value="{{ dados.telefone }}" placeholder="(81) 99999-8888" required autocomplete="off"></label>
+  <label class="l">Nome (só se for um contato novo)<input type="text" name="nome" value="{{ dados.nome }}" maxlength="120"></label>
+  <button class="btn full" style="margin-top:12px">Abrir conversa</button>
+  <small style="color:var(--mu);display:block;margin-top:6px">Se o número já estiver cadastrado, a conversa dele é aberta. Fora da janela de 24 h só dá para enviar modelo aprovado.</small>
+</form>

@@ -156,4 +156,34 @@
     try { history.replaceState(null, '', '/conversas/?lead=' + it.dataset.lead); } catch (x) {}
   });
   d.addEventListener('DOMContentLoaded', function () { rolarFim(d.getElementById('c-msgs'), true); });
+
+  // ---- barra de ações da conversa (estilo Avise Aí) ----
+  d.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-preencher]');
+    if (b) {
+      fetch(b.dataset.preencher, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) {
+        var ta = d.querySelector('#c-form textarea');
+        if (j.erro) { mostrar(j.erro); return; }
+        if (ta && !ta.disabled) { ta.value = j.texto; ta.dispatchEvent(new Event('input')); ta.focus(); }
+        else { try { navigator.clipboard.writeText(j.texto); mostrar('Texto copiado (a conversa está fora da janela de 24 h)'); } catch (x) {} }
+      });
+      return;
+    }
+    var a = e.target.closest('[data-abrir]');
+    if (a) {
+      var alvo = d.querySelector(a.dataset.abrir); if (!alvo) return;
+      if (alvo.tagName === 'DETAILS') { var pai = alvo.closest('.mais-ferr'); if (pai) pai.open = true; alvo.open = !alvo.open; alvo.scrollIntoView({ block: 'nearest' }); }
+      else { alvo.hidden = !alvo.hidden; var inp = alvo.querySelector('input[type=text]'); if (inp && !alvo.hidden) inp.focus(); }
+      return;
+    }
+    var em = e.target.closest('[data-emoji]');
+    if (em) {
+      var t = d.querySelector('#c-form textarea');
+      if (t && !t.disabled) { var i = t.selectionStart || t.value.length; t.value = t.value.slice(0, i) + em.dataset.emoji + t.value.slice(i); t.focus(); }
+      var det = em.closest('details'); if (det) det.open = false;
+      return;
+    }
+    // fecha menus (pop) ao clicar fora
+    d.querySelectorAll('details.pop[open]').forEach(function (p) { if (!p.contains(e.target)) p.open = false; });
+  });
 })();

@@ -52,7 +52,8 @@
       <a href="{% url 'captacao:contatos' %}" class="{% if rota == 'contatos' %}on{% endif %}"><svg class="i"><use href="#s-users"/></svg><span>Contatos</span></a>
       <a href="{% url 'captacao:campanhas' %}" class="{% if rota == 'campanhas' %}on{% endif %}"><svg class="i"><use href="#s-mega"/></svg><span>Campanhas</span></a>
       <a href="{% url 'captacao:modelos' %}" class="{% if rota == 'modelos' %}on{% endif %}"><svg class="i"><use href="#s-doc"/></svg><span>Modelos</span></a>
-      <a href="{% url 'captacao:funil_config' %}" class="{% if rota == 'funil_config' %}on{% endif %}"><svg class="i"><use href="#s-tag"/></svg><span>Etiquetas e funil</span></a>
+      <a href="{% url 'captacao:etapas' %}" class="{% if rota == 'etapas' or rota == 'etapa_editar' %}on{% endif %}"><svg class="i"><use href="#s-funil"/></svg><span>Etapas do funil</span></a>
+      <a href="{% url 'captacao:funil_config' %}" class="{% if rota == 'funil_config' %}on{% endif %}"><svg class="i"><use href="#s-tag"/></svg><span>Etiquetas e regras</span></a>
       <a href="{% url 'captacao:portais' %}" class="{% if rota == 'portais' %}on{% endif %}"><svg class="i"><use href="#s-globe"/></svg><span>Portais</span></a>
       <a href="{% url 'captacao:carros' %}" class="{% if rota == 'carros' %}on{% endif %}"><svg class="i"><use href="#s-car"/></svg><span>Carros</span></a>
       <div class="grp">Resultados</div>

@@ -11,7 +11,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
-from . import utils, whatsapp
+from . import funil, utils, whatsapp
 from .models import Campanha, CampanhaEnvio, Lead, ModeloWhatsApp, Procura
 
 LOTE = 15
@@ -22,11 +22,11 @@ AUTOMATICAS = (Campanha.Tipo.REGUA, Campanha.Tipo.ANIVERSARIO, Campanha.Tipo.AVI
 def publico(filtro):
     """Leads da campanha. Filtros: todos (inclui vendidos/perdidos), etapas, origem, portal, etiqueta(s), de/ate (cadastro), dias_parado."""
     qs = Lead.objects.filter(nao_contatar=False).exclude(telefone="")
-    etapas = [e for e in (filtro.get("etapas") or []) if e in Lead.Etapa.values]
+    etapas = [e for e in (filtro.get("etapas") or []) if e in funil.chaves()]
     if etapas:
         qs = qs.filter(etapa__in=etapas)
     elif not filtro.get("todos"):
-        qs = qs.exclude(etapa__in=[Lead.Etapa.VENDIDO, Lead.Etapa.PERDIDO])
+        qs = qs.exclude(etapa__in=funil.fechadas())
     if filtro.get("origem") in Lead.Origem.values:
         qs = qs.filter(origem=filtro["origem"])
     if filtro.get("portal") in Lead.Portal.values:

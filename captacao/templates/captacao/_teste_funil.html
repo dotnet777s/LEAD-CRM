@@ -1,0 +1,6 @@
+{% if etapa or etiquetas %}
+  <div class="box" style="background:#0a1016">
+    {% if etapa %}<p style="margin:0">Cairia na etapa <b style="color:{{ etapa.cor }}">{{ etapa.nome }}</b> (se o lead ainda não estiver mais adiante no funil).</p>{% endif %}
+    {% if etiquetas %}<p style="margin:6px 0 0">Receberia as etiquetas: {% for t in etiquetas %}<span class="etq" style="--c:{{ t.cor }}">{{ t.nome }}</span> {% endfor %}</p>{% endif %}
+  </div>
+{% else %}<small style="color:var(--mu)">Nenhuma etapa nem etiqueta seria definida por essa mensagem.</small>{% endif %}

@@ -189,6 +189,8 @@ def _entrada(m, nome_perfil, agora):
     try:
         classificacao.cliente_respondeu(lead)
         classificacao.aplicar_regras(lead, texto)
+        if com_midia:
+            classificacao.arquivo_recebido(lead)
     except Exception:  # noqa: BLE001 - classificar nunca impede de gravar a mensagem
         log.exception("whatsapp: falha ao classificar")
     try:
@@ -375,3 +377,26 @@ def criar_modelo_nomeado(nome, categoria, texto_local, idioma="pt_BR"):
     corpo, ordem, exemplos = modelos.para_meta(texto_local)
     criar_modelo(nome, categoria, corpo, exemplos, idioma)
     ModeloWhatsApp.objects.filter(nome=nome, idioma=idioma).update(corpo_local=texto_local, variaveis=ordem)
+
+
+def enviar_arquivo(lead, conteudo, nome, mime, legenda="", usuario=None):
+    """Anexo pelo CRM: sobe o arquivo na Meta e envia como imagem, vídeo, áudio ou documento (dentro da janela de 24 h)."""
+    if not configurado():
+        raise WhatsAppErro("API do WhatsApp não configurada.")
+    if not janela_aberta(lead.telefone):
+        raise JanelaFechada("Conversa fora da janela de 24 h: use um template aprovado.")
+    r = requests.post(f"https://graph.facebook.com/{settings.WHATSAPP_API_VERSION}/{settings.WHATSAPP_PHONE_ID}/media", timeout=60,
+                      headers={"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}"},
+                      data={"messaging_product": "whatsapp", "type": mime}, files={"file": (nome, conteudo, mime)})
+    if r.status_code >= 400 or not (r.json() or {}).get("id"):
+        raise WhatsAppErro(_erro_meta(r) if r.status_code >= 400 else "A Meta não aceitou o arquivo.")
+    midia = r.json()["id"]
+    tipo = "image" if mime.startswith("image/") else "video" if mime.startswith("video/") else "audio" if mime.startswith("audio/") else "document"
+    corpo = {"id": midia}
+    if tipo in ("image", "video", "document") and legenda:
+        corpo["caption"] = legenda
+    if tipo == "document":
+        corpo["filename"] = nome[:100]
+    wamid = _post({"to": lead.telefone, "type": tipo, tipo: corpo})
+    return WhatsAppMensagem.objects.create(lead=lead, telefone=lead.telefone, direcao="out", tipo=tipo, texto=legenda or f"[{tipo}]", wamid=wamid,
+                                           status=WhatsAppMensagem.Status.ENVIADA, usuario=usuario, midia_id=midia, midia_tipo=mime[:100])

@@ -67,8 +67,12 @@ class Lead(models.Model):
     nao_contatar = models.BooleanField("Não quer receber mensagens", default=False, db_default=False)
     etiquetas = models.ManyToManyField("Etiqueta", blank=True, related_name="leads")
     aniversario = models.DateField("Aniversário", null=True, blank=True)
+    comentario_fixo = models.CharField("Comentário fixado na conversa", max_length=300, blank=True, db_default="")
+    fixada = models.BooleanField("Conversa fixada no topo", default=False, db_default=False)
+    arquivada = models.BooleanField("Conversa finalizada (arquivada)", default=False, db_default=False)
+    marcada_nao_lida = models.BooleanField(default=False, db_default=False)
     classe = models.CharField(max_length=1, choices=Classe.choices, default=Classe.B)
-    etapa = models.CharField(max_length=12, choices=Etapa.choices, default=Etapa.NOVO, db_index=True)
+    etapa = models.CharField(max_length=12, default=Etapa.NOVO, db_index=True)    # chave de uma EtapaFunil (editável no funil)
     etapa_desde = models.DateTimeField(default=timezone.now)
     vendedor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
                                  related_name="leads_crm")
@@ -132,13 +136,21 @@ class Lead(models.Model):
             return f"({t[:2]}) {t[2:6]}-{t[6:]}"
         return self.telefone
 
+    def get_etapa_display(self):
+        from . import funil
+        return funil.nome(self.etapa)
+
+    @property
+    def etapa_cor(self):
+        from . import funil
+        return funil.cor(self.etapa)
+
     @property
     def proxima_etapa(self):
-        if self.etapa in (self.Etapa.REQUALIFICAR, self.Etapa.SEM_ESTOQUE):
-            return self.Etapa.ATENDIMENTO
-        if self.etapa in self.ABERTAS:
-            return self.FUNIL[self.FUNIL.index(self.etapa) + 1]
-        return None
+        """Chave da próxima etapa do funil (ou None). Etapas laterais voltam para 'Em atendimento'."""
+        from . import funil
+        e = funil.proxima(self.etapa)
+        return e.chave if e else None
 
     @property
     def incompleto(self):
@@ -513,7 +525,7 @@ class RegraClassificacao(models.Model):
     nome = models.CharField(max_length=60)
     palavras = models.TextField(help_text="Uma por linha ou separadas por vírgula. Sem diferenciar acento e maiúscula.")
     etiqueta = models.ForeignKey(Etiqueta, null=True, blank=True, on_delete=models.SET_NULL, related_name="regras")
-    etapa = models.CharField(max_length=12, blank=True, choices=Lead.Etapa.choices)
+    etapa = models.CharField(max_length=12, blank=True)
     motivo_perda = models.CharField(max_length=16, blank=True, choices=Lead.MotivoPerda.choices)
     ativa = models.BooleanField(default=True)
     ordem = models.PositiveSmallIntegerField(default=0)
@@ -632,3 +644,31 @@ class Agendamento(models.Model):
 
     class Meta:
         ordering = ["inicio"]
+
+
+class EtapaFunil(models.Model):
+    """Etapa do funil (coluna do Kanban), totalmente editável: nome, cor, ordem, tag que leva o lead até ela,
+    grupos de palavras-chave e gatilho por arquivo. As etapas 'de sistema' (novo, atendimento, qualificado, visita,
+    vendido, perdido) não podem ser apagadas porque o CRM usa as regras delas (eventos da Meta, formulários, painel)."""
+
+    class Tipo(models.TextChoices):
+        NORMAL = "normal", "Normal"
+        GANHO = "ganho", "Ganho (venda)"
+        PERDIDO = "perdido", "Perdido"
+
+    chave = models.CharField(max_length=12, unique=True)
+    nome = models.CharField(max_length=40)
+    cor = models.CharField(max_length=7, default="#3b82f6")
+    ordem = models.PositiveSmallIntegerField(default=0, db_index=True)
+    tipo = models.CharField(max_length=8, choices=Tipo.choices, default=Tipo.NORMAL)
+    lateral = models.BooleanField(default=False, help_text="Fica fora da sequência 'avançar' (ex.: Não temos).")
+    sistema = models.BooleanField(default=False)
+    tag = models.ForeignKey(Etiqueta, null=True, blank=True, on_delete=models.SET_NULL, related_name="etapas")
+    grupos = models.JSONField(default=list, blank=True)       # [{"palavras": ["preço", "valor"], "todas": false}]
+    por_arquivo = models.BooleanField(default=False)          # cliente mandou um arquivo/foto -> vai para esta etapa
+
+    class Meta:
+        ordering = ["ordem", "id"]
+
+    def __str__(self):
+        return self.nome
