@@ -1,7 +1,8 @@
 {% extends "captacao/base.html" %}
 {% block title %}TopCar · Configurar follow-up{% endblock %}
+{% block titulo %}Follow-up{% endblock %}
 {% block content %}
-{% include "captacao/_abas_funil.html" with ativa="followup" %}
+{% include "captacao/_abas.html" with grupo="config" ativa="followup" %}
 <div class="pg">
   <div class="fu-topo"><div><h1 style="margin:0;font-size:20px">Configurar follow-up</h1>
     <small style="color:var(--mu)">A sequência para quem não responde. Use {nome} e {carro} nos textos.</small></div>

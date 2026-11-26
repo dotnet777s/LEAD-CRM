@@ -254,4 +254,22 @@
       rec.stop();
     }
   });
+
+  // ---- tema claro/escuro, menu recolhido e "Mais" (celular) ----
+  var raiz = d.documentElement, icTema = d.querySelector('#tema use');
+  function pintarTema() { if (icTema) icTema.setAttribute('href', raiz.getAttribute('data-theme') === 'light' ? '#s-moon' : '#s-sun'); }
+  pintarTema();
+  d.addEventListener('click', function (e) {
+    if (e.target.closest('#tema')) {
+      var novo = raiz.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      raiz.setAttribute('data-theme', novo); try { localStorage.setItem('tema', novo); } catch (x) {} pintarTema();
+    } else if (e.target.closest('#recolher')) {
+      raiz.classList.toggle('recolher'); try { localStorage.setItem('menu', raiz.classList.contains('recolher') ? '1' : '0'); } catch (x) {}
+    } else if (e.target.closest('#mais')) {
+      d.getElementById('app').classList.toggle('sheet-aberta');
+    } else if (e.target.closest('#veu') || e.target.closest('#sheet a')) {
+      d.getElementById('app').classList.remove('sheet-aberta');
+    }
+    d.querySelectorAll('details.usuario[open]').forEach(function (u) { if (!u.contains(e.target)) u.open = false; });
+  });
 })();

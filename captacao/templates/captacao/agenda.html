@@ -2,9 +2,9 @@
 {% block title %}TopCar · Agenda{% endblock %}
 {% block titulo %}Agenda{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="agenda" ativa="agenda" %}
 <div class="pg">
-  <div class="subabas" style="padding:0 0 10px"><a class="on" href="{% url 'captacao:agenda' %}">Agenda</a><a href="{% url 'captacao:agenda_cadastros' %}">Profissionais e atividades</a><a href="{% url 'captacao:agenda_mensagens' %}">Mensagens ao cliente</a></div>
-  {% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+    {% if erro %}<p class="err">{{ erro }}</p>{% endif %}
   <details class="dprog" style="margin-bottom:12px" {% if lead_pre %}open{% endif %}><summary>Novo agendamento</summary>
     <form method="post" action="{% url 'captacao:agendamento_novo' %}" class="cfg" style="margin-top:8px">{% csrf_token %}
       <div class="linha"><label class="l">Contato<select name="lead" required><option value="">Escolha…</option>{% for c in contatos %}<option value="{{ c.pk }}" {% if lead_pre == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.nome }} · {{ c.telefone_formatado }}</option>{% endfor %}</select></label>

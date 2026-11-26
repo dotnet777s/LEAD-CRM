@@ -1,0 +1,21 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Configurações{% endblock %}
+{% block titulo %}Configurações{% endblock %}
+{% block content %}
+{% include "captacao/_abas.html" with grupo="config" ativa="geral" %}
+<div class="pg">
+  <div class="titulo-pg"><div><h1>Configurações</h1><small>Tudo o que ajusta o CRM, num só lugar.</small></div></div>
+  <div class="hub">
+    <a class="hub-card" href="{% url 'captacao:wa_conexao' %}"><span class="ic-h"><svg class="i"><use href="#s-wa"/></svg></span><div><b>WhatsApp</b><span>Conexão com a API oficial, webhook e qualidade do número.</span><br><em class="{% if wa_ok %}ok{% else %}al{% endif %}">{% if wa_ok %}Conectado{% else %}Ainda não conectado{% endif %}</em></div></a>
+    <a class="hub-card" href="{% url 'captacao:modelos' %}"><span class="ic-h"><svg class="i"><use href="#s-doc"/></svg></span><div><b>Modelos e respostas rápidas</b><span>Modelos aprovados da Meta e textos prontos para o atendimento.</span><br><em class="{% if n_modelos %}ok{% else %}al{% endif %}">{{ n_modelos }} modelo(s) aprovado(s)</em></div></a>
+    <a class="hub-card" href="{% url 'captacao:etapas' %}"><span class="ic-h"><svg class="i"><use href="#s-funil"/></svg></span><div><b>Etapas do funil</b><span>Nome, cor, ordem e como o lead chega em cada etapa.</span><br><em>{{ n_etapas }} etapas</em></div></a>
+    <a class="hub-card" href="{% url 'captacao:funil_config' %}"><span class="ic-h"><svg class="i"><use href="#s-tag"/></svg></span><div><b>Etiquetas e regras</b><span>Etiquetas coloridas e as palavras que movem o funil sozinhas.</span><br><em>{{ n_etiquetas }} etiquetas</em></div></a>
+    <a class="hub-card" href="{% url 'captacao:followup_config' %}"><span class="ic-h"><svg class="i"><use href="#s-follow"/></svg></span><div><b>Follow-up</b><span>Sequência de mensagens para quem não responde, por etapa do funil.</span><br><em class="{% if fu_ativo %}ok{% else %}al{% endif %}">{% if fu_ativo %}Ligado · {{ fu_etapas }} etapa(s){% else %}Desligado{% endif %}</em></div></a>
+    <a class="hub-card" href="{% url 'captacao:agenda_mensagens' %}"><span class="ic-h"><svg class="i"><use href="#s-agenda"/></svg></span><div><b>Mensagens do agendamento</b><span>Confirmação, lembretes e agradecimento depois da visita.</span></div></a>
+    <a class="hub-card" href="{% url 'captacao:portais' %}"><span class="ic-h"><svg class="i"><use href="#s-globe"/></svg></span><div><b>Portais (OLX)</b><span>Leitura dos e-mails de lead dos portais.</span><br><em class="{% if imap_ok %}ok{% else %}al{% endif %}">{% if imap_ok %}Caixa de e-mail configurada{% else %}Caixa de e-mail pendente{% endif %}</em></div></a>
+    <a class="hub-card" href="{% url 'captacao:carros' %}"><span class="ic-h"><svg class="i"><use href="#s-car"/></svg></span><div><b>Estoque (AutoCerto)</b><span>Atualização automática do catálogo e páginas de captura.</span><br><em class="{% if estoque_ok %}ok{% else %}al{% endif %}">{% if estoque_ok %}Sincronizando{% else %}Falta a URL do AutoCerto{% endif %}</em></div></a>
+    {% if eh_gestor %}<a class="hub-card" href="{% url 'captacao:equipe' %}"><span class="ic-h"><svg class="i"><use href="#s-team"/></svg></span><div><b>Equipe</b><span>Consultores, gestores e o código do Telegram.</span><br><em>{{ n_equipe }} usuário(s)</em></div></a>{% endif %}
+    <a class="hub-card" href="{% url 'captacao:conta' %}"><span class="ic-h"><svg class="i"><use href="#s-user"/></svg></span><div><b>Minha conta</b><span>Seus dados e a troca de senha.</span></div></a>
+  </div>
+</div>
+{% endblock %}

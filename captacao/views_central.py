@@ -52,7 +52,7 @@ class ContatosView(Base, TemplateView):
         except ValueError:
             pag = 1
         total = qs.count()
-        ctx.update(contatos=qs[(pag - 1) * PAGINA: pag * PAGINA], total=total, pag=pag, tem_mais=total > pag * PAGINA,
+        ctx.update(contatos=qs.prefetch_related("etiquetas")[(pag - 1) * PAGINA: pag * PAGINA], total=total, pag=pag, tem_mais=total > pag * PAGINA,
                    q=p.get("q", ""), origem=p.get("origem", ""), etapa=p.get("etapa", ""), nc=p.get("nc", ""),
                    etiquetas=Etiqueta.objects.all(), etiqueta=p.get("etiqueta", ""),
                    origens=Lead.Origem.choices, etapas=funil.choices(), importado=p.get("importado"), ignorados=p.get("ignorados"),
@@ -314,3 +314,20 @@ class WebhookAssinarView(Base, View):
         except whatsapp.WhatsAppErro as e:
             return redirect(f"/whatsapp/?erro={e}")
         return redirect("/whatsapp/?msg=Recebimento de mensagens ativado para este app")
+
+
+class ConfiguracoesView(Base, TemplateView):
+    """Central de configurações: um cartão por assunto, com a situação de cada um."""
+    template_name = "captacao/configuracoes.html"
+
+    def get_context_data(self, **kw):
+        from django.contrib.auth import get_user_model
+        from .models import EtapaFunil, FollowUpConfig
+        ctx = super().get_context_data(**kw)
+        cfg = FollowUpConfig.obter()
+        funil.garantir_padroes()
+        ctx.update(
+            wa_ok=whatsapp.configurado(), n_modelos=ModeloWhatsApp.objects.filter(status="APPROVED").count(), n_etapas=EtapaFunil.objects.count(),
+            n_etiquetas=Etiqueta.objects.count(), fu_ativo=cfg.ativo, fu_etapas=len(cfg.etapas_gatilho), n_equipe=get_user_model().objects.filter(is_active=True).count(),
+            imap_ok=bool(settings.PORTAIS_IMAP_HOST and settings.PORTAIS_IMAP_USER), estoque_ok=bool(settings.AUTOCERTO_URL), gestor=eh_gestor(self.request.user))
+        return ctx

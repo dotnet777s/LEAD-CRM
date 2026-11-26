@@ -1,6 +1,8 @@
 {% extends "captacao/base.html" %}
 {% block title %}TopCar · Eventos Meta{% endblock %}
+{% block titulo %}Resultados{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="resultados" ativa="eventos" %}
 <div class="pg">
   <h1 style="font-size:20px">Eventos enviados à Meta</h1>
   {% if not capi_ligada %}<div class="box" style="border-color:var(--am);color:var(--am);margin-bottom:12px">

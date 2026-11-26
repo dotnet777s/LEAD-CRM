@@ -1,0 +1,30 @@
+{% comment %}Abas da seção. Uso: {% include "captacao/_abas.html" with grupo="funil" ativa="followup" %}{% endcomment %}
+<div class="tabs-wrap"><nav class="tabs" aria-label="Seção">
+{% if grupo == "funil" %}
+  <a href="{% url 'captacao:kanban' %}" class="{% if ativa == 'quadro' %}on{% endif %}">Quadro</a>
+  <a href="{% url 'captacao:followup' %}" class="{% if ativa == 'followup' %}on{% endif %}">Follow-up{% if menu_followup %}<b class="pt">{{ menu_followup }}</b>{% endif %}</a>
+  <a href="{% url 'captacao:portais' %}" class="{% if ativa == 'portais' %}on{% endif %}">Portais</a>
+{% elif grupo == "agenda" %}
+  <a href="{% url 'captacao:agenda' %}" class="{% if ativa == 'agenda' %}on{% endif %}">Agenda</a>
+  <a href="{% url 'captacao:agenda_cadastros' %}" class="{% if ativa == 'cadastros' %}on{% endif %}">Profissionais e atividades</a>
+  <a href="{% url 'captacao:agenda_mensagens' %}" class="{% if ativa == 'mensagens' %}on{% endif %}">Mensagens ao cliente</a>
+{% elif grupo == "campanhas" %}
+  <a href="{% url 'captacao:campanhas' %}" class="{% if ativa == 'campanhas' %}on{% endif %}">Campanhas</a>
+  <a href="{% url 'captacao:enviar' %}" class="{% if ativa == 'enviar' %}on{% endif %}">Enviar</a>
+  <a href="{% url 'captacao:historico' %}" class="{% if ativa == 'historico' %}on{% endif %}">Histórico de envios</a>
+{% elif grupo == "resultados" %}
+  <a href="{% url 'captacao:visao_geral' %}" class="{% if ativa == 'visao' %}on{% endif %}">Visão geral</a>
+  <a href="{% url 'captacao:painel' %}" class="{% if ativa == 'painel' %}on{% endif %}">Anúncios (Meta)</a>
+  <a href="{% url 'captacao:funil_form' %}" class="{% if ativa == 'formulario' %}on{% endif %}">Formulário</a>
+  <a href="{% url 'captacao:eventos' %}" class="{% if ativa == 'eventos' %}on{% endif %}">Eventos Meta</a>
+{% elif grupo == "config" %}
+  <a href="{% url 'captacao:configuracoes' %}" class="{% if ativa == 'geral' %}on{% endif %}">Geral</a>
+  <a href="{% url 'captacao:wa_conexao' %}" class="{% if ativa == 'whatsapp' %}on{% endif %}">WhatsApp</a>
+  <a href="{% url 'captacao:modelos' %}" class="{% if ativa == 'modelos' %}on{% endif %}">Modelos</a>
+  <a href="{% url 'captacao:etapas' %}" class="{% if ativa == 'etapas' %}on{% endif %}">Etapas do funil</a>
+  <a href="{% url 'captacao:funil_config' %}" class="{% if ativa == 'etiquetas' %}on{% endif %}">Etiquetas e regras</a>
+  <a href="{% url 'captacao:followup_config' %}" class="{% if ativa == 'followup' %}on{% endif %}">Follow-up</a>
+  {% if eh_gestor %}<a href="{% url 'captacao:equipe' %}" class="{% if ativa == 'equipe' %}on{% endif %}">Equipe</a>{% endif %}
+  <a href="{% url 'captacao:conta' %}" class="{% if ativa == 'conta' %}on{% endif %}">Minha conta</a>
+{% endif %}
+</nav></div>

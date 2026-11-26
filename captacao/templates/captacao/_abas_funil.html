@@ -1,5 +1,1 @@
-<div class="subabas">
-  <a href="{% url 'captacao:kanban' %}" class="{% if ativa == 'quadro' %}on{% endif %}">Quadro</a>
-  <a href="{% url 'captacao:followup' %}" class="{% if ativa == 'followup' %}on{% endif %}">Follow-up{% if n_agora %}<b class="pt">{{ n_agora }}</b>{% endif %}</a>
-  <a href="{% url 'captacao:portais' %}" class="{% if ativa == 'portais' %}on{% endif %}">Portais</a>
-</div>
+{% include "captacao/_abas.html" with grupo="funil" %}

@@ -2,6 +2,7 @@
 {% block title %}TopCar · Nova campanha{% endblock %}
 {% block titulo %}Nova campanha{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="campanhas" ativa="campanhas" %}
 <div class="pg">
   <div class="titulo-pg"><div><h1>Nova campanha</h1><small>Escolha um tipo e siga os passos: você revisa tudo antes de qualquer envio.</small></div><a class="btn sec sm" href="{% url 'captacao:campanhas' %}">Voltar</a></div>
   <div class="tipos">{% for k, nome, desc in tipos %}<a class="tipo" href="{% url 'captacao:campanha_nova' k %}"><b>{{ nome }}</b><span>{{ desc }}</span><em>Criar →</em></a>{% endfor %}</div>

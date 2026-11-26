@@ -2,6 +2,7 @@
 {% block title %}TopCar · Trocar senha{% endblock %}
 {% block titulo %}Trocar senha{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="config" ativa="conta" %}
 <div class="pg" style="max-width:480px">
   <div class="titulo-pg"><div><h1>Trocar a senha</h1></div></div>
   <form method="post" class="box cfg">{% csrf_token %}

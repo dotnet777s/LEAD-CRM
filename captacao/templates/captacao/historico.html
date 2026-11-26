@@ -2,6 +2,7 @@
 {% block title %}TopCar · Histórico de envios{% endblock %}
 {% block titulo %}Histórico de envios{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="campanhas" ativa="historico" %}
 <div class="pg">
   <div class="titulo-pg"><div><h1>Relatório de envios</h1><small>Avisos e campanhas: o que saiu, o que está na fila e o que falhou.</small></div>
     <a class="btn" href="{% url 'captacao:enviar' %}">Enviar</a></div>

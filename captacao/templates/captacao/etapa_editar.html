@@ -2,6 +2,7 @@
 {% block title %}TopCar · {{ e.nome }}{% endblock %}
 {% block titulo %}Etapa{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="config" ativa="etapas" %}
 <div class="pg" style="max-width:760px">
   <div class="titulo-pg"><div><h1 style="display:flex;align-items:center;gap:10px"><i class="bola" style="background:{{ e.cor }}"></i>{{ e.nome }}</h1><small>{{ n }} lead(s) nesta etapa{% if e.sistema %} · etapa usada pelo CRM{% endif %}</small></div><a class="btn sec sm" href="{% url 'captacao:etapas' %}">Voltar ao funil</a></div>
   {% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}{% if erro %}<p class="err">{{ erro }}</p>{% endif %}

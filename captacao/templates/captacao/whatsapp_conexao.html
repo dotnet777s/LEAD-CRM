@@ -2,6 +2,7 @@
 {% block title %}TopCar · WhatsApp{% endblock %}
 {% block titulo %}WhatsApp{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="config" ativa="whatsapp" %}
 <div class="pg">
   <div class="titulo-pg"><div><h1>Conexão do WhatsApp</h1><small>API oficial (WhatsApp Business Platform da Meta)</small></div></div>
   {% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}{% if erro_acao %}<p class="err">{{ erro_acao }}</p>{% endif %}

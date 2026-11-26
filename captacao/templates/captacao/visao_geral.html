@@ -2,6 +2,7 @@
 {% block title %}TopCar · Visão geral{% endblock %}
 {% block titulo %}Visão geral{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="resultados" ativa="visao" %}
 <div class="pg">
   <div class="titulo-pg"><div><h1>Visão geral</h1><small>Leads dos últimos {{ dias }} dias: de onde vêm, quando chegam e o que procuram.</small></div>
     <form method="get"><select name="dias" onchange="this.form.submit()">

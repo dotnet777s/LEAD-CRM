@@ -55,6 +55,7 @@ urlpatterns = [
     path("conversas/nova/", views_conversas.NovaConversaView.as_view(), name="conversa_nova"),
     path("conversas/<int:pk>/etapa/", views_conversas.EtapaView.as_view(), name="conversa_etapa"),
     path("whatsapp/midia/<int:pk>/", views_conversas.MidiaView.as_view(), name="wa_midia"),
+    path("configuracoes/", views_central.ConfiguracoesView.as_view(), name="configuracoes"),
     path("whatsapp/", views_central.ConexaoView.as_view(), name="wa_conexao"),
     path("whatsapp/assinar/", views_central.WebhookAssinarView.as_view(), name="wa_assinar"),
     path("lead/<int:pk>/etiqueta/<slug:acao>/", views_funil.EtiquetaLeadView.as_view(), name="lead_etiqueta"),

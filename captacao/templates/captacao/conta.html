@@ -2,6 +2,7 @@
 {% block title %}TopCar · Minha conta{% endblock %}
 {% block titulo %}Minha conta{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="config" ativa="conta" %}
 <div class="pg" style="max-width:560px">
   <div class="titulo-pg"><div><h1>Minha conta</h1><small>Usuário: {{ request.user.username }}</small></div></div>
   {% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}

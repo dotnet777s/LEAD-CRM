@@ -2,6 +2,7 @@
 {% block title %}TopCar · Etiquetas e funil{% endblock %}
 {% block titulo %}Etiquetas e funil{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="config" ativa="etiquetas" %}
 <div class="pg">
   <div class="titulo-pg"><div><h1>Etiquetas e funil automático</h1><small>O funil anda sozinho conforme o que o cliente escreve. A etapa só avança; nunca volta sozinha.</small></div></div>
   {% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}

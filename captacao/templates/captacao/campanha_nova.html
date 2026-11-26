@@ -2,6 +2,7 @@
 {% block title %}TopCar · {{ titulo }}{% endblock %}
 {% block titulo %}{{ titulo }}{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="campanhas" ativa="campanhas" %}
 <div class="pg" style="max-width:820px">
   <div class="titulo-pg"><div><h1>{{ titulo }}</h1><small>{{ desc }}</small></div><a class="btn sec sm" href="{% url 'captacao:campanha_tipos' %}">Voltar</a></div>
   {% if erro %}<p class="err">{{ erro }}</p>{% endif %}

@@ -1,5 +1,6 @@
 {% extends "captacao/base.html" %}
 {% block title %}TopCar · Formulário{% endblock %}
+{% block titulo %}Resultados{% endblock %}
 {% block head %}
 <style>
 .dsh{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--r1:#86b6ef;--r2:#6da7ec;--r3:#5598e7;--r4:#3987e5;--r5:#2a78d6;--r6:#256abf;--r7:#1c5cab;
@@ -67,6 +68,7 @@
 </style>
 {% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="resultados" ativa="formulario" %}
 <div class="dsh">
 <h1>Diagnóstico do formulário</h1>
 <p class="sub">Onde as pessoas desistem na página de captura, o que fazer e qual versão dos botões converte mais.</p>

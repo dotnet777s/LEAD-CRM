@@ -1,6 +1,8 @@
 {% extends "captacao/base.html" %}
 {% block title %}TopCar · Painel{% endblock %}
+{% block titulo %}Resultados{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="resultados" ativa="painel" %}
 <div class="pg">
 <form class="barra" method="get" style="padding:0 0 12px">
   <select name="periodo" onchange="this.form.submit()">{% for v, r in periodos %}<option value="{{ v }}" {% if v == periodo %}selected{% endif %}>{{ r }}</option>{% endfor %}</select>

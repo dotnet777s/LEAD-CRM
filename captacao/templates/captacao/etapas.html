@@ -3,6 +3,7 @@
 {% block titulo %}Etapas do funil{% endblock %}
 {% block head %}<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="config" ativa="etapas" %}
 <div class="pg" style="max-width:760px">
   <div class="titulo-pg"><div><h1>Configurar funil de leads</h1><small>Monte as etapas do seu funil, arraste para reordenar e defina como o lead chega em cada uma: por etiqueta, por palavras-chave ou por arquivo.</small></div>
     <a class="btn sec sm" href="{% url 'captacao:funil_config' %}">Etiquetas e regras</a></div>

@@ -1,6 +1,8 @@
 {% extends "captacao/base.html" %}
 {% block title %}TopCar · Equipe{% endblock %}
+{% block titulo %}Equipe{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="config" ativa="equipe" %}
 <div class="pg">
 {% for m in messages %}<div class="box" style="margin-bottom:10px;border-color:{% if m.tags == 'error' %}var(--rd){% else %}var(--gr){% endif %}">{{ m }}</div>{% endfor %}
 <div class="grid" style="grid-template-columns:minmax(0,1fr)">

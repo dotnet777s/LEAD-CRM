@@ -1,7 +1,8 @@
 {% extends "captacao/base.html" %}
 {% block title %}TopCar · Portais{% endblock %}
+{% block titulo %}Funil{% endblock %}
 {% block content %}
-{% include "captacao/_abas_funil.html" with ativa="portais" %}
+{% include "captacao/_abas.html" with grupo="funil" ativa="portais" %}
 <div class="pg">
   <div class="fu-topo"><div><h1 style="margin:0;font-size:20px">Leads dos portais</h1>
     <small style="color:var(--mu)">E-mails recebidos dos portais. Ativos agora: {{ ativos|join:", "|upper }}. {% if not ligado %}<b style="color:var(--am)">Leitura da caixa de e-mail ainda não configurada.</b>{% endif %}</small></div></div>

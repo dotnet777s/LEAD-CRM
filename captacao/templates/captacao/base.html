@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>{% block title %}TopCar · CRM{% endblock %}</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#070a0e">
+<meta name="theme-color" content="#090d12">
 <link rel="icon" href="{% static 'captacao/favicon.png' %}">
 <link rel="manifest" href="{% static 'captacao/manifest.webmanifest' %}">
+<script>(function(){try{var t=localStorage.getItem('tema');if(!t)t='dark';document.documentElement.setAttribute('data-theme',t);
+if(localStorage.getItem('menu')==='1')document.documentElement.classList.add('recolher');}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
 <link rel="stylesheet" href="{% static 'captacao/crm.css' %}">
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
 {% block head %}{% endblock %}
@@ -35,44 +37,61 @@
 <symbol id="s-hist" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.700M3 4v5h5M12 8v4l3 2"/></symbol>
 <symbol id="s-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
 <symbol id="s-out" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/></symbol>
+
+<symbol id="s-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.400 15a1.700 1.700 0 0 0 .3 1.800l.1.1a2 2 0 1 1-2.800 2.800l-.1-.1a1.700 1.700 0 0 0-1.800-.3 1.700 1.700 0 0 0-1 1.500V21a2 2 0 1 1-4 0v-.1a1.700 1.700 0 0 0-1.100-1.500 1.700 1.700 0 0 0-1.800.3l-.1.1a2 2 0 1 1-2.800-2.800l.1-.1a1.700 1.700 0 0 0 .3-1.800 1.700 1.700 0 0 0-1.500-1H3a2 2 0 1 1 0-4h.1a1.700 1.700 0 0 0 1.500-1.100 1.700 1.700 0 0 0-.3-1.800l-.1-.1a2 2 0 1 1 2.800-2.800l.1.100a1.700 1.700 0 0 0 1.800.3h.1a1.700 1.700 0 0 0 1-1.500V3a2 2 0 1 1 4 0v.1a1.700 1.700 0 0 0 1 1.500 1.700 1.700 0 0 0 1.800-.3l.1-.1a2 2 0 1 1 2.800 2.800l-.1.100a1.700 1.700 0 0 0-.3 1.800v.1a1.700 1.700 0 0 0 1.500 1H21a2 2 0 1 1 0 4h-.1a1.700 1.700 0 0 0-1.500 1Z"/></symbol>
+<symbol id="s-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.900 4.900l1.400 1.400M17.700 17.700l1.400 1.400M2 12h2M20 12h2M4.900 19.100l1.400-1.400M17.700 6.300l1.400-1.400"/></symbol>
+<symbol id="s-moon" viewBox="0 0 24 24"><path d="M21 12.800A9 9 0 1 1 11.200 3a7 7 0 0 0 9.800 9.800Z"/></symbol>
+<symbol id="s-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.800-3.800"/></symbol>
+<symbol id="s-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.500 7.500 2.500 7.500h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+<symbol id="s-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.600"/><circle cx="12" cy="12" r="1.600"/><circle cx="19" cy="12" r="1.600"/></symbol>
+<symbol id="s-collapse" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/><path d="M4 4v16"/></symbol>
+<symbol id="s-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.500"/><path d="M5 20c.6-4 3.300-6 7-6s6.400 2 7 6"/></symbol>
 </defs></svg>
 
-<div class="app">
+<div class="app" id="app">
   <aside class="side" id="side">
-    <a href="{% url 'captacao:conversas' %}" class="brand"><img src="{% static 'captacao/logo-menu.png' %}" alt="TopCar" height="26"><span>CRM</span></a>
-    <nav>
-      <div class="grp">Atendimento</div>
-      <a href="{% url 'captacao:conversas' %}" class="{% if rota == 'conversas' %}on{% endif %}"><svg class="i"><use href="#s-chat"/></svg><span>Conversas</span><i id="b-conv" class="bdg" hx-get="{% url 'captacao:conversas_badge' %}" hx-trigger="every 20s" hx-swap="innerHTML">{% if menu_nao_lidas %}<b class="pt">{{ menu_nao_lidas }}</b>{% endif %}</i></a>
-      <a href="{% url 'captacao:kanban' %}" class="{% if rota == 'kanban' %}on{% endif %}"><svg class="i"><use href="#s-funil"/></svg><span>Funil</span></a>
-      <a href="{% url 'captacao:followup' %}" class="{% if rota == 'followup' or rota == 'followup_config' %}on{% endif %}"><svg class="i"><use href="#s-follow"/></svg><span>Follow-up</span>{% if menu_followup %}<i class="bdg"><b class="pt">{{ menu_followup }}</b></i>{% endif %}</a>
-      <a href="{% url 'captacao:agenda' %}" class="{% if rota == 'agenda' %}on{% endif %}"><svg class="i"><use href="#s-agenda"/></svg><span>Agenda</span></a>
-      <div class="grp">Base</div>
-      <a href="{% url 'captacao:enviar' %}" class="{% if rota == 'enviar' %}on{% endif %}"><svg class="i"><use href="#s-send"/></svg><span>Enviar</span></a>
-      <a href="{% url 'captacao:historico' %}" class="{% if rota == 'historico' %}on{% endif %}"><svg class="i"><use href="#s-hist"/></svg><span>Histórico de envios</span></a>
+    <a href="{% url 'captacao:conversas' %}" class="brand"><img src="{% static 'captacao/logo-menu.png' %}" alt="TopCar"><span>CRM</span></a>
+    <nav aria-label="Principal">
+      <a href="{% url 'captacao:conversas' %}" class="{% if rota == 'conversas' %}on{% endif %}"><svg class="i"><use href="#s-chat"/></svg><span>Conversas</span><i class="bdg" hx-get="{% url 'captacao:conversas_badge' %}" hx-trigger="every 20s" hx-swap="innerHTML">{% if menu_nao_lidas %}<b class="pt">{{ menu_nao_lidas }}</b>{% endif %}</i></a>
+      <a href="{% url 'captacao:kanban' %}" class="{% if rota == 'kanban' or rota == 'followup' or rota == 'portais' %}on{% endif %}"><svg class="i"><use href="#s-funil"/></svg><span>Funil</span>{% if menu_followup %}<i class="bdg"><b class="pt">{{ menu_followup }}</b></i>{% endif %}</a>
+      <a href="{% url 'captacao:agenda' %}" class="{% if rota == 'agenda' or rota == 'agenda_cadastros' or rota == 'agenda_mensagens' %}on{% endif %}"><svg class="i"><use href="#s-agenda"/></svg><span>Agenda</span></a>
       <a href="{% url 'captacao:contatos' %}" class="{% if rota == 'contatos' %}on{% endif %}"><svg class="i"><use href="#s-users"/></svg><span>Contatos</span></a>
-      <a href="{% url 'captacao:campanhas' %}" class="{% if rota == 'campanhas' %}on{% endif %}"><svg class="i"><use href="#s-mega"/></svg><span>Campanhas</span></a>
-      <a href="{% url 'captacao:modelos' %}" class="{% if rota == 'modelos' %}on{% endif %}"><svg class="i"><use href="#s-doc"/></svg><span>Modelos</span></a>
-      <a href="{% url 'captacao:etapas' %}" class="{% if rota == 'etapas' or rota == 'etapa_editar' %}on{% endif %}"><svg class="i"><use href="#s-funil"/></svg><span>Etapas do funil</span></a>
-      <a href="{% url 'captacao:funil_config' %}" class="{% if rota == 'funil_config' %}on{% endif %}"><svg class="i"><use href="#s-tag"/></svg><span>Etiquetas e regras</span></a>
-      <a href="{% url 'captacao:portais' %}" class="{% if rota == 'portais' %}on{% endif %}"><svg class="i"><use href="#s-globe"/></svg><span>Portais</span></a>
+      <a href="{% url 'captacao:campanhas' %}" class="{% if rota == 'campanhas' or rota == 'campanha_tipos' or rota == 'campanha_nova' or rota == 'enviar' or rota == 'historico' %}on{% endif %}"><svg class="i"><use href="#s-mega"/></svg><span>Campanhas</span></a>
       <a href="{% url 'captacao:carros' %}" class="{% if rota == 'carros' %}on{% endif %}"><svg class="i"><use href="#s-car"/></svg><span>Carros</span></a>
-      <div class="grp">Resultados</div>
-      <a href="{% url 'captacao:visao_geral' %}" class="{% if rota == 'visao_geral' %}on{% endif %}"><svg class="i"><use href="#s-pie"/></svg><span>Visão geral</span></a>
-      <a href="{% url 'captacao:painel' %}" class="{% if rota == 'painel' %}on{% endif %}"><svg class="i"><use href="#s-chart"/></svg><span>Painel</span></a>
-      <a href="{% url 'captacao:funil_form' %}" class="{% if rota == 'funil_form' %}on{% endif %}"><svg class="i"><use href="#s-form"/></svg><span>Formulário</span></a>
-      <a href="{% url 'captacao:eventos' %}" class="{% if rota == 'eventos' %}on{% endif %}"><svg class="i"><use href="#s-bolt"/></svg><span>Meta</span></a>
-      <div class="grp">Conta</div>
-      <a href="{% url 'captacao:wa_conexao' %}" class="{% if rota == 'wa_conexao' %}on{% endif %}"><svg class="i"><use href="#s-wa"/></svg><span>WhatsApp</span></a>
-      {% if eh_gestor %}<a href="{% url 'captacao:equipe' %}" class="{% if rota == 'equipe' %}on{% endif %}"><svg class="i"><use href="#s-team"/></svg><span>Equipe</span></a>{% endif %}
+      <div class="sep"></div>
+      <a href="{% url 'captacao:visao_geral' %}" class="{% if rota == 'visao_geral' or rota == 'painel' or rota == 'funil_form' or rota == 'eventos' %}on{% endif %}"><svg class="i"><use href="#s-chart"/></svg><span>Resultados</span></a>
+      <a href="{% url 'captacao:configuracoes' %}" class="{% if rota == 'configuracoes' or rota == 'modelos' or rota == 'etapas' or rota == 'etapa_editar' or rota == 'funil_config' or rota == 'wa_conexao' or rota == 'equipe' or rota == 'conta' or rota == 'senha' or rota == 'followup_config' %}on{% endif %}"><svg class="i"><use href="#s-cog"/></svg><span>Configurações</span></a>
     </nav>
-    <form method="post" action="{% url 'captacao:sair' %}" class="sair">{% csrf_token %}<button class="link"><svg class="i"><use href="#s-out"/></svg><span>Sair</span></button></form>
-    <a href="{% url 'captacao:conta' %}" class="minha-conta">{{ request.user.first_name|default:request.user.username }} · minha conta</a>
+    <div class="side-rodape"><button type="button" id="recolher" title="Recolher o menu"><svg class="i"><use href="#s-collapse"/></svg><span>Recolher menu</span></button></div>
   </aside>
-  <div class="veu" id="veu"></div>
   <div class="main">
-    <header class="topo-app"><button class="menu-btn" id="menu-btn" aria-label="Menu"><svg class="i"><use href="#s-menu"/></svg></button><span class="tt">{% block titulo %}{% endblock %}</span></header>
+    <header class="topbar">
+      <span class="tt">{% block titulo %}{% endblock %}</span>
+      <form class="busca-g" action="{% url 'captacao:contatos' %}" method="get" role="search"><svg class="i"><use href="#s-search"/></svg><input type="search" name="q" placeholder="Buscar contato, telefone ou e-mail" autocomplete="off" aria-label="Buscar contato"></form>
+      <a class="ib" href="{% url 'captacao:conversas' %}?f=nao_lidas" title="Conversas não lidas" aria-label="Conversas não lidas"><svg class="i"><use href="#s-bell"/></svg>{% if menu_nao_lidas %}<b class="pt">{{ menu_nao_lidas }}</b>{% endif %}</a>
+      <button type="button" class="ib" id="tema" title="Alternar tema claro/escuro" aria-label="Alternar tema"><svg class="i"><use href="#s-sun"/></svg></button>
+      <details class="usuario"><summary aria-label="Minha conta"><span class="av-u">{{ request.user.first_name|default:request.user.username|slice:":1"|upper }}</span></summary>
+        <div class="menu-u"><div class="quem"><b>{{ request.user.first_name|default:request.user.username }}</b><small>{{ request.user.username }}</small></div>
+          <a href="{% url 'captacao:conta' %}"><svg class="i"><use href="#s-user"/></svg>Minha conta</a>
+          <form method="post" action="{% url 'captacao:sair' %}">{% csrf_token %}<button><svg class="i"><use href="#s-out"/></svg>Sair</button></form></div></details>
+    </header>
     <div class="conteudo">{% block content %}{% endblock %}</div>
   </div>
+  <div class="veu" id="veu"></div>
+  <div class="sheet" id="sheet" aria-label="Mais opções">
+    <a href="{% url 'captacao:campanhas' %}"><svg class="i"><use href="#s-mega"/></svg>Campanhas e envios</a>
+    <a href="{% url 'captacao:carros' %}"><svg class="i"><use href="#s-car"/></svg>Carros</a>
+    <a href="{% url 'captacao:visao_geral' %}"><svg class="i"><use href="#s-chart"/></svg>Resultados</a>
+    <a href="{% url 'captacao:configuracoes' %}"><svg class="i"><use href="#s-cog"/></svg>Configurações</a>
+    <a href="{% url 'captacao:conta' %}"><svg class="i"><use href="#s-user"/></svg>Minha conta</a>
+  </div>
+  <nav class="bottombar" aria-label="Principal (celular)">
+    <a href="{% url 'captacao:conversas' %}" class="{% if rota == 'conversas' %}on{% endif %}"><svg class="i"><use href="#s-chat"/></svg>Conversas{% if menu_nao_lidas %}<b class="pt">{{ menu_nao_lidas }}</b>{% endif %}</a>
+    <a href="{% url 'captacao:kanban' %}" class="{% if rota == 'kanban' or rota == 'followup' or rota == 'portais' %}on{% endif %}"><svg class="i"><use href="#s-funil"/></svg>Funil{% if menu_followup %}<b class="pt">{{ menu_followup }}</b>{% endif %}</a>
+    <a href="{% url 'captacao:agenda' %}" class="{% if rota == 'agenda' %}on{% endif %}"><svg class="i"><use href="#s-agenda"/></svg>Agenda</a>
+    <a href="{% url 'captacao:contatos' %}" class="{% if rota == 'contatos' %}on{% endif %}"><svg class="i"><use href="#s-users"/></svg>Contatos</a>
+    <button type="button" id="mais"><svg class="i"><use href="#s-more"/></svg>Mais</button>
+  </nav>
 </div>
 <dialog id="dlg"><div id="dlg-box"></div></dialog>
 <div id="toast" role="status" aria-live="polite" hidden></div>

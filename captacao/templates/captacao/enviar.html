@@ -2,6 +2,7 @@
 {% block title %}TopCar · Enviar{% endblock %}
 {% block titulo %}Enviar{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="campanhas" ativa="enviar" %}
 <div class="pg" style="max-width:760px">
   <div class="titulo-pg"><div><h1>Enviar</h1><small>Programe um modelo aprovado para um ou mais contatos, uma vez ou com recorrência.</small></div></div>
   {% if erro %}<p class="err">{{ erro }}</p>{% endif %}

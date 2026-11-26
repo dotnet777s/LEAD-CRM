@@ -2,6 +2,7 @@
 {% block title %}TopCar · Modelos{% endblock %}
 {% block titulo %}Modelos{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="config" ativa="modelos" %}
 <div class="pg">
   <div class="titulo-pg"><div><h1>Modelos de mensagem</h1><small>Os modelos da Meta permitem falar com o cliente fora da janela de 24 h e fazer campanhas. Precisam ser aprovados.</small></div>
     {% if gestor %}<form method="post" action="{% url 'captacao:modelos_acao' 'sincronizar' %}">{% csrf_token %}<button class="btn sec sm" {% if not api or not tem_waba %}disabled title="Conecte a API e informe o WHATSAPP_WABA_ID"{% endif %}>Sincronizar com a Meta</button></form>{% endif %}</div>

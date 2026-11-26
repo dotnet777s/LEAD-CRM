@@ -19,14 +19,18 @@
     <label class="chk" style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="nc" value="1" style="width:auto" {% if nc %}checked{% endif %}> Não quer mensagens</label>
     <button class="btn sec sm">Filtrar</button>
   </form>
-  <div class="box" style="padding:6px 10px;overflow-x:auto"><table class="t">
-    <tr><th>Nome</th><th>Telefone</th><th>Origem</th><th>Etapa</th><th>Carro</th><th></th></tr>
+  <div class="box" style="padding:4px 8px;overflow-x:auto"><table class="t">
+    <tr><th>Contato</th><th>Telefone</th><th>Etapa</th><th>Origem</th><th>Carro de interesse</th><th></th></tr>
     {% for c in contatos %}
-    <tr><td><button class="nome" style="background:none;border:0;padding:0;font-weight:700;cursor:pointer;text-align:left" hx-get="{% url 'captacao:lead' c.pk %}" hx-target="#dlg-box">{{ c.nome|truncatechars:30 }}</button>{% if c.nao_contatar %} <span class="badge erro">não contatar</span>{% endif %}</td>
-      <td>{{ c.telefone_formatado }}</td><td>{% if c.portal %}{{ c.get_portal_display }}{% else %}{{ c.get_origem_display }}{% endif %}</td><td>{{ c.get_etapa_display }}</td>
-      <td style="color:var(--mu)">{{ c.carro_texto|truncatechars:34 }}</td>
+    <tr><td><div style="display:flex;align-items:center;gap:10px"><span class="av" style="width:34px;height:34px;font-size:14px">{{ c.nome|slice:":1"|upper }}</span>
+        <div><button class="nome" style="background:none;border:0;padding:0;font-weight:700;cursor:pointer;text-align:left;color:var(--tx)" hx-get="{% url 'captacao:lead' c.pk %}" hx-target="#dlg-box">{{ c.nome|truncatechars:28 }}</button>{% if c.nao_contatar %} <span class="badge erro">não contatar</span>{% endif %}
+          <div class="etqs" style="margin:3px 0 0">{% for e in c.etiquetas.all %}<span class="etq mini" style="--c:{{ e.cor }};margin-left:0">{{ e.nome }}</span>{% endfor %}</div></div></div></td>
+      <td style="white-space:nowrap">{{ c.telefone_formatado }}</td>
+      <td><span class="chip-et" style="--c:{{ c.etapa_cor }}">{{ c.get_etapa_display }}</span></td>
+      <td>{% if c.portal %}<span class="portal">{{ c.get_portal_display }}</span>{% else %}<span style="color:var(--mu)">{{ c.get_origem_display }}</span>{% endif %}</td>
+      <td style="color:var(--mu)">{{ c.carro_texto|truncatechars:34|default:"—" }}</td>
       <td style="text-align:right;white-space:nowrap"><a class="btn sec sm" href="{% url 'captacao:conversas' %}?lead={{ c.pk }}">Conversa</a></td></tr>
-    {% empty %}<tr><td colspan="6" style="color:var(--mu)">Nenhum contato encontrado.</td></tr>{% endfor %}
+    {% empty %}<tr><td colspan="6"><div class="vazio-g" style="border:0">Nenhum contato encontrado.</div></td></tr>{% endfor %}
   </table></div>
   <div style="display:flex;gap:8px;margin-top:10px;justify-content:center">
     {% if pag > 1 %}<a class="btn sec sm" href="?{% for k, v in request.GET.items %}{% if k != 'p' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}p={{ pag|add:'-1' }}">← Anterior</a>{% endif %}

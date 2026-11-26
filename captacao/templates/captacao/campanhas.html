@@ -2,6 +2,7 @@
 {% block title %}TopCar · Campanhas{% endblock %}
 {% block titulo %}Campanhas{% endblock %}
 {% block content %}
+{% include "captacao/_abas.html" with grupo="campanhas" ativa="campanhas" %}
 <div class="pg">
   <div class="titulo-pg"><div><h1>Campanhas de WhatsApp</h1><small>Envio de um modelo aprovado para um grupo de leads. Hoje: {{ enviados_24h }} de {{ limite }} mensagens nas últimas 24 h.</small></div>{% if gestor %}<a class="btn" href="{% url 'captacao:campanha_tipos' %}">Nova campanha</a>{% endif %}</div>
   {% if erro %}<p class="err">{{ erro }}</p>{% endif %}

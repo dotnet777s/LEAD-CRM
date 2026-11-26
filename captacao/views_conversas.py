@@ -19,7 +19,7 @@ from . import audio, fotos, followup, funil, services, utils, whatsapp
 from .models import Etiqueta, FollowUp, Historico, Lead, MensagemProgramada, ModeloWhatsApp, RespostaRapida, WhatsAppMensagem
 from .views import Base, eh_gestor, leads_visiveis, trigger
 
-ABAS = [("todas", "Todas as mensagens"), ("meus", "Meus atendimentos"), ("portais", "Portais"), ("arquivadas", "Arquivadas")]
+ABAS = [("todas", "Todas"), ("meus", "Meus"), ("portais", "Portais"), ("arquivadas", "Arquivadas")]
 FILTROS = [("todas", "Todas"), ("nao_lidas", "Não lidas"), ("minhas", "Minhas"), ("agendados", "Agendados"), ("programadas", "Programadas"),
            ("loja", "Esperando cliente"), ("cliente", "Cliente esperando"), ("sem_humano", "Sem humano"), ("sem_conversa", "Sem conversa")]
 LIMITE_ARQUIVO = 16 * 1024 * 1024
