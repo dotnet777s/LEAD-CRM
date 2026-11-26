@@ -1,0 +1,29 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Histórico de envios{% endblock %}
+{% block titulo %}Histórico de envios{% endblock %}
+{% block content %}
+<div class="pg">
+  <div class="titulo-pg"><div><h1>Relatório de envios</h1><small>Avisos e campanhas: o que saiu, o que está na fila e o que falhou.</small></div>
+    <a class="btn" href="{% url 'captacao:enviar' %}">Enviar</a></div>
+  {% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}
+  <div class="kpis"><div class="kpi"><b>{{ n_pendente }}</b><small>pendentes</small></div><div class="kpi"><b style="color:var(--gr)">{{ n_enviado }}</b><small>enviados</small></div>
+    <div class="kpi"><b style="color:var(--rd)">{{ n_falhou }}</b><small>falharam</small></div><div class="kpi"><b>{{ n_recorrentes }}</b><small>recorrentes ativos</small></div></div>
+  {% if n_falhou %}<p class="aviso-jan" style="margin-bottom:10px">Falhas como “payment issue” indicam problema no pagamento da conta do WhatsApp no Meta Business Manager: resolva lá e use “Reenviar”.</p>{% endif %}
+  <form class="filtros-l" method="get"><input type="date" name="de" value="{{ de }}" style="width:auto"><input type="date" name="ate" value="{{ ate }}" style="width:auto">
+    <select name="ver" onchange="this.form.submit()"><option value="">Histórico</option><option value="recorrentes" {% if ver == 'recorrentes' %}selected{% endif %}>Ver recorrentes</option><option value="arquivados" {% if ver == 'arquivados' %}selected{% endif %}>Ver arquivados</option></select><button class="btn sec sm">Filtrar</button></form>
+  <div class="box" style="padding:6px 10px;overflow-x:auto"><table class="t">
+    <tr><th>Status</th><th>Mensagem</th><th>Contato</th><th>Quando</th><th>Origem</th><th></th></tr>
+    {% for l in linhas %}<tr>
+      <td><span class="badge {% if l.status == 'enviado' %}enviado{% elif l.status == 'falhou' %}erro{% elif l.status == 'pendente' %}pendente{% endif %}">{{ l.rotulo }}</span>{% if l.rec %}<br><small style="color:var(--mu)">{{ l.rec }}</small>{% endif %}</td>
+      <td style="max-width:300px"><span style="color:var(--mu)">{{ l.texto|truncatechars:90 }}</span>{% if l.erro %}<br><small style="color:#ffb3b0">{{ l.erro }}</small>{% endif %}</td>
+      <td>{{ l.lead.nome|truncatechars:22 }}<br><small style="color:var(--mu)">{{ l.lead.telefone_formatado }}</small></td>
+      <td style="white-space:nowrap">{{ l.quando|date:"d/m H:i" }}</td><td><small>{{ l.origem }}</small></td>
+      <td style="white-space:nowrap">{% if l.tipo == 'aviso' %}
+        {% if l.status == 'pendente' %}<form method="post" action="{% url 'captacao:aviso_acao' l.pk 'cancelar' %}" style="display:inline">{% csrf_token %}<button class="btn red sm">Cancelar</button></form>{% endif %}
+        {% if l.status == 'falhou' %}<form method="post" action="{% url 'captacao:aviso_acao' l.pk 'reenviar' %}" style="display:inline">{% csrf_token %}<button class="btn sec sm">Reenviar</button></form>{% endif %}
+        {% if l.status != 'pendente' %}<form method="post" action="{% url 'captacao:aviso_acao' l.pk 'arquivar' %}" style="display:inline">{% csrf_token %}<button class="btn sec sm">Arquivar</button></form>{% endif %}{% endif %}
+        <a class="btn sec sm" href="{% url 'captacao:conversas' %}?lead={{ l.lead.pk }}">Iniciar conversa</a></td></tr>
+    {% empty %}<tr><td colspan="6" style="color:var(--mu)">Nada por aqui no período.</td></tr>{% endfor %}
+  </table></div>
+</div>
+{% endblock %}

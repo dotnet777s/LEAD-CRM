@@ -1,7 +1,8 @@
 from django.contrib.auth import views as auth_views
+from django.urls import reverse_lazy
 from django.urls import path
 
-from . import views, views_central, views_conversas, views_equipe, views_followup, views_funil, views_painel, views_publico as pub
+from . import views, views_central, views_envios, views_conversas, views_equipe, views_followup, views_funil, views_painel, views_publico as pub
 
 app_name = "captacao"
 
@@ -62,6 +63,19 @@ urlpatterns = [
     path("contatos/exportar/", views_central.ContatosExportarView.as_view(), name="contatos_exportar"),
     path("contatos/importar/", views_central.ContatosImportarView.as_view(), name="contatos_importar"),
     path("agenda/", views_central.AgendaView.as_view(), name="agenda"),
+    path("agenda/cadastros/", views_envios.AgendaGestaoView.as_view(), name="agenda_cadastros"),
+    path("agenda/cadastros/<slug:acao>/", views_envios.AgendaCadastroView.as_view(), name="agenda_cadastro"),
+    path("agenda/cadastros/<slug:acao>/<int:pk>/", views_envios.AgendaCadastroView.as_view(), name="agenda_cadastro_id"),
+    path("agenda/novo/", views_envios.AgendamentoNovoView.as_view(), name="agendamento_novo"),
+    path("agenda/<int:pk>/<slug:status>/", views_envios.AgendamentoStatusView.as_view(), name="agendamento_status"),
+    path("enviar/", views_envios.EnviarView.as_view(), name="enviar"),
+    path("historico/", views_envios.HistoricoView.as_view(), name="historico"),
+    path("historico/<int:pk>/<slug:acao>/", views_envios.AvisoAcaoView.as_view(), name="aviso_acao"),
+    path("campanhas/nova/", views_envios.CampanhaTiposView.as_view(), name="campanha_tipos"),
+    path("campanhas/nova/<slug:tipo>/", views_envios.CampanhaNovaView.as_view(), name="campanha_nova"),
+    path("conta/", views_envios.ContaView.as_view(), name="conta"),
+    path("conta/senha/", auth_views.PasswordChangeView.as_view(template_name="captacao/senha.html", success_url=reverse_lazy("captacao:conta")), name="senha"),
+    path("lead/<int:pk>/aniversario/", views_envios.AniversarioView.as_view(), name="aniversario"),
     path("lead/<int:pk>/visita/<slug:resultado>/", views_central.VisitaResultadoView.as_view(), name="visita_resultado"),
     path("modelos/", views_central.ModelosView.as_view(), name="modelos"),
     path("modelos/rapida/<int:pk>/excluir/", views_central.RapidaExcluirView.as_view(), name="rapida_excluir"),

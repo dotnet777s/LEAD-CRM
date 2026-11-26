@@ -14,7 +14,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from . import classificacao, followup, telegram, utils
+from . import classificacao, followup, modelos, telegram, utils
 from .models import Historico, Lead, MensagemProgramada, ModeloWhatsApp, WhatsAppMensagem
 
 log = logging.getLogger(__name__)
@@ -85,13 +85,19 @@ def enviar_texto(lead, texto, usuario=None):
                                            wamid=wamid, status=WhatsAppMensagem.Status.ENVIADA, usuario=usuario)
 
 
-def enviar_template(lead, nome, parametros=(), idioma="pt_BR", usuario=None, texto_ref=""):
+def enviar_template(lead, nome, parametros=(), idioma="pt_BR", usuario=None, texto_ref="", header=None):
     """Template aprovado na Meta (pode ser enviado a qualquer hora). `parametros` preenchem {{1}}, {{2}}..."""
     if not configurado():
         raise WhatsAppErro("API do WhatsApp não configurada.")
     corpo = {"to": lead.telefone, "type": "template", "template": {"name": nome, "language": {"code": idioma}}}
+    componentes = []
+    if header and header[1]:                      # cabeçalho de mídia: ("IMAGE" | "VIDEO", link público)
+        tipo = header[0].lower()
+        componentes.append({"type": "header", "parameters": [{"type": tipo, tipo: {"link": header[1]}}]})
     if parametros:
-        corpo["template"]["components"] = [{"type": "body", "parameters": [{"type": "text", "text": str(p)} for p in parametros]}]
+        componentes.append({"type": "body", "parameters": [{"type": "text", "text": str(p)} for p in parametros]})
+    if componentes:
+        corpo["template"]["components"] = componentes
     wamid = _post(corpo)
     return WhatsAppMensagem.objects.create(lead=lead, telefone=lead.telefone, direcao="out", tipo="template",
                                            texto=texto_ref or f"[template {nome}]", wamid=wamid,
@@ -283,10 +289,11 @@ def sincronizar_modelos():
         dados = r.json()
         for t in dados.get("data", []):
             corpo, nv = _corpo_e_variaveis(t.get("components", []))
+            cab = next((c.get("format", "") for c in t.get("components", []) if c.get("type") == "HEADER"), "")
             ModeloWhatsApp.objects.update_or_create(
                 nome=t["name"], idioma=t.get("language", "pt_BR"),
                 defaults=dict(categoria=t.get("category", ""), status=t.get("status", ""), corpo=corpo, n_variaveis=nv,
-                              atualizado_em=timezone.now()))
+                              header_tipo=cab if cab in ("IMAGE", "VIDEO") else "", atualizado_em=timezone.now()))
             n += 1
         url, params = (dados.get("paging") or {}).get("next"), None
     return n
@@ -310,11 +317,11 @@ def criar_modelo(nome, categoria, corpo, exemplos=(), idioma="pt_BR"):
     return True
 
 
-def enviar_modelo(lead, modelo, usuario=None):
-    """Envia um ModeloWhatsApp ao lead. {{1}} vira o primeiro nome."""
-    primeiro = (lead.nome or "").split()[0].title() if lead.nome else "tudo bem"
-    params = ([primeiro] + [""] * (modelo.n_variaveis - 1)) if modelo.n_variaveis else []
-    return enviar_template(lead, modelo.nome, params, modelo.idioma, usuario, texto_ref=modelo.corpo.replace("{{1}}", primeiro))
+def enviar_modelo(lead, modelo, usuario=None, extras=None):
+    """Envia um ModeloWhatsApp ao lead, preenchendo as variáveis ({{nome}}, {{saudacao}}...) e o cabeçalho de mídia."""
+    params = modelos.parametros(modelo, lead, extras)
+    header = (modelo.header_tipo, modelo.header_url) if modelo.header_tipo and modelo.header_url else None
+    return enviar_template(lead, modelo.nome, params, modelo.idioma, usuario, texto_ref=modelos.texto_final(modelo, params), header=header)
 
 
 def info_numero():
@@ -358,3 +365,13 @@ def assinar_webhook():
     if r.status_code >= 400:
         raise WhatsAppErro(_erro_meta(r))
     return True
+
+
+def criar_modelo_nomeado(nome, categoria, texto_local, idioma="pt_BR"):
+    """Cria o modelo a partir do texto com variáveis nomeadas ({{nome}}): converte para {{1}}.. e gera os exemplos sozinho."""
+    erradas = modelos.invalidas(texto_local)
+    if erradas:
+        raise WhatsAppErro("Variável desconhecida: " + ", ".join("{{%s}}" % e for e in erradas))
+    corpo, ordem, exemplos = modelos.para_meta(texto_local)
+    criar_modelo(nome, categoria, corpo, exemplos, idioma)
+    ModeloWhatsApp.objects.filter(nome=nome, idioma=idioma).update(corpo_local=texto_local, variaveis=ordem)

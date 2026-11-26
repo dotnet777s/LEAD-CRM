@@ -66,6 +66,7 @@ class Lead(models.Model):
     email = models.EmailField(blank=True, db_default="")
     nao_contatar = models.BooleanField("Não quer receber mensagens", default=False, db_default=False)
     etiquetas = models.ManyToManyField("Etiqueta", blank=True, related_name="leads")
+    aniversario = models.DateField("Aniversário", null=True, blank=True)
     classe = models.CharField(max_length=1, choices=Classe.choices, default=Classe.B)
     etapa = models.CharField(max_length=12, choices=Etapa.choices, default=Etapa.NOVO, db_index=True)
     etapa_desde = models.DateTimeField(default=timezone.now)
@@ -424,6 +425,10 @@ class ModeloWhatsApp(models.Model):
     status = models.CharField(max_length=20, blank=True)          # APPROVED, PENDING, REJECTED...
     corpo = models.TextField(blank=True)
     n_variaveis = models.PositiveSmallIntegerField(default=0)
+    corpo_local = models.TextField(blank=True)                       # texto com variáveis nomeadas, ex.: {{nome}}
+    variaveis = models.JSONField(default=list, blank=True)           # ordem das variáveis: [{{1}}, {{2}}...] -> nomes
+    header_tipo = models.CharField(max_length=10, blank=True)        # IMAGE ou VIDEO (cabeçalho de mídia)
+    header_url = models.CharField(max_length=500, blank=True)        # link público da mídia usada no envio
     atualizado_em = models.DateTimeField(default=timezone.now)
 
     class Meta:
@@ -444,7 +449,19 @@ class Campanha(models.Model):
         PAUSADA = "pausada", "Pausada"
         CONCLUIDA = "concluida", "Concluída"
 
+    class Tipo(models.TextChoices):
+        TODOS = "todos", "Todos os contatos"
+        REGUA = "regua", "Régua de disparos"
+        TAG = "tag", "Por etiqueta"
+        ETAPA = "etapa", "Por etapa do funil"
+        CADASTRO = "cadastro", "Por leads cadastrados"
+        ANIVERSARIO = "aniversario", "Data de aniversário"
+        AVISE = "avise", "Avise quando chegar"
+        ITEM = "item", "Item do catálogo"
+
     nome = models.CharField(max_length=100)
+    tipo = models.CharField(max_length=12, choices=Tipo.choices, default=Tipo.ETAPA, db_default="etapa")
+    config = models.JSONField(default=dict, blank=True)     # régua: etiquetas e passos; item: veículo; avise/aniversário: opções
     modelo = models.ForeignKey(ModeloWhatsApp, on_delete=models.PROTECT, related_name="campanhas")
     filtro = models.JSONField(default=dict, blank=True)           # etapa, origem, portal, dias_sem_contato
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.RASCUNHO, db_index=True)
@@ -464,12 +481,16 @@ class CampanhaEnvio(models.Model):
 
     campanha = models.ForeignKey(Campanha, related_name="envios", on_delete=models.CASCADE)
     lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="envios_campanha")
+    modelo = models.ForeignKey(ModeloWhatsApp, null=True, blank=True, on_delete=models.PROTECT, related_name="+")   # passo da régua
+    passo = models.PositiveSmallIntegerField(default=0)
+    enviar_em = models.DateTimeField(null=True, blank=True, db_index=True)
+    extras = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDENTE, db_index=True)
     erro = models.CharField(max_length=300, blank=True)
     enviado_em = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        unique_together = [("campanha", "lead")]
+        unique_together = [("campanha", "lead", "passo")]
 
 
 # ===================================================================== etiquetas e classificação automática
@@ -520,3 +541,94 @@ class MensagemProgramada(models.Model):
 
     class Meta:
         ordering = ["enviar_em"]
+
+
+class Aviso(models.Model):
+    """Envio avulso de um modelo para um contato, em data e hora marcadas, com recorrência (tela Enviar)."""
+
+    class Recorrencia(models.TextChoices):
+        NENHUMA = "", "Sem recorrência"
+        DIARIA = "diaria", "Diária"
+        SEMANAL = "semanal", "Semanal"
+        QUINZENAL = "quinzenal", "Quinzenal"
+        MENSAL = "mensal", "Mensal"
+        TRIMESTRAL = "trimestral", "Trimestral"
+        SEMESTRAL = "semestral", "Semestral"
+        ANUAL = "anual", "Anual"
+
+    class Status(models.TextChoices):
+        PENDENTE = "pendente", "Pendente"
+        ENVIADO = "enviado", "Enviado"
+        FALHOU = "falhou", "Falhou"
+        CANCELADO = "cancelado", "Cancelado"
+
+    lead = models.ForeignKey(Lead, related_name="avisos", on_delete=models.CASCADE)
+    modelo = models.ForeignKey(ModeloWhatsApp, on_delete=models.PROTECT, related_name="avisos")
+    enviar_em = models.DateTimeField(db_index=True)
+    recorrencia = models.CharField(max_length=10, choices=Recorrencia.choices, blank=True, default="")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDENTE, db_index=True)
+    erro = models.CharField(max_length=300, blank=True)
+    enviado_em = models.DateTimeField(null=True, blank=True)
+    arquivado = models.BooleanField(default=False)
+    origem = models.CharField(max_length=30, blank=True)               # "campanha: nome" quando vier de uma campanha
+    criado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    criado_em = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-enviar_em", "-id"]
+
+
+class Procura(models.Model):
+    """Cliente que procurou um carro que a loja não tinha. Vira aviso quando um carro parecido entra no estoque."""
+    lead = models.ForeignKey(Lead, related_name="procuras", on_delete=models.CASCADE)
+    descricao = models.CharField(max_length=150)
+    avisada_em = models.DateTimeField(null=True, blank=True)
+    criada_em = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-criada_em"]
+
+
+# ===================================================================== agenda (profissionais, atividades, agendamentos)
+class Profissional(models.Model):
+    nome = models.CharField(max_length=80)
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["nome"]
+        verbose_name_plural = "profissionais"
+
+    def __str__(self):
+        return self.nome
+
+
+class Atividade(models.Model):
+    """Tipo de compromisso (ex.: Visita à loja, Test drive, Avaliação do carro). A duração preenche o agendamento."""
+    nome = models.CharField(max_length=80)
+    duracao_min = models.PositiveSmallIntegerField(default=30)
+    ativa = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+
+class Agendamento(models.Model):
+    class Status(models.TextChoices):
+        AGENDADO = "agendado", "Agendado"
+        CONFIRMADO = "confirmado", "Confirmado"
+        REALIZADO = "realizado", "Realizado"
+        CANCELADO = "cancelado", "Cancelado"
+        FALTOU = "faltou", "Não compareceu"
+
+    lead = models.ForeignKey(Lead, related_name="agendamentos", on_delete=models.CASCADE)
+    profissional = models.ForeignKey(Profissional, null=True, blank=True, on_delete=models.SET_NULL, related_name="agendamentos")
+    atividade = models.ForeignKey(Atividade, null=True, blank=True, on_delete=models.SET_NULL, related_name="agendamentos")
+    inicio = models.DateTimeField(db_index=True)
+    fim = models.DateTimeField()
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.AGENDADO, db_index=True)
+    observacao = models.CharField(max_length=300, blank=True)
+    criado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    criado_em = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["inicio"]

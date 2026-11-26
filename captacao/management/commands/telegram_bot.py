@@ -4,7 +4,7 @@ import time
 import requests
 from django.core.management.base import BaseCommand, CommandError
 
-from captacao import campanhas, followup, telegram, whatsapp
+from captacao import avisos, campanhas, followup, telegram, whatsapp
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +44,8 @@ class Command(BaseCommand):
                     try:
                         followup.sincronizar()                   # leads que entraram numa etapa com follow-up
                         whatsapp.enviar_programadas()
+                        campanhas.rodar_automaticas()
+                        avisos.rodar()
                         campanhas.rodar_lote()
                     except Exception:  # noqa: BLE001
                         log.exception("campanhas falhou")

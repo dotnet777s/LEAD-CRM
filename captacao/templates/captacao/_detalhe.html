@@ -6,6 +6,7 @@
 {% if lead.portal %}<p style="margin:0 0 8px"><span class="portal">{{ lead.get_portal_display }}</span>{% if lead.email %} <small style="color:var(--mu)">{{ lead.email }}</small>{% endif %}</p>{% endif %}
 {% if lead.observacao and lead.origem == 'portal' %}<p class="nota-portal">{{ lead.observacao }}</p>{% endif %}
 
+<form hx-post="{% url 'captacao:aniversario' lead.pk %}" hx-swap="none" style="display:flex;gap:6px;align-items:center;margin:8px 0"><small style="color:var(--mu)">Aniversário</small><input type="date" name="aniversario" value="{{ lead.aniversario|date:'Y-m-d' }}" style="width:auto"><button class="btn sec sm">Salvar</button></form>
 <div class="sec-t">Etiquetas</div>
 <div class="etqs">{% for e in lead.etiquetas.all %}<span class="etq" style="--c:{{ e.cor }}">{{ e.nome }}<form hx-post="{% url 'captacao:lead_etiqueta' lead.pk 'remove' %}" hx-target="#dlg-box" style="display:inline"><input type="hidden" name="volta" value="detalhe"><input type="hidden" name="etiqueta" value="{{ e.pk }}"><button title="Remover">×</button></form></span>{% empty %}<small style="color:var(--mu)">Sem etiquetas</small>{% endfor %}</div>
 <form hx-post="{% url 'captacao:lead_etiqueta' lead.pk 'add' %}" hx-target="#dlg-box" style="display:flex;gap:6px;margin-top:6px"><input type="hidden" name="volta" value="detalhe">

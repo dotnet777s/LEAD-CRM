@@ -1,0 +1,36 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · {{ titulo }}{% endblock %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block content %}
+<div class="pg" style="max-width:820px">
+  <div class="titulo-pg"><div><h1>{{ titulo }}</h1><small>{{ desc }}</small></div><a class="btn sec sm" href="{% url 'captacao:campanha_tipos' %}">Voltar</a></div>
+  {% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+  <form method="post" class="box cfg">{% csrf_token %}
+    <label class="l">Nome da campanha<input type="text" name="nome" maxlength="100" value="{{ dados.nome }}" required></label>
+    {% if tipo == 'regua' %}
+      <div class="sec-t">1. Quais etiquetas ativam a régua?</div>
+      <div class="checks">{% for e in etiquetas %}<label><input type="checkbox" name="etiquetas" value="{{ e.pk }}"> {{ e.nome }}</label>{% endfor %}</div>
+      <small style="color:var(--mu)">Quando a equipe (ou uma regra) marcar a etiqueta num contato, ele entra na régua. Só entra quem for marcado depois de a campanha ser ativada: ninguém recebe mensagem atrasada.</small>
+      <div class="sec-t">2. Cronograma (dias depois da marcação)</div>
+      {% for i in passos %}<div class="linha"><label class="l">Mensagem {{ i }}: modelo<select name="modelo_{{ i }}"><option value="">{% if i > 1 %}(não usar){% else %}Escolha…{% endif %}</option>{% for m in modelos %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}</select></label>
+        <label class="l">Dias depois<input type="number" name="dias_{{ i }}" min="0" value="{% if i == 1 %}0{% else %}{{ i|add:i|add:'-2' }}{% endif %}"></label></div>{% endfor %}
+    {% else %}
+      <label class="l">Modelo aprovado<select name="modelo" required><option value="">Escolha…</option>{% for m in modelos %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}</select></label>
+    {% endif %}
+    {% if tipo == 'tag' %}<div class="sec-t">Quem recebe: contatos com a etiqueta</div><div class="checks">{% for e in etiquetas %}<label><input type="checkbox" name="etiquetas" value="{{ e.pk }}"> {{ e.nome }}</label>{% endfor %}</div>{% endif %}
+    {% if tipo == 'etapa' %}<div class="sec-t">Quem recebe: leads nas etapas</div><div class="checks">{% for v, r in etapas %}<label><input type="checkbox" name="etapas" value="{{ v }}"> {{ r }}</label>{% endfor %}</div>{% endif %}
+    {% if tipo == 'cadastro' %}<div class="linha"><label class="l">Cadastrados de<input type="date" name="de" required></label><label class="l">até (máx. 31 dias)<input type="date" name="ate" required></label></div>{% endif %}
+    {% if tipo == 'item' %}
+      <label class="l">Carro que será divulgado<select name="veiculo" required><option value="">Escolha…</option>{% for c in carros %}<option value="{{ c.pk }}">{{ c.marca_fmt }} {{ c.modelo_fmt }} {{ c.ano }}</option>{% endfor %}</select></label>
+      <div class="linha"><label class="l">Para quem veio de (origem)<select name="origem"><option value="">Qualquer</option>{% for v, r in origens %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></label>
+        <label class="l">Portal<select name="portal"><option value="">Qualquer</option>{% for v, r in portais %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></label></div>
+      <small style="color:var(--mu)">No modelo, use {% templatetag openvariable %}carro{% templatetag closevariable %}, {% templatetag openvariable %}preco{% templatetag closevariable %} e {% templatetag openvariable %}link{% templatetag closevariable %}.</small>
+    {% endif %}
+    {% if tipo == 'aniversario' %}<small style="color:var(--mu);display:block;margin-top:8px">Todo dia, o CRM envia o modelo a quem faz aniversário (cadastre a data na ficha do contato ou na importação).</small>{% endif %}
+    {% if tipo == 'avise' %}<small style="color:var(--mu);display:block;margin-top:8px">Quem foi para a etapa “Não temos” é lembrado: quando um carro parecido entrar no estoque, recebe o aviso com o link. Use {% templatetag openvariable %}carro{% templatetag closevariable %}, {% templatetag openvariable %}preco{% templatetag closevariable %} e {% templatetag openvariable %}link{% templatetag closevariable %} no modelo.</small>{% endif %}
+    {% if tipo == 'todos' or tipo == 'tag' or tipo == 'etapa' or tipo == 'cadastro' or tipo == 'item' %}<label class="chk" style="margin-top:10px"><input type="checkbox" name="espalhar" checked> Espalhar os envios ao longo do dia (das 9h às 18h)</label>{% endif %}
+    <button class="btn" style="margin-top:12px">Criar campanha</button>
+    <small style="color:var(--mu);display:block;margin-top:6px">A campanha nasce como rascunho. Você revisa na lista e só então inicia o envio. Quem pediu para não receber nunca entra.</small>
+  </form>
+</div>
+{% endblock %}

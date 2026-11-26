@@ -1,0 +1,12 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Trocar senha{% endblock %}
+{% block titulo %}Trocar senha{% endblock %}
+{% block content %}
+<div class="pg" style="max-width:480px">
+  <div class="titulo-pg"><div><h1>Trocar a senha</h1></div></div>
+  <form method="post" class="box cfg">{% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for campo in form %}<label class="l">{{ campo.label }}{{ campo }}</label>{% for e in campo.errors %}<div class="err">{{ e }}</div>{% endfor %}{% endfor %}
+    <button class="btn" style="margin-top:10px">Salvar nova senha</button> <a class="btn sec" href="{% url 'captacao:conta' %}">Cancelar</a></form>
+</div>
+{% endblock %}

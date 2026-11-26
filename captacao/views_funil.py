@@ -10,7 +10,7 @@ from django.utils.dateparse import parse_datetime
 from django.views import View
 from django.views.generic import TemplateView
 
-from . import classificacao, services, utils, whatsapp
+from . import campanhas, classificacao, services, utils, whatsapp
 from .models import Etiqueta, Lead, MensagemProgramada, RegraClassificacao, WhatsAppMensagem
 from .views import Base, eh_gestor, leads_visiveis, render_detalhe, trigger
 from .views_conversas import _resposta
@@ -26,6 +26,7 @@ class EtiquetaLeadView(Base, View):
         e = Etiqueta.objects.filter(pk=request.POST.get("etiqueta", "")).first() if request.POST.get("etiqueta", "").isdigit() else None
         if e and acao == "add":
             lead.etiquetas.add(e)
+            campanhas.ao_etiquetar(lead, e)
         elif e and acao == "remove":
             lead.etiquetas.remove(e)
         elif acao not in ("add", "remove"):

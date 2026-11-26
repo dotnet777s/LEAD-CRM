@@ -3,6 +3,16 @@
 {% block titulo %}Agenda{% endblock %}
 {% block content %}
 <div class="pg">
+  <div class="subabas" style="padding:0 0 10px"><a class="on" href="{% url 'captacao:agenda' %}">Agenda</a><a href="{% url 'captacao:agenda_cadastros' %}">Profissionais e atividades</a></div>
+  {% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+  <details class="dprog" style="margin-bottom:12px"><summary>Novo agendamento</summary>
+    <form method="post" action="{% url 'captacao:agendamento_novo' %}" class="cfg" style="margin-top:8px">{% csrf_token %}
+      <div class="linha"><label class="l">Contato<select name="lead" required><option value="">Escolha…</option>{% for c in contatos %}<option value="{{ c.pk }}">{{ c.nome }} · {{ c.telefone_formatado }}</option>{% endfor %}</select></label>
+        <label class="l">Atividade<select name="atividade"><option value="">Visita (30 min)</option>{% for a in atividades %}<option value="{{ a.pk }}">{{ a.nome }} ({{ a.duracao_min }} min)</option>{% endfor %}</select></label>
+        <label class="l">Profissional<select name="profissional"><option value="">Qualquer</option>{% for p in profissionais %}<option value="{{ p.pk }}">{{ p.nome }}</option>{% endfor %}</select></label>
+        <label class="l">Quando<input type="datetime-local" name="inicio" required></label></div>
+      <label class="l">Observação<input type="text" name="observacao" maxlength="300"></label>
+      <button class="btn sm" style="margin-top:8px">Agendar</button></form></details>
   <div class="titulo-pg"><div><h1>Agenda de visitas</h1><small>{{ ini|date:"d/m" }} a {{ fim|date:"d/m/Y" }} · {{ total }} visita(s)</small></div>
     <div style="display:flex;gap:6px"><a class="btn sec sm" href="?s={{ s|add:'-1' }}">← Semana anterior</a><a class="btn sec sm" href="?s=0">Hoje</a><a class="btn sec sm" href="?s={{ s|add:'1' }}">Próxima →</a></div></div>
   {% if atrasadas %}<div class="box" style="margin-bottom:12px;border-color:#5a2220"><h2 style="color:var(--rd)">Visitas que já passaram: o cliente veio?</h2>
@@ -12,9 +22,14 @@
   <div class="agenda">
   {% for d in dias %}
     <div class="dia{% if d.hoje %} hoje{% endif %}"><h4>{{ d.data|date:"D d/m" }}</h4>
+      {% for a in d.agendamentos %}<div class="vis-i"><b>{{ a.inicio|date:"H:i" }} · {{ a.lead.nome|truncatechars:18 }}</b><small>{{ a.atividade.nome|default:"Visita" }}{% if a.profissional %} · {{ a.profissional.nome }}{% endif %} · {{ a.get_status_display }}</small>
+        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">{% if a.status == 'agendado' %}<form method="post" action="{% url 'captacao:agendamento_status' a.pk 'confirmado' %}">{% csrf_token %}<button class="btn sec sm">Confirmar</button></form>{% endif %}
+          {% if a.status == 'agendado' or a.status == 'confirmado' %}<form method="post" action="{% url 'captacao:agendamento_status' a.pk 'realizado' %}">{% csrf_token %}<button class="btn sm">Realizado</button></form>
+          <form method="post" action="{% url 'captacao:agendamento_status' a.pk 'faltou' %}">{% csrf_token %}<button class="btn sec sm">Faltou</button></form>
+          <form method="post" action="{% url 'captacao:agendamento_status' a.pk 'cancelado' %}">{% csrf_token %}<button class="btn red sm">Cancelar</button></form>{% endif %}</div></div>{% endfor %}
       {% for l in d.visitas %}<div class="vis-i"><b>{{ l.visita_em|date:"H:i" }} · {{ l.nome|truncatechars:20 }}</b><small>{{ l.carro_texto|truncatechars:34 }}</small>
         <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><a class="btn sec sm" href="{% url 'captacao:conversas' %}?lead={{ l.pk }}">Conversa</a><a class="btn sec sm" target="_blank" rel="noopener" href="{{ l.whatsapp_url }}">WhatsApp</a></div></div>
-      {% empty %}<small style="color:#556">—</small>{% endfor %}
+      {% endfor %}{% if not d.visitas and not d.agendamentos %}<small style="color:#556">—</small>{% endif %}
     </div>
   {% endfor %}
   </div>

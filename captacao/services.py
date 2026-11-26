@@ -200,6 +200,9 @@ def mudar_etapa(lead, nova, usuario=None, motivo_perda="", veiculo_vendido=None,
         lead.vendido_em = None
     lead.save()
     followup.encerrar_se_avancou(lead, agora)
+    if nova == Lead.Etapa.SEM_ESTOQUE:
+        from . import campanhas      # import tardio
+        campanhas.registrar_procura(lead)
     meta.enfileirar_evento_crm(lead, nova)
     return True
 

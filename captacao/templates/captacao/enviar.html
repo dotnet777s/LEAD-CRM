@@ -1,0 +1,22 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Enviar{% endblock %}
+{% block titulo %}Enviar{% endblock %}
+{% block content %}
+<div class="pg" style="max-width:760px">
+  <div class="titulo-pg"><div><h1>Enviar</h1><small>Programe um modelo aprovado para um ou mais contatos, uma vez ou com recorrência.</small></div></div>
+  {% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+  <div class="box" style="margin-bottom:12px"><b>Política de envio</b><p style="margin:6px 0 0;color:var(--mu);font-size:13.5px">O WhatsApp trata mensagens em massa para contatos frios como spam. O sistema respeita o limite diário da conta e nunca envia a quem pediu para não receber.</p></div>
+  {% if not api %}<p class="aviso-jan" style="margin-bottom:12px">A API do WhatsApp ainda não está conectada: dá para programar, mas os avisos só saem depois da conexão.</p>{% endif %}
+  <form method="post" class="box cfg">{% csrf_token %}
+    <label class="l">Contato(s) *</label>
+    <input type="search" id="busca-c" placeholder="Filtrar contatos…" style="margin-bottom:6px">
+    <div class="pick" id="lista-c">{% for c in contatos %}<label><input type="checkbox" name="contatos" value="{{ c.pk }}" {% if lead_id == c.pk|stringformat:"s" %}checked{% endif %} data-n="{{ c.nome|lower }} {{ c.telefone }}"> {{ c.nome }} <small style="color:var(--mu)">{{ c.telefone_formatado }}</small></label>{% endfor %}</div>
+    <label class="l">Modelo *<select name="modelo" required><option value="">Selecione um modelo</option>{% for m in modelos %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}</select></label>
+    <div class="linha"><label class="l">Data de envio *<input type="date" name="data" value="{{ hoje }}" required></label><label class="l">Hora de envio<input type="time" name="hora" value="{{ hora }}"></label>
+      <label class="l">Recorrência<select name="recorrencia">{% for v, r in recorrencias %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></label></div>
+    <small style="color:var(--mu)">Avisos recorrentes são renovados automaticamente no período escolhido.</small>
+    <div style="margin-top:12px;display:flex;gap:8px"><button class="btn">Criar</button><a class="btn sec" href="{% url 'captacao:historico' %}">Cancelar</a></div>
+  </form>
+</div>
+<script>document.getElementById('busca-c').addEventListener('input',function(){var q=this.value.toLowerCase();document.querySelectorAll('#lista-c label').forEach(function(l){l.style.display=l.querySelector('input').dataset.n.indexOf(q)>-1?'':'none';});});</script>
+{% endblock %}

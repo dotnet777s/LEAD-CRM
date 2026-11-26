@@ -12,8 +12,8 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
 
-from . import campanhas, followup, services, utils, whatsapp
-from .models import Campanha, Etiqueta, Historico, Lead, ModeloWhatsApp, RespostaRapida
+from . import campanhas, followup, modelos, services, utils, whatsapp
+from .models import Agendamento, Atividade, Campanha, Etiqueta, Historico, Lead, ModeloWhatsApp, Profissional, RespostaRapida
 from .views import Base, eh_gestor, leads_visiveis, trigger
 
 PAGINA = 100
@@ -91,8 +91,16 @@ class ContatosImportarView(Base, View):
             if not tel or not nome or Lead.objects.filter(telefone=tel).exists():
                 ign += 1
                 continue
+            niver = None
+            for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+                try:
+                    from datetime import datetime as _dt
+                    niver = _dt.strptime(l.get("aniversario") or "", fmt).date()
+                    break
+                except ValueError:
+                    pass
             lead = Lead.objects.create(nome=nome[:120], telefone=tel, origem=Lead.Origem.OUTRO, email=(l.get("email") or "")[:254],
-                                       etapa=Lead.Etapa.NOVO)
+                                       etapa=Lead.Etapa.NOVO, aniversario=niver)
             Historico.objects.create(lead=lead, tipo=Historico.Tipo.CRIADO, usuario=request.user, texto="Importado por planilha")
             novos += 1
         return redirect(f"/contatos/?importado={novos}&ignorados={ign}")
@@ -113,14 +121,21 @@ class AgendaView(Base, TemplateView):
         fim = ini + timedelta(days=7)
         leads = (leads_visiveis(self.request.user).filter(visita_em__date__gte=ini, visita_em__date__lt=fim)
                  .exclude(etapa__in=[Lead.Etapa.PERDIDO]).order_by("visita_em"))
+        agend = list(Agendamento.objects.select_related("lead", "profissional", "atividade")
+                     .filter(lead__in=leads_visiveis(self.request.user), inicio__date__gte=ini, inicio__date__lt=fim).exclude(status="cancelado"))
+        com_agend = {(a.lead_id, a.inicio) for a in agend}
         dias = []
         for i in range(7):
             d = ini + timedelta(days=i)
-            dias.append({"data": d, "hoje": d == hoje, "visitas": [l for l in leads if timezone.localtime(l.visita_em).date() == d]})
+            dias.append({"data": d, "hoje": d == hoje,
+                         "visitas": [l for l in leads if timezone.localtime(l.visita_em).date() == d and (l.pk, l.visita_em) not in com_agend],
+                         "agendamentos": [a for a in agend if timezone.localtime(a.inicio).date() == d]})
         atrasadas = (leads_visiveis(self.request.user).filter(etapa=Lead.Etapa.VISITA, visita_em__lt=timezone.now() - timedelta(hours=2))
                      .order_by("visita_em")[:30])
         ctx.update(dias=dias, ini=ini, fim=fim - timedelta(days=1), s=desloc, atrasadas=atrasadas,
-                   total=sum(len(d["visitas"]) for d in dias))
+                   total=sum(len(d["visitas"]) + len(d["agendamentos"]) for d in dias),
+                   profissionais=Profissional.objects.filter(ativo=True), atividades=Atividade.objects.filter(ativa=True),
+                   contatos=leads_visiveis(self.request.user).exclude(telefone="").order_by("nome")[:600], erro=self.request.GET.get("erro", ""))
         return ctx
 
 
@@ -151,7 +166,7 @@ class ModelosView(Base, TemplateView):
         ctx = super().get_context_data(**kw)
         ctx.update(modelos=ModeloWhatsApp.objects.all(), rapidas=RespostaRapida.objects.all(), api=whatsapp.configurado(),
                    tem_waba=bool(settings.WHATSAPP_WABA_ID), gestor=eh_gestor(self.request.user),
-                   msg=self.request.GET.get("msg", ""), erro=self.request.GET.get("erro", ""))
+                   msg=self.request.GET.get("msg", ""), erro=self.request.GET.get("erro", ""), variaveis=modelos.VARIAVEIS)
         return ctx
 
 
@@ -169,6 +184,11 @@ class ModelosAcaoView(Base, View):
                 corpo = (p.get("corpo") or "").strip()
                 if not nome or not corpo or len(corpo) > 1024:
                     raise whatsapp.WhatsAppErro("Informe o nome e o texto (até 1024 caracteres).")
+                if modelos.RE_VAR.search(corpo):             # texto com variáveis nomeadas: {{nome}}, {{saudacao}}...
+                    if len(corpo) > 800:
+                        raise whatsapp.WhatsAppErro("O texto pode ter até 800 caracteres.")
+                    whatsapp.criar_modelo_nomeado(nome, p.get("categoria") if p.get("categoria") in ("UTILITY", "MARKETING") else "UTILITY", corpo)
+                    return redirect("/modelos/?msg=Modelo enviado para aprovação da Meta")
                 exemplos = [e.strip() for e in (p.get("exemplos") or "").split(",") if e.strip()]
                 nvars = len(set(re.findall(r"\{\{(\d+)\}\}", corpo)))
                 if nvars and len(exemplos) < nvars:
@@ -176,6 +196,14 @@ class ModelosAcaoView(Base, View):
                 whatsapp.criar_modelo(nome, p.get("categoria") if p.get("categoria") in ("UTILITY", "MARKETING") else "UTILITY",
                                       corpo, exemplos[:nvars])
                 return redirect("/modelos/?msg=Modelo enviado para aprovação da Meta")
+            if acao == "cabecalho":
+                m = ModeloWhatsApp.objects.filter(pk=p.get("modelo", "")).first() if p.get("modelo", "").isdigit() else None
+                url = (p.get("url") or "").strip()
+                if not m or (url and not url.startswith("https://")):
+                    raise whatsapp.WhatsAppErro("Informe o link (https) da imagem ou do vídeo do cabeçalho.")
+                m.header_url = url
+                m.save(update_fields=["header_url"])
+                return redirect("/modelos/?msg=Cabeçalho salvo")
             if acao == "rapida":
                 titulo, texto = (p.get("titulo") or "").strip()[:60], (p.get("texto") or "").strip()[:1500]
                 if titulo and texto:

@@ -3,12 +3,12 @@
 {% block titulo %}Campanhas{% endblock %}
 {% block content %}
 <div class="pg">
-  <div class="titulo-pg"><div><h1>Campanhas de WhatsApp</h1><small>Envio de um modelo aprovado para um grupo de leads. Hoje: {{ enviados_24h }} de {{ limite }} mensagens nas últimas 24 h.</small></div></div>
+  <div class="titulo-pg"><div><h1>Campanhas de WhatsApp</h1><small>Envio de um modelo aprovado para um grupo de leads. Hoje: {{ enviados_24h }} de {{ limite }} mensagens nas últimas 24 h.</small></div>{% if gestor %}<a class="btn" href="{% url 'captacao:campanha_tipos' %}">Nova campanha</a>{% endif %}</div>
   {% if erro %}<p class="err">{{ erro }}</p>{% endif %}
   {% if not api %}<p class="aviso-jan" style="margin-bottom:12px">A API do WhatsApp ainda não está conectada: dá para montar campanhas, mas elas só enviam depois da conexão.</p>{% endif %}
   <div class="lista-c">
   {% for c in campanhas %}<div class="box"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
-      <div><b style="font-size:16px">{{ c.nome }}</b> <span class="badge {% if c.status == 'enviando' %}enviado{% elif c.status == 'pausada' %}pendente{% elif c.status == 'concluida' %}enviado{% endif %}">{{ c.get_status_display }}</span>
+      <div><b style="font-size:16px">{{ c.nome }}</b> <span class="badge pendente">{{ c.get_tipo_display }}</span> <span class="badge {% if c.status == 'enviando' %}enviado{% elif c.status == 'pausada' %}pendente{% elif c.status == 'concluida' %}enviado{% endif %}">{{ c.get_status_display }}</span>
         <div><small style="color:var(--mu)">Modelo: {{ c.modelo.nome }} · criada em {{ c.criada_em|date:"d/m H:i" }}</small></div></div>
       {% if gestor %}<div style="display:flex;gap:6px">
         {% if c.status == 'rascunho' or c.status == 'pausada' %}<form method="post" action="{% url 'captacao:campanha_acao' c.pk 'iniciar' %}">{% csrf_token %}<button class="btn sm" {% if not api %}disabled{% endif %}>{% if c.status == 'pausada' %}Retomar{% else %}Iniciar envio{% endif %}</button></form>{% endif %}

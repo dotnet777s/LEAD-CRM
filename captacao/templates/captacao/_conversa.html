@@ -26,7 +26,7 @@
   <div class="c-ferr"><select id="c-rapidas" aria-label="Respostas rápidas"><option value="">Respostas rápidas (copiar)</option>{% for r in rapidas %}<option value="{{ r.texto }}">{{ r.titulo }}</option>{% endfor %}</select></div>
   {% endif %}
   {% if api %}
-  <details class="prog"><summary>Programar uma mensagem{% if programadas %} ({{ programadas|length }}){% endif %}</summary>
+  <details class="dprog"><summary>Programar uma mensagem{% if programadas %} ({{ programadas|length }}){% endif %}</summary>
     <form hx-post="{% url 'captacao:conversa_programar' lead.pk %}" hx-target="#c-conv" hx-swap="innerHTML" style="display:grid;gap:6px;margin-top:6px">
       <input type="datetime-local" name="quando" required><input type="text" name="texto" placeholder="Texto que vai sair nesse horário" maxlength="1500" required><button class="btn sec sm" style="justify-self:start">Programar</button></form>
     {% for p in programadas %}<div class="vis-i" style="margin-top:6px"><b>{{ p.enviar_em|date:"d/m H:i" }}</b><small>{{ p.texto|truncatechars:80 }}</small>

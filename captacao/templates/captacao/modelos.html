@@ -8,17 +8,24 @@
   {% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}{% if erro %}<p class="err">{{ erro }}</p>{% endif %}
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
   {% for m in modelos %}<div class="box"><div style="display:flex;justify-content:space-between;gap:8px"><b>{{ m.nome }}</b><span class="badge {% if m.aprovado %}enviado{% elif m.status == 'REJECTED' %}erro{% else %}pendente{% endif %}">{{ m.status|default:"?" }}</span></div>
-    <small style="color:var(--mu)">{{ m.categoria }} · {{ m.idioma }} · {{ m.n_variaveis }} variável(is)</small><p style="margin:8px 0 0;white-space:pre-wrap">{{ m.corpo }}</p></div>
+    <small style="color:var(--mu)">{{ m.categoria }} · {{ m.idioma }} · {{ m.n_variaveis }} variável(is)</small><p style="margin:8px 0 0;white-space:pre-wrap">{{ m.corpo }}</p>
+    {% if m.header_tipo and gestor %}<form method="post" action="{% url 'captacao:modelos_acao' 'cabecalho' %}" style="display:flex;gap:6px;margin-top:8px">{% csrf_token %}<input type="hidden" name="modelo" value="{{ m.pk }}"><input type="text" name="url" value="{{ m.header_url }}" placeholder="Link https da {% if m.header_tipo == 'VIDEO' %}vídeo{% else %}imagem{% endif %} do cabeçalho"><button class="btn sec sm">Salvar</button></form>{% endif %}</div>
   {% empty %}<div class="vazio-g" style="grid-column:1/-1">Nenhum modelo ainda. {% if api %}Clique em “Sincronizar com a Meta” ou crie um abaixo.{% else %}Conecte a API do WhatsApp para sincronizar.{% endif %}</div>{% endfor %}
   </div>
   {% if gestor %}
   <div class="box" style="margin-top:14px"><h2>Novo modelo</h2>
-    <form method="post" action="{% url 'captacao:modelos_acao' 'criar' %}" class="cfg">{% csrf_token %}
-      <label class="l">Nome (letras minúsculas e _)<input type="text" name="nome" placeholder="ex.: retomada_interesse" maxlength="100"></label>
-      <label class="l">Categoria<select name="categoria"><option value="UTILITY">Utilidade (atendimento, retomada)</option><option value="MARKETING">Marketing (ofertas)</option></select></label>
-      <label class="l">Texto (use {% templatetag openvariable %}1{% templatetag closevariable %} para o primeiro nome do cliente)<textarea name="corpo" rows="4" maxlength="1024" placeholder="Olá, {% templatetag openvariable %}1{% templatetag closevariable %}! Aqui é da TopCar Veículos. ..."></textarea></label>
-      <label class="l">Exemplo para cada variável (separe por vírgula)<input type="text" name="exemplos" placeholder="ex.: Maria"></label>
-      <button class="btn" style="margin-top:8px" {% if not api or not tem_waba %}disabled{% endif %}>Enviar para aprovação da Meta</button>
+    <form method="post" action="{% url 'captacao:modelos_acao' 'criar' %}" class="cfg" id="f-modelo">{% csrf_token %}
+      <div class="grid" style="grid-template-columns:minmax(0,1fr) 340px;align-items:start">
+      <div>
+        <label class="l">Nome do modelo * (letras minúsculas e _)<input type="text" name="nome" placeholder="ex.: retomada_interesse" maxlength="100" required></label>
+        <label class="l">Categoria<select name="categoria"><option value="UTILITY">Utilidade (atendimento, retomada)</option><option value="MARKETING">Marketing (ofertas)</option></select></label>
+        <label class="l">Conteúdo * <span style="float:right" id="cont-c">0/800</span><textarea name="corpo" id="corpo-m" rows="6" maxlength="800" placeholder="Digite {% templatetag openvariable %} para ver as variáveis disponíveis" required></textarea></label>
+        <div class="vars">{% for k, v in variaveis.items %}<button type="button" data-v="{{ k }}" title="{{ v.0 }}">{% templatetag openvariable %}{{ k }}{% templatetag closevariable %}</button>{% endfor %}</div>
+        <small style="color:var(--mu)">A Meta exige que o texto não comece nem termine com uma variável e analisa o conteúdo antes de aprovar.</small>
+        <button class="btn" style="margin-top:10px;display:block" {% if not api or not tem_waba %}disabled{% endif %}>Enviar para aprovação da Meta</button>
+      </div>
+      <div><div class="sec-t" style="margin-top:0">Pré-visualização</div><div class="previa-wa"><small style="color:#8a9aa5">João Silva · (11) 99999-9999</small><div class="m" id="previa-m">Sua mensagem aparecerá aqui...</div></div></div>
+      </div>
     </form></div>
   {% endif %}
   <div class="box" style="margin-top:14px"><h2>Respostas rápidas</h2><small style="color:var(--mu)">Textos prontos para usar nas conversas (aparecem no menu “Respostas rápidas”).</small>
@@ -29,4 +36,9 @@
       <input type="text" name="titulo" placeholder="Título (ex.: Endereço da loja)" maxlength="60"><textarea name="texto" rows="3" maxlength="1500" placeholder="Texto da resposta"></textarea><button class="btn sec sm" style="justify-self:start">Salvar resposta</button></form>{% endif %}
   </div>
 </div>
+{% verbatim %}<script>
+(function(){var t=document.getElementById('corpo-m');if(!t)return;var ex={nome:'João',saudacao:'Bom dia',remetente:'TopCar Veículos',meu_whatsapp:'(81) 96000-2209',endereco:'Loja 11, Shopping do Automóvel',carro:'Fiat Argo 2022',preco:'R$ 59.900',link:'https://contato.topcarpe.com.br/v/1',mes:'novembro',descricao:'revisão gratuita',valor:'R$ 500',vencimento:'30/11'};
+function atualiza(){document.getElementById('cont-c').textContent=t.value.length+'/800';document.getElementById('previa-m').textContent=t.value?t.value.replace(/\{\{\s*([a-z_]+)\s*\}\}/g,function(m,k){return ex[k]||m;}):'Sua mensagem aparecerá aqui...';}
+t.addEventListener('input',atualiza);document.querySelectorAll('.vars button').forEach(function(b){b.addEventListener('click',function(){var i=t.selectionStart||t.value.length;t.value=t.value.slice(0,i)+'{{'+b.dataset.v+'}}'+t.value.slice(i);t.focus();atualiza();});});atualiza();})();
+</script>{% endverbatim %}
 {% endblock %}

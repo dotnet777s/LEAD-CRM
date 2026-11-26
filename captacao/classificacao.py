@@ -9,7 +9,7 @@ import re
 
 from django.db import transaction
 
-from . import services, utils
+from . import campanhas, services, utils
 from .models import Etiqueta, Historico, Lead, RegraClassificacao
 
 ORDEM = [Lead.Etapa.NOVO, Lead.Etapa.REQUALIFICAR, Lead.Etapa.ATENDIMENTO, Lead.Etapa.SEM_ESTOQUE, Lead.Etapa.QUALIFICADO,
@@ -59,6 +59,7 @@ def etiquetar(lead, nome, texto_historico=""):
     if not e or lead.etiquetas.filter(pk=e.pk).exists():
         return False
     lead.etiquetas.add(e)
+    campanhas.ao_etiquetar(lead, e)
     if texto_historico:
         Historico.objects.create(lead=lead, tipo=Historico.Tipo.NOTA, texto=texto_historico[:500])
     return True
@@ -108,6 +109,7 @@ def aplicar_regras(lead, texto):
         dispararam.append(regra.nome)
         if regra.etiqueta_id and not lead.etiquetas.filter(pk=regra.etiqueta_id).exists():
             lead.etiquetas.add(regra.etiqueta)
+            campanhas.ao_etiquetar(lead, regra.etiqueta)
         if regra.etapa and pode_avancar(lead, regra.etapa):
             try:
                 services.mudar_etapa(lead, regra.etapa, None, motivo_perda=regra.motivo_perda)
