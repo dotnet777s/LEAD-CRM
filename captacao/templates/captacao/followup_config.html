@@ -1,0 +1,55 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Configurar follow-up{% endblock %}
+{% block content %}
+{% include "captacao/_abas_funil.html" with ativa="followup" %}
+<div class="pg">
+  <div class="fu-topo"><div><h1 style="margin:0;font-size:20px">Configurar follow-up</h1>
+    <small style="color:var(--mu)">A sequência para quem não responde. Use {nome} e {carro} nos textos.</small></div>
+    <a class="btn sec sm" href="{% url 'captacao:followup' %}">Voltar</a></div>
+  {% if salvo %}<p class="ok-msg">Configuração salva.</p>{% endif %}{% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+  <form method="post" class="box cfg">{% csrf_token %}
+    <h2>Regras gerais</h2>
+    <label class="chk"><input type="checkbox" name="ativo" {% if cfg.ativo %}checked{% endif %}> Follow-up ligado</label>
+    <label class="chk"><input type="checkbox" name="primeiro_nome" {% if cfg.primeiro_nome %}checked{% endif %}> Chamar só pelo primeiro nome</label>
+    <label class="chk"><input type="checkbox" name="enviar_domingo" {% if cfg.enviar_domingo %}checked{% endif %}> Também aos domingos</label>
+    <div class="linha"><label class="l">Das <input type="number" name="hora_inicio" min="0" max="23" value="{{ cfg.hora_inicio }}"></label>
+      <label class="l">Até as <input type="number" name="hora_fim" min="1" max="24" value="{{ cfg.hora_fim }}"></label></div>
+    <small style="color:var(--mu)">Fora desse horário, a tentativa fica para a próxima manhã.</small>
+    <label class="chk" style="margin-top:12px"><input type="checkbox" name="envio_automatico" {% if cfg.envio_automatico %}checked{% endif %} {% if not api %}disabled{% endif %}> Enviar sozinho pela API do WhatsApp
+      {% if not api %}<small style="color:var(--am)"> (disponível depois de conectar a API)</small>{% endif %}</label>
+
+    <h2 style="margin-top:20px">Tentativas</h2>
+    {% for p in passos %}
+    <fieldset class="passo">
+      <legend>Tentativa {{ p.ordem }}</legend>
+      <label class="chk"><input type="checkbox" name="p{{ p.pk }}_ativo" {% if p.ativo %}checked{% endif %}> Ligada</label>
+      <div class="linha">
+        <label class="l">{% if p.ordem == 1 %}Horas depois do 1º contato{% else %}Dias depois da anterior{% endif %}
+          {% if p.ordem == 1 %}<input type="number" name="p{{ p.pk }}_horas" min="0" value="{{ p.espera_horas }}"><input type="hidden" name="p{{ p.pk }}_dias" value="{{ p.espera_dias }}">
+          {% else %}<input type="number" name="p{{ p.pk }}_dias" min="0" value="{{ p.espera_dias }}"><input type="hidden" name="p{{ p.pk }}_horas" value="{{ p.espera_horas }}">{% endif %}</label>
+        <label class="l">Hora fixa (opcional)<input type="number" name="p{{ p.pk }}_hora" min="0" max="23" value="{{ p.hora_envio|default_if_none:'' }}"></label>
+      </div>
+      {% for v in p.v %}<label class="l">Mensagem {% cycle 'A' 'B' 'C' %}<textarea name="p{{ p.pk }}_v{{ forloop.counter0 }}" rows="3" maxlength="900">{{ v }}</textarea></label>{% endfor %}
+      <label class="l">Template aprovado na Meta (para fora das 24 h)<input type="text" name="p{{ p.pk }}_template" value="{{ p.template_nome }}" placeholder="ex.: followup_1"></label>
+    </fieldset>
+    {% endfor %}
+    <button class="btn" style="margin-top:12px">Salvar</button>
+  </form>
+
+  <div class="box" style="margin-top:12px">
+    <h2>Qual mensagem funciona melhor</h2>
+    {% if desempenho %}<table class="t"><tr><th>Tentativa</th><th>Texto</th><th class="n">Enviadas</th><th class="n">Respostas</th><th class="n">Taxa</th></tr>
+      {% for d in desempenho %}<tr><td>{{ d.passo }}</td><td>{{ d.letra }}</td><td class="n">{{ d.enviadas }}</td><td class="n">{{ d.respostas }}</td><td class="n">{{ d.taxa }}%</td></tr>{% endfor %}</table>
+    {% else %}<small style="color:var(--mu)">Aparece depois dos primeiros envios. Cada lead recebe sempre o mesmo texto (A, B ou C) em todas as tentativas, e o CRM conta quem respondeu.</small>{% endif %}
+  </div>
+
+  <div class="box" style="margin-top:12px">
+    <h2>API oficial do WhatsApp</h2>
+    <p style="margin:0 0 6px">Status: <b style="color:{% if api %}var(--gr){% else %}var(--am){% endif %}">{% if api %}conectada{% else %}ainda não conectada{% endif %}</b></p>
+    <dl class="kv"><dt>Webhook</dt><dd><code>{{ webhook }}</code></dd>
+      <dt>Token de verificação</dt><dd>{% if tem_verify %}definido{% else %}falta WHATSAPP_VERIFY_TOKEN{% endif %}</dd>
+      <dt>Segredo do app</dt><dd>{% if tem_segredo %}definido{% else %}falta WHATSAPP_APP_SECRET{% endif %}</dd></dl>
+    <small style="color:var(--mu)">Quando conectada, quem responde ao cliente para o follow-up sozinho e as mensagens aparecem no painel do lead.</small>
+  </div>
+</div>
+{% endblock %}

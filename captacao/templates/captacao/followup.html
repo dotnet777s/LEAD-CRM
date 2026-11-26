@@ -1,0 +1,13 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Follow-up{% endblock %}
+{% block content %}
+{% include "captacao/_abas_funil.html" with ativa="followup" %}
+<div class="pg">
+  <div class="fu-topo">
+    <div><h1 style="margin:0;font-size:20px">Follow-up</h1>
+      <small style="color:var(--mu)">Quem já recebeu o 1º contato e não respondeu. A mensagem já vem pronta: abra o WhatsApp, envie e toque em “Enviei”.</small></div>
+    {% if gestor %}<a class="btn sec sm" href="{% url 'captacao:followup_config' %}">Configurar</a>{% endif %}
+  </div>
+  <div id="fu-lista" hx-get="{% url 'captacao:followup_lista' %}?aba={{ aba }}" hx-trigger="load, followupAtualizar from:body, every 60s" hx-swap="innerHTML"></div>
+</div>
+{% endblock %}

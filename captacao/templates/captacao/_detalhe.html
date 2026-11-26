@@ -3,6 +3,40 @@
 <div class="carro" style="color:var(--mu)">{{ lead.carro_texto|default:"Sem carro definido" }}</div>
 <p style="margin:12px 0"><a class="btn full js-wa" href="{{ lead.whatsapp_url }}?text={{ mensagem|urlencode }}" target="_blank" rel="noopener" data-marcar="{% url 'captacao:whatsapp' lead.pk %}">Abrir WhatsApp · {{ lead.telefone_formatado }}</a></p>
 
+{% if lead.portal %}<p style="margin:0 0 8px"><span class="portal">{{ lead.get_portal_display }}</span>{% if lead.email %} <small style="color:var(--mu)">{{ lead.email }}</small>{% endif %}</p>{% endif %}
+{% if lead.observacao and lead.origem == 'portal' %}<p class="nota-portal">{{ lead.observacao }}</p>{% endif %}
+
+<div class="sec-t">Follow-up</div>
+{% if fu %}
+<div class="fu-box{% if fu.status == 'pausado' %} pausado{% endif %}">
+  <b>{% if fu.status == 'pausado' %}Pausado{% else %}Tentativa {{ fu.pos }}/{{ fu.total }}{% endif %}</b>
+  {% if fu.proximo_em and fu.status == 'ativo' %}<small> · {{ fu.proximo_em|date:"d/m H:i" }}</small>{% endif %}
+  <p>{{ fu.texto }}</p>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">
+    <a class="btn sm js-wa" target="_blank" rel="noopener" href="https://wa.me/{{ lead.telefone }}?text={{ fu.texto|urlencode }}" data-marcar="{% url 'captacao:whatsapp' lead.pk %}">WhatsApp com a mensagem</a>
+    <button class="btn sec sm" hx-post="{% url 'captacao:followup_acao' fu.pk 'enviei' %}" hx-swap="none" hx-on::after-request="htmx.ajax('GET','{% url 'captacao:lead' lead.pk %}',{target:'#dlg-box',swap:'innerHTML'})">Enviei</button>
+    <button class="btn sec sm" hx-post="{% url 'captacao:lead_followup' lead.pk 'parar' %}" hx-target="#dlg-box">Cliente respondeu</button>
+  </div>
+</div>
+{% else %}
+<small style="color:var(--mu)">{% if ultimo_fu %}Último follow-up: {{ ultimo_fu.get_status_display }}. {% else %}Nenhum em andamento. {% endif %}</small>
+{% if lead.etapa != 'vendido' and lead.etapa != 'perdido' %}<button class="btn sec sm" hx-post="{% url 'captacao:lead_followup' lead.pk 'iniciar' %}" hx-target="#dlg-box">Iniciar follow-up</button>{% endif %}
+{% endif %}
+
+{% if conversa or wa_ligado %}
+<div class="sec-t">Conversa no WhatsApp</div>
+<div class="conv">{% for m in conversa %}<div class="m {{ m.direcao }}">{{ m.texto }}<small>{{ m.criado_em|date:"d/m H:i" }}{% if m.direcao == 'out' %} · {{ m.get_status_display }}{% endif %}</small></div>
+{% empty %}<small style="color:var(--mu)">Sem mensagens ainda.</small>{% endfor %}</div>
+{% if wa_ligado %}
+{% if erro_wa %}<p class="err">{{ erro_wa }}</p>{% endif %}
+{% if wa_janela %}
+<form hx-post="{% url 'captacao:lead_enviar' lead.pk %}" hx-target="#dlg-box" style="display:flex;gap:6px;margin-top:8px">
+  <input type="text" name="texto" placeholder="Responder pelo WhatsApp…" maxlength="1500" autocomplete="off"><button class="btn sm">Enviar</button>
+</form>
+{% else %}<small style="color:var(--am)">Fora da janela de 24 h: só dá para enviar template aprovado (o cliente precisa responder primeiro).</small>{% endif %}
+{% endif %}
+{% endif %}
+
 <div class="sec-t">Etapa: {{ lead.get_etapa_display }}{% if lead.etapa == 'novo' %} · <span class="sla {{ lead.sla }}">{{ lead.tempo_txt }}</span>{% endif %}</div>
 <div class="chips">
 {% for val, nome in etapas_funil %}

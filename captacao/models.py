@@ -295,3 +295,98 @@ class PortalMensagem(models.Model):
 
     class Meta:
         ordering = ["-criado_em"]
+
+
+# ===================================================================== follow-up e WhatsApp
+class FollowUpConfig(models.Model):
+    """Regras do follow-up (uma linha só). Editável na tela Follow-up > Configurar."""
+    ativo = models.BooleanField(default=True)
+    hora_inicio = models.PositiveSmallIntegerField("Enviar a partir das (h)", default=8)
+    hora_fim = models.PositiveSmallIntegerField("Enviar até as (h)", default=20)
+    enviar_domingo = models.BooleanField(default=False)
+    primeiro_nome = models.BooleanField("Chamar só pelo primeiro nome", default=True)
+    envio_automatico = models.BooleanField("Enviar sozinho pela API do WhatsApp (quando conectada)", default=False)
+
+    @classmethod
+    def obter(cls):
+        c, _ = cls.objects.get_or_create(pk=1)
+        return c
+
+
+class FollowUpPasso(models.Model):
+    """Cada tentativa da sequência, com até 3 variações de texto (A/B/C) para comparar qual responde mais."""
+    ordem = models.PositiveSmallIntegerField(unique=True)
+    ativo = models.BooleanField(default=True)
+    espera_dias = models.PositiveSmallIntegerField(default=0, help_text="Dias depois do passo anterior (0 = usa as horas).")
+    espera_horas = models.PositiveSmallIntegerField(default=0)
+    hora_envio = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Hora fixa do dia (vazio = mesma hora).")
+    variantes = models.JSONField(default=list)
+    template_nome = models.CharField("Template aprovado na Meta", max_length=100, blank=True,
+                                     help_text="Usado quando a conversa está fora da janela de 24 h (API oficial).")
+
+    class Meta:
+        ordering = ["ordem"]
+
+
+class FollowUp(models.Model):
+    class Status(models.TextChoices):
+        ATIVO = "ativo", "Em andamento"
+        PAUSADO = "pausado", "Pausado"
+        RESPONDEU = "respondeu", "Cliente respondeu"
+        ESGOTADO = "esgotado", "Sem resposta"
+        ENCERRADO = "encerrado", "Encerrado (lead avançou)"
+
+    lead = models.ForeignKey(Lead, related_name="followups", on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.ATIVO, db_index=True)
+    passo_atual = models.PositiveSmallIntegerField(default=1, help_text="Ordem do próximo passo a executar.")
+    variante = models.PositiveSmallIntegerField(default=0)
+    proximo_em = models.DateTimeField(null=True, blank=True, db_index=True)
+    iniciado_em = models.DateTimeField(default=timezone.now)
+    finalizado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["proximo_em"]
+
+
+class FollowUpTentativa(models.Model):
+    followup = models.ForeignKey(FollowUp, related_name="tentativas", on_delete=models.CASCADE)
+    passo = models.PositiveSmallIntegerField()
+    variante = models.PositiveSmallIntegerField(default=0)
+    mensagem = models.TextField(blank=True)
+    via_api = models.BooleanField(default=False)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    feita_em = models.DateTimeField(default=timezone.now)
+    respondeu = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["feita_em"]
+
+
+class WhatsAppMensagem(models.Model):
+    """Conversa do WhatsApp (API oficial): entradas pelo webhook e saídas enviadas pelo CRM."""
+
+    class Direcao(models.TextChoices):
+        ENTRADA = "in", "Cliente"
+        SAIDA = "out", "Loja"
+
+    class Status(models.TextChoices):
+        PENDENTE = "pendente", "Enviando"
+        ENVIADA = "sent", "Enviada"
+        ENTREGUE = "delivered", "Entregue"
+        LIDA = "read", "Lida"
+        FALHOU = "failed", "Falhou"
+        RECEBIDA = "recebida", "Recebida"
+
+    lead = models.ForeignKey(Lead, null=True, blank=True, on_delete=models.SET_NULL, related_name="mensagens_wa")
+    telefone = models.CharField(max_length=15, db_index=True)
+    direcao = models.CharField(max_length=3, choices=Direcao.choices)
+    tipo = models.CharField(max_length=20, default="text")          # text, template, image, audio, ...
+    texto = models.TextField(blank=True)
+    wamid = models.CharField(max_length=200, blank=True, db_index=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.RECEBIDA)
+    erro = models.CharField(max_length=300, blank=True)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    criado_em = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ["criado_em", "id"]

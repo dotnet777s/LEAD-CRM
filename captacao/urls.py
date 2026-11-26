@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views, views_equipe, views_painel, views_publico as pub
+from . import views, views_equipe, views_followup, views_painel, views_publico as pub
 
 app_name = "captacao"
 
@@ -31,6 +31,14 @@ urlpatterns = [
     path("lead/<int:pk>/retorno/", views.RetornoView.as_view(), name="retorno"),
     path("lead/<int:pk>/whatsapp/", views.WhatsAppView.as_view(), name="whatsapp"),
     path("lead/<int:pk>/excluir/", views.ExcluirView.as_view(), name="excluir"),
+    path("lead/<int:pk>/followup/<slug:acao>/", views_followup.LeadFollowUpView.as_view(), name="lead_followup"),
+    path("lead/<int:pk>/enviar/", views_followup.LeadEnviarView.as_view(), name="lead_enviar"),
+    path("followup/", views_followup.FollowUpView.as_view(), name="followup"),
+    path("followup/lista/", views_followup.FollowUpListaView.as_view(), name="followup_lista"),
+    path("followup/configurar/", views_followup.FollowUpConfigView.as_view(), name="followup_config"),
+    path("followup/<int:pk>/<slug:acao>/", views_followup.FollowUpAcaoView.as_view(), name="followup_acao"),
+    path("portais/", views_followup.PortaisView.as_view(), name="portais"),
+    path("whatsapp/webhook/", views_followup.webhook_whatsapp, name="wa_webhook"),
     path("painel/", views_painel.PainelView.as_view(), name="painel"),
     path("painel/formulario/", views_painel.FunilFormView.as_view(), name="funil_form"),
     path("painel/investimento/", views_painel.InvestimentoView.as_view(), name="investimento"),

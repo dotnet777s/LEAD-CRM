@@ -184,6 +184,37 @@ def avisar_retorno_portal(lead, portal, carro):
     return n
 
 
+def avisar_mensagem_whatsapp(lead, texto, wamid, followup_parou=False):
+    """O cliente escreveu no WhatsApp (API oficial): avisa o SDR com o trecho da mensagem."""
+    if not configurado():
+        return 0
+    extra = "\n⏹ Follow-up parado automaticamente." if followup_parou else ""
+    corpo = (f"💬 <b>MENSAGEM DE {esc(lead.nome.upper())}</b>\n📱 {esc(lead.telefone_formatado)}\n\n"
+             f"“{esc((texto or '')[:300])}”{extra}")
+    n = 0
+    for v in _chats():
+        _, criada = enfileirar(v.chat_id, corpo, botoes_lead(lead), lead, "mensagem", f"wa:{wamid or lead.pk}:{v.chat_id}")
+        n += criada
+    return n
+
+
+def alertas_followup(agora=None):
+    """Resumo das tarefas de follow-up que venceram agora (um aviso por janela de 15 min, com os nomes)."""
+    from . import followup
+    agora = agora or timezone.now()
+    novos = [f for f in followup.devidos(agora) if f.proximo_em >= agora - timedelta(minutes=20)]
+    if not novos:
+        return 0
+    linhas = [f"• {esc(f.lead.nome)} · {esc((f.lead.carro_texto or 'sem carro').split(' · ')[0])}" for f in novos[:10]]
+    texto = f"🔔 <b>FOLLOW-UP PARA FAZER ({len(novos)})</b>\n\n" + "\n".join(linhas) + f"\n\n{esc(settings.SITE_URL)}/followup/"
+    n, chave = 0, int(agora.timestamp() // 900)
+    for v in _chats():
+        _, criada = enfileirar(v.chat_id, texto, [[{"text": "Abrir follow-up", "url": f"{settings.SITE_URL}/followup/"}]],
+                               None, "followup", f"fu:{chave}:{v.chat_id}")
+        n += criada
+    return n
+
+
 def avisar_lead_completo(lead):
     """Quem tinha deixado só o contato terminou o formulário. Se o SDR já foi avisado do formulário incompleto,
     manda 'terminou o formulário'; se não (terminou rápido), é um lead novo comum."""

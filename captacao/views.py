@@ -15,7 +15,7 @@ from django.views.generic import TemplateView
 
 from catalogo.models import Veiculo
 
-from . import services, utils
+from . import followup, services, utils, whatsapp
 from .forms import LeadManualForm
 from .models import EventoMeta, Lead
 
@@ -99,7 +99,7 @@ class KanbanView(Base, TemplateView):
         ctx.update(
             consultores=U.objects.filter(is_active=True).order_by("first_name", "username"),
             carros=Veiculo.objects.filter(status__in=Veiculo.EM_LOJA).order_by("marca", "modelo"),
-            origens=Lead.Origem.choices, gestor=eh_gestor(self.request.user), periodos=[("", "Tudo"), ("hoje", "Hoje"), ("7d", "7 dias"), ("mes", "Mês")])
+            n_agora=followup.contagens()["agora"], origens=Lead.Origem.choices, gestor=eh_gestor(self.request.user), periodos=[("", "Tudo"), ("hoje", "Hoje"), ("7d", "7 dias"), ("mes", "Mês")])
         return ctx
 
 
@@ -108,6 +108,7 @@ class QuadroView(Base, View):
         agora = timezone.now()
         base = aplicar_filtros(leads_visiveis(request.user), request.GET)
         corte = agora - timedelta(days=DIAS_FECHADOS)
+        fus = {f.lead_id: f for f in followup.FollowUp.objects.filter(status__in=["ativo", "pausado"])}
         colunas = []
         for etapa in Lead.ABERTAS + [Lead.Etapa.VENDIDO, Lead.Etapa.PERDIDO]:
             qs = base.filter(etapa=etapa)
@@ -116,6 +117,11 @@ class QuadroView(Base, View):
             total = qs.count()
             ordem = "criado_em" if etapa == Lead.Etapa.NOVO else "-etapa_desde"
             cards = [preparar_card(l, agora) for l in qs.order_by(ordem)[:LIMITE_COLUNA]]
+            for l in cards:
+                l.fu = fus.get(l.pk)
+                if l.fu:
+                    l.fu_devido = bool(l.fu.status == "ativo" and l.fu.proximo_em and l.fu.proximo_em <= agora)
+                    l.fu_pos = followup.posicao(l.fu)
             colunas.append({"etapa": etapa.value, "nome": etapa.label, "total": total, "cards": cards})
         ultimo_novo = base.filter(etapa=Lead.Etapa.NOVO).order_by("-id").values_list("id", flat=True).first() or 0
         return render(request, "captacao/_quadro.html", {
@@ -123,9 +129,13 @@ class QuadroView(Base, View):
 
 
 # ---- detalhe e ações --------------------------------------------------------------------------
-def render_detalhe(request, lead):
+def render_detalhe(request, lead, erro_wa=""):
     agora = timezone.now()
     preparar_card(lead, agora)
+    fu = followup.ativo_do_lead(lead)
+    if fu:
+        fu.pos, fu.total = followup.posicao(fu)
+        fu.texto = followup.montar_mensagem(fu, usuario=request.user)
     return render(request, "captacao/_detalhe.html", {
         "lead": lead, "gestor": eh_gestor(request.user), "etapas": Lead.Etapa,
         "etapas_funil": [(e.value, e.label) for e in Lead.Etapa],
@@ -134,7 +144,10 @@ def render_detalhe(request, lead):
         "resumo": services.resumo_respostas(lead.respostas) if lead.respostas else "",
         "mensagem": mensagem_inicial(lead, request.user),
         "consultores": get_user_model().objects.filter(is_active=True).order_by("first_name", "username"),
-        "com_form": [e.value for e in COM_FORM]})
+        "com_form": [e.value for e in COM_FORM],
+        "fu": fu, "ultimo_fu": lead.followups.exclude(status__in=["ativo", "pausado"]).order_by("-id").first(),
+        "conversa": list(lead.mensagens_wa.order_by("-criado_em")[:20])[::-1], "wa_ligado": whatsapp.configurado(),
+        "wa_janela": whatsapp.configurado() and whatsapp.janela_aberta(lead.telefone), "erro_wa": erro_wa})
 
 
 class DetalheView(Base, View):

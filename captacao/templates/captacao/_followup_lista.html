@@ -1,0 +1,32 @@
+<div class="fu-abas">{% for k, nome in abas %}
+  <button type="button" class="{% if k == aba %}on{% endif %}" hx-get="{% url 'captacao:followup_lista' %}?aba={{ k }}" hx-target="#fu-lista">{{ nome }}<b>{% if k == 'agora' %}{{ contagens.agora }}{% elif k == 'agendados' %}{{ contagens.agendados }}{% elif k == 'pausados' %}{{ contagens.pausados }}{% elif k == 'esgotados' %}{{ contagens.esgotados }}{% else %}{{ contagens.responderam }}{% endif %}</b></button>{% endfor %}
+</div>
+{% for f in itens %}
+<article class="fu-item{% if f.atrasado and aba == 'agora' %} vencido{% endif %}">
+  <div class="fu-cab">
+    <div><button class="nome" hx-get="{% url 'captacao:lead' f.lead.pk %}" hx-target="#dlg-box">{{ f.lead.nome|truncatechars:30 }}</button>
+      <span class="tag {{ f.lead.classe }}">{{ f.lead.classe }}</span>{% if f.lead.portal %} <span class="portal">{{ f.lead.get_portal_display }}</span>{% endif %}
+      <div class="carro">{{ f.lead.carro_texto|default:"Sem carro definido"|truncatechars:60 }} · {{ f.lead.telefone_formatado }}</div></div>
+    <div class="fu-quando">
+      {% if f.status == 'ativo' %}<b>Tentativa {{ f.pos }}/{{ f.total }}</b><small>{% if f.atrasado %}venceu {{ f.proximo_em|timesince }} atrás{% else %}{{ f.proximo_em|date:"d/m \à\s H:i" }}{% endif %}</small>
+      {% elif f.status == 'pausado' %}<b>Pausado</b><small>{{ f.pos }}/{{ f.total }}</small>
+      {% else %}<b>{{ f.get_status_display }}</b><small>{{ f.finalizado_em|date:"d/m H:i" }}</small>{% endif %}
+    </div>
+  </div>
+  {% if f.texto %}<p class="fu-msg"><span class="tag">{{ f.letra }}</span> {{ f.texto }}</p>{% endif %}
+  <div class="fu-acoes">
+    {% if f.status == 'ativo' %}
+      <a class="btn sm js-wa" target="_blank" rel="noopener" href="{{ f.wa }}" data-marcar="{% url 'captacao:whatsapp' f.lead.pk %}">WhatsApp com a mensagem</a>
+      {% if api %}<button class="btn sec sm" hx-post="{% url 'captacao:followup_acao' f.pk 'enviar_api' %}" hx-swap="none">Enviar pelo CRM</button>{% endif %}
+      <button class="btn sec sm" hx-post="{% url 'captacao:followup_acao' f.pk 'enviei' %}" hx-swap="none">Enviei ✓</button>
+      <button class="btn sec sm" hx-post="{% url 'captacao:followup_acao' f.pk 'respondeu' %}" hx-swap="none">Respondeu</button>
+      <button class="btn sec sm" hx-post="{% url 'captacao:followup_acao' f.pk 'pular' %}" hx-swap="none" hx-confirm="Pular esta tentativa sem enviar?">Pular</button>
+      <button class="btn sec sm" hx-post="{% url 'captacao:followup_acao' f.pk 'pausar' %}" hx-swap="none">Pausar</button>
+    {% elif f.status == 'pausado' %}
+      <button class="btn sm" hx-post="{% url 'captacao:followup_acao' f.pk 'retomar' %}" hx-swap="none">Retomar</button>
+    {% elif f.status == 'esgotado' %}
+      {% if f.lead.etapa != 'perdido' and f.lead.etapa != 'vendido' %}<button class="btn red sm" hx-post="{% url 'captacao:followup_acao' f.pk 'perdido' %}" hx-swap="none" hx-confirm="Marcar este lead como perdido (sem resposta)?">Marcar como perdido</button>{% endif %}
+    {% endif %}
+  </div>
+</article>
+{% empty %}<div class="vazio" style="margin-top:14px">{% if aba == 'agora' %}Nada para fazer agora. 🎉{% else %}Nenhum follow-up aqui.{% endif %}</div>{% endfor %}

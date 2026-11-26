@@ -16,11 +16,13 @@
       <div class="meta">
         {% if l.sla %}<span class="tag {{ l.classe }}">{{ l.classe }}</span>{% endif %}
         {% if l.incompleto %}<span class="tag inc" title="Deixou o contato e não terminou o formulário">Incompleto</span>{% endif %}
-        <span>{{ l.get_origem_display }}</span>
+        {% if not l.portal %}<span>{{ l.get_origem_display }}</span>{% endif %}
         {% if l.utm_content %}<span title="Anúncio">{{ l.utm_content|truncatechars:18 }}</span>{% endif %}
         <span class="quem{% if not l.vendedor %} sem{% endif %}">{% if l.vendedor %}{{ l.vendedor.first_name|default:l.vendedor.username }}{% else %}Sem consultor{% endif %}</span>
         {% if not l.sla %}<span>{{ l.tempo_txt }}</span>{% endif %}
         {% if l.visita_em and l.etapa == 'visita' %}<span class="vis">Visita {{ l.visita_em|date:"d/m H:i" }}</span>{% endif %}
+        {% if l.fu %}<span class="fu{% if l.fu_devido %} devido{% endif %}" title="Follow-up">{% if l.fu.status == 'pausado' %}Follow-up pausado{% elif l.fu_devido %}Follow-up agora{% else %}Follow-up {{ l.fu_pos.0 }}/{{ l.fu_pos.1 }}{% endif %}</span>{% endif %}
+        {% if l.portal %}<span class="portal">{{ l.get_portal_display }}</span>{% endif %}
         {% if l.retorno_atrasado %}<span class="atrasado">Retorno atrasado</span>{% endif %}
       </div>
       {% if c.etapa != 'vendido' and c.etapa != 'perdido' %}

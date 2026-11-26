@@ -1,0 +1,19 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · Portais{% endblock %}
+{% block content %}
+{% include "captacao/_abas_funil.html" with ativa="portais" %}
+<div class="pg">
+  <div class="fu-topo"><div><h1 style="margin:0;font-size:20px">Leads dos portais</h1>
+    <small style="color:var(--mu)">E-mails recebidos dos portais. Ativos agora: {{ ativos|join:", "|upper }}. {% if not ligado %}<b style="color:var(--am)">Leitura da caixa de e-mail ainda não configurada.</b>{% endif %}</small></div></div>
+  {% if revisar %}<p class="err" style="margin:0 0 10px">{{ revisar }} e-mail(s) sem telefone: abra e cadastre o lead à mão.</p>{% endif %}
+  <div class="box"><table class="t">
+    <tr><th>Quando</th><th>Portal</th><th>Situação</th><th>Lead / assunto</th></tr>
+    {% for m in mensagens %}
+    <tr><td>{{ m.criado_em|date:"d/m H:i" }}</td><td>{{ m.get_portal_display|default:"—" }}</td>
+      <td><span class="badge {% if m.status == 'sem_telefone' %}erro{% elif m.status == 'criado' %}enviado{% elif m.status == 'atualizado' %}pendente{% endif %}">{{ m.get_status_display }}</span></td>
+      <td>{% if m.lead %}<button class="nome" hx-get="{% url 'captacao:lead' m.lead.pk %}" hx-target="#dlg-box">{{ m.lead.nome }}</button> <small style="color:var(--mu)">{{ m.lead.carro_texto|truncatechars:40 }}</small>
+        {% else %}<details><summary>{{ m.assunto|truncatechars:60 }}</summary><pre class="corpo">{{ m.corpo }}</pre></details>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="4" style="color:var(--mu)">Nenhum e-mail recebido ainda.</td></tr>{% endfor %}
+  </table></div>
+</div>
+{% endblock %}

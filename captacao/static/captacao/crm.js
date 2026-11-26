@@ -21,6 +21,9 @@
     } catch (e) {}
   }
 
+  // erros de ações (ex.: envio pela API recusado) aparecem como aviso
+  d.body.addEventListener('htmx:responseError', function (e) { var t = (e.detail.xhr && e.detail.xhr.responseText) || ''; if (t && t.length < 300) mostrar(t); });
+
   // ---- diálogo (painel do lead e formulários) ----
   d.body.addEventListener('htmx:afterSwap', function (e) {
     if (e.detail.target === box && !dlg.open) dlg.showModal();

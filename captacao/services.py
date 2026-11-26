@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
-from . import meta, telegram, utils
+from . import followup, meta, telegram, utils
 from .models import EventoMeta, Historico, Interacao, Lead
 
 JANELA_DEDUP_DIAS = 30
@@ -189,6 +189,7 @@ def mudar_etapa(lead, nova, usuario=None, motivo_perda="", veiculo_vendido=None,
     elif antiga == Lead.Etapa.VENDIDO:
         lead.vendido_em = None
     lead.save()
+    followup.encerrar_se_avancou(lead, agora)
     meta.enfileirar_evento_crm(lead, nova)
     return True
 
@@ -196,7 +197,9 @@ def mudar_etapa(lead, nova, usuario=None, motivo_perda="", veiculo_vendido=None,
 def marcar_atendimento(lead, usuario=None):
     """Chamado ao abrir o WhatsApp: tira o lead de 'Novo' e marca a primeira resposta."""
     if lead.etapa in (Lead.Etapa.NOVO, Lead.Etapa.REQUALIFICAR):
-        return mudar_etapa(lead, Lead.Etapa.ATENDIMENTO, usuario)
+        mudou = mudar_etapa(lead, Lead.Etapa.ATENDIMENTO, usuario)
+        followup.iniciar(lead)             # 1º contato feito: se o cliente não responder, a sequência cobra
+        return mudou
     return False
 
 

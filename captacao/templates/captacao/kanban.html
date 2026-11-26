@@ -1,6 +1,7 @@
 {% extends "captacao/base.html" %}
 {% block head %}<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>{% endblock %}
 {% block content %}
+{% include "captacao/_abas_funil.html" with ativa="quadro" %}
 <form id="filtros" class="barra" hx-get="{% url 'captacao:quadro' %}" hx-target="#quadro" hx-trigger="input delay:300ms, change" hx-sync="this:replace" onsubmit="return false">
   <input type="search" name="q" placeholder="Buscar nome ou telefone" autocomplete="off">
   <button type="button" id="filtrar" class="btn sec filtrar" aria-expanded="false">Filtros</button>
