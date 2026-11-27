@@ -103,6 +103,7 @@ urlpatterns = [
     path("painel/formulario/", views_painel.FunilFormView.as_view(), name="funil_form"),
     path("painel/investimento/", views_painel.InvestimentoView.as_view(), name="investimento"),
     path("carros/", views_painel.CarrosView.as_view(), name="carros"),
+    path("carros/<int:pk>/", views_painel.CarroDetalheView.as_view(), name="carro"),
     path("carros/sincronizar/", views_painel.SincronizarEstoqueView.as_view(), name="estoque_sincronizar"),
     path("carros/<int:pk>/midias/", views_painel.MidiasView.as_view(), name="midias"),
     path("equipe/", views_equipe.EquipeView.as_view(), name="equipe"),

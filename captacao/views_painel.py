@@ -161,30 +161,76 @@ class InvestimentoView(LoginRequiredMixin, View):
 VIDEO_EXT = (".mp4", ".mov", ".webm")
 
 
+ORDENS_CARROS = {"recentes": "Mais recentes", "menor": "Menor preço", "maior": "Maior preço", "leads": "Mais leads", "parados": "Mais tempo no estoque", "semfoto": "Sem foto primeiro"}
+
+
+def _dias_no_estoque(v, agora):
+    ref = v.cadastrado_em or v.atualizado_em
+    return (agora - ref).days if ref else None
+
+
 class CarrosView(LoginRequiredMixin, TemplateView):
-    """Páginas de captura do estoque de Olinda: link para copiar/colar no anúncio e leads de cada carro."""
+    """Carros à venda (estoque do AutoCerto): vitrine com foto, preço, leads e atalhos; é a base do 'workspace' de cada carro."""
     template_name = "captacao/carros.html"
 
     def get_context_data(self, **kw):
         from django.conf import settings
-        from . import utils
+        from django.db.models import Max
+        from . import fotos as fotos_mod, utils
         ctx = super().get_context_data(**kw)
-        q = (self.request.GET.get("q") or "").strip().lower()
-        from . import fotos as fotos_mod
-        n_fotos, n_videos = fotos_mod.contagem_por_veiculo(), Counter()     # vídeos ficam no ROUTE
+        g = self.request.GET
+        q = (g.get("q") or "").strip().lower()
+        marca, ordem, visao = g.get("marca", ""), g.get("ordem", "recentes"), g.get("v", "grade")
+        agora = timezone.now()
+        n_fotos = fotos_mod.contagem_por_veiculo()
         leads = dict(Lead.objects.filter(veiculo_id__isnull=False).values_list("veiculo_id").annotate(n=Count("id")))
+        todos = list(Veiculo.objects.filter(status__in=Veiculo.EM_LOJA))
+        capas = fotos_mod.capas([v.pk for v in todos])
         carros = []
-        for v in Veiculo.objects.filter(status__in=Veiculo.EM_LOJA).order_by("marca", "modelo"):
-            if q and q not in f"{v.marca} {v.modelo} {v.versao} {v.ano} {v.placa}".lower():
+        for v in todos:
+            if q and q not in f"{v.marca} {v.modelo} {v.versao} {v.ano} {v.placa} {v.cor}".lower():
+                continue
+            if marca and v.marca_fmt != marca:
                 continue
             caminho = reverse("captacao:captura", args=[v.pk, utils.slug_veiculo(v)])
-            carros.append({"v": v, "url": settings.SITE_URL + caminho, "caminho": caminho, "leads": leads.get(v.pk, 0),
-                           "fotos": n_fotos[v.pk], "videos": n_videos[v.pk],
-                           "preco": utils.preco_brl(v.valor_venda)})
-        from django.db.models import Max
-        ctx.update(ultima_sync=Veiculo.objects.aggregate(m=Max("sincronizado_em"))["m"], msg=self.request.GET.get("msg", ""),
-                   erro=self.request.GET.get("erro", ""), fonte_ok=bool(settings.AUTOCERTO_URL))
-        ctx.update(carros=carros, q=q, utm="utm_source=facebook&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}")
+            carros.append({"v": v, "url": settings.SITE_URL + caminho, "caminho": caminho, "leads": leads.get(v.pk, 0), "fotos": n_fotos[v.pk],
+                           "capa": capas.get(v.pk), "preco": utils.preco_brl(v.valor_venda), "dias": _dias_no_estoque(v, agora),
+                           "detalhe": reverse("captacao:carro", args=[v.pk])})
+        chave = {"menor": lambda c: (c["v"].valor_venda is None, c["v"].valor_venda or 0), "maior": lambda c: -(c["v"].valor_venda or 0),
+                 "leads": lambda c: -c["leads"], "parados": lambda c: -(c["dias"] or 0), "semfoto": lambda c: (c["fotos"] > 0, c["v"].marca),
+                 "recentes": lambda c: -(c["v"].cadastrado_em.timestamp() if c["v"].cadastrado_em else 0)}.get(ordem)
+        if chave:
+            carros.sort(key=chave)
+        precos = [v.valor_venda for v in todos if v.valor_venda]
+        ctx.update(
+            carros=carros, q=q, marca=marca, ordem=ordem, visao=visao if visao in ("grade", "lista") else "grade", ordens=ORDENS_CARROS,
+            marcas=sorted({v.marca_fmt for v in todos}), n_total=len(todos), n_sem_foto=sum(1 for v in todos if not n_fotos[v.pk]),
+            n_parados=sum(1 for v in todos if (_dias_no_estoque(v, agora) or 0) > 45), preco_medio=utils.preco_brl(sum(precos) / len(precos)) if precos else "—",
+            n_leads=sum(leads.get(v.pk, 0) for v in todos),
+            ultima_sync=Veiculo.objects.aggregate(m=Max("sincronizado_em"))["m"], msg=g.get("msg", ""), erro=g.get("erro", ""),
+            fonte_ok=bool(settings.AUTOCERTO_URL), utm="utm_source=facebook&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}")
+        return ctx
+
+
+class CarroDetalheView(LoginRequiredMixin, TemplateView):
+    """Workspace do carro: dados, galeria, links, leads e (em breve) o conteúdo produzido no estúdio."""
+    template_name = "captacao/carro_detalhe.html"
+
+    def get_context_data(self, pk, **kw):
+        from django.conf import settings
+        from django.shortcuts import get_object_or_404
+        from . import fotos as fotos_mod, utils
+        ctx = super().get_context_data(**kw)
+        v = get_object_or_404(Veiculo, pk=pk)
+        galeria, _ = fotos_mod.midia_do_veiculo(pk)
+        caminho = reverse("captacao:captura", args=[v.pk, utils.slug_veiculo(v)])
+        ctx.update(
+            v=v, galeria=galeria, url=settings.SITE_URL + caminho, caminho=caminho, preco=utils.preco_brl(v.valor_venda),
+            utm="utm_source=facebook&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}",
+            leads=leads_visiveis(self.request.user).filter(veiculo_id=pk).order_by("-criado_em")[:30],
+            dias=_dias_no_estoque(v, timezone.now()), opcionais=[o for o in (v.opcionais or []) if o],
+            parcela=utils.preco_brl(utils.parcela_estimada(v.valor_venda, settings.FINANCIAMENTO_ENTRADA_PCT, settings.FINANCIAMENTO_PARCELAS,
+                                                            settings.FINANCIAMENTO_TAXA_AM)[0] or 0) if v.valor_venda else "")
         return ctx
 
 

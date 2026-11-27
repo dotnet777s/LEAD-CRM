@@ -56,3 +56,39 @@ class EstruturaTests(Logado):
     def test_titulo_da_pagina_na_barra_superior(self):
         for url, titulo in (("/", "Funil"), ("/contatos/", "Contatos"), ("/painel/", "Resultados"), ("/modelos/", "Modelos")):
             self.assertIn(f'<span class="tt">{titulo}</span>', self.client.get(url).content.decode(), url)
+
+
+class CarrosFotoTests(Logado):
+    def test_lista_de_carros_mostra_a_primeira_foto(self):
+        from .helpers import novo_veiculo
+        v = novo_veiculo(fotos=2)
+        sem = novo_veiculo(modelo="Sem Foto", fotos=0, total_fotos=0)
+        html = self.client.get("/carros/").content.decode()
+        capa = v.rid and __import__("catalogo.models", fromlist=["FotoVeiculo"]).FotoVeiculo.objects.filter(veiculo_rid=v.rid, capa=True).first()
+        self.assertIn(f"/foto/{capa.pk}/480.webp", html)
+        self.assertIn("sem foto", html)
+        self.assertTrue(sem)
+
+
+class CarroWorkspaceTests(Logado):
+    def test_pagina_do_carro_com_galeria_leads_e_links(self):
+        from .helpers import novo_veiculo
+        v = novo_veiculo(fotos=3, observacoes="Revisado e com laudo.")
+        l = lead(veiculo=v)
+        html = self.client.get(f"/carros/{v.pk}/").content.decode()
+        for trecho in ("Galeria (3)", "Leads deste carro", "Maria Souza", "Revisado e com laudo.", f"/v/{v.pk}-", "Conteúdo (estúdio)", "Link do anúncio"):
+            self.assertIn(trecho, html)
+        self.assertEqual(html.count('alt="Foto '), 3)
+        self.assertTrue(l)
+
+    def test_ordenar_filtrar_e_trocar_visao(self):
+        from .helpers import novo_veiculo
+        novo_veiculo(modelo="Barato", valor_venda=30000)
+        novo_veiculo(modelo="Caro", valor_venda=90000)
+        h = self.client.get("/carros/?ordem=maior").content.decode()
+        self.assertLess(h.index("Caro"), h.index("Barato"))
+        h = self.client.get("/carros/?ordem=menor").content.decode()
+        self.assertLess(h.index("Barato"), h.index("Caro"))
+        self.assertIn("<table", self.client.get("/carros/?v=lista").content.decode())
+        self.assertNotIn("Barato", self.client.get("/carros/?q=caro").content.decode())
+        self.assertEqual(self.client.get("/carros/999999/").status_code, 404)

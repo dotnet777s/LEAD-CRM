@@ -1,0 +1,42 @@
+{% extends "captacao/base.html" %}
+{% block title %}TopCar · {{ v.marca_fmt }} {{ v.modelo_fmt }}{% endblock %}
+{% block titulo %}Carros{% endblock %}
+{% block content %}
+<div class="pg">
+  <p style="margin:0 0 10px"><a href="{% url 'captacao:carros' %}" style="color:var(--mu);text-decoration:none">← Carros</a></p>
+  <div class="car-topo">
+    <div class="car-capa">{% if galeria %}<img src="{% url 'captacao:foto' galeria.0.pk 800 %}" srcset="{% url 'captacao:foto' galeria.0.pk 800 %} 800w, {% url 'captacao:foto' galeria.0.pk 1200 %} 1200w" sizes="(min-width:900px) 520px, 100vw" alt="{{ v.marca_fmt }} {{ v.modelo_fmt }}">{% else %}<span class="sem">sem foto</span>{% endif %}</div>
+    <div>
+      <p class="car-marca">{{ v.marca_fmt }}</p>
+      <h1 style="margin:0;font-size:26px;letter-spacing:-.02em">{{ v.modelo_fmt }} <span style="font-weight:500;color:var(--tx2);font-size:.7em">{{ v.versao_fmt }}</span></h1>
+      <p style="color:var(--mu);margin:4px 0 12px">{{ v.ano }}{% if v.km is not None %} · {{ v.km|floatformat:0 }} km{% endif %}{% if v.cambio_fmt %} · {{ v.cambio_fmt }}{% endif %}{% if v.combustivel %} · {{ v.combustivel }}{% endif %}{% if v.cor_fmt %} · {{ v.cor_fmt }}{% endif %}{% if v.portas %} · {{ v.portas }} portas{% endif %}</p>
+      <div class="num" style="margin-bottom:2px">{{ preco }}</div>{% if parcela %}<small style="color:var(--mu)">ou 60x de {{ parcela }}* (estimativa)</small>{% endif %}
+      <div class="kpis" style="margin:16px 0 0;grid-template-columns:repeat(3,minmax(0,1fr))">
+        <div class="kpi"><b>{{ galeria|length }}</b><small>fotos</small></div><div class="kpi"><b>{{ leads|length }}</b><small>leads</small></div><div class="kpi"><b>{% if dias is not None %}{{ dias }} d{% else %}—{% endif %}</b><small>no estoque</small></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+        <a class="btn" href="{{ caminho }}" target="_blank" rel="noopener">Abrir página de captura</a>
+        <button class="btn sec" data-copiar="{{ url }}">Copiar link</button><button class="btn sec" data-copiar="{{ url }}?{{ utm }}">Link do anúncio (com parâmetros)</button></div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:18px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+    <div class="box"><h2>Ficha</h2><dl class="kv"><dt>Placa</dt><dd>{{ v.placa|default:"—" }}</dd><dt>Ano/modelo</dt><dd>{{ v.ano }}</dd><dt>Cor</dt><dd>{{ v.cor_fmt|default:"—" }}</dd><dt>Câmbio</dt><dd>{{ v.cambio_fmt|default:"—" }}</dd><dt>Combustível</dt><dd>{{ v.combustivel|default:"—" }}</dd><dt>Zero km</dt><dd>{% if v.zero_km %}Sim{% else %}Não{% endif %}</dd><dt>Id no AutoCerto</dt><dd>{{ v.rid }}</dd></dl>
+      {% if opcionais %}<div class="sec-t">Opcionais</div><div class="etqs">{% for o in opcionais %}<span class="etq" style="--c:#64748b">{{ o }}</span>{% endfor %}</div>{% endif %}</div>
+    <div class="box"><h2>Leads deste carro</h2>
+      {% if leads %}<ul class="hist">{% for l in leads %}<li style="display:flex;justify-content:space-between;gap:8px"><span><button class="nome" style="background:none;border:0;padding:0;font-weight:700;cursor:pointer;color:var(--tx)" hx-get="{% url 'captacao:lead' l.pk %}" hx-target="#dlg-box">{{ l.nome|truncatechars:26 }}</button><small>{{ l.criado_em|date:"d/m H:i" }}{% if l.portal %} · {{ l.get_portal_display }}{% endif %}</small></span><span class="chip-et" style="--c:{{ l.etapa_cor }}">{{ l.get_etapa_display }}</span></li>{% endfor %}</ul>
+      {% else %}<div class="vazio-g" style="border:0;padding:20px 0">Nenhum lead ligado a este carro ainda.</div>{% endif %}</div>
+    <div class="box"><h2>Conteúdo (estúdio)</h2><p style="color:var(--mu);margin:0 0 10px">Takes, roteiros e vídeos deste carro vão ficar aqui: gravar, tratar, montar e publicar sem sair do CRM.</p>
+      <div class="vazio-g" style="padding:22px 12px">Estúdio ainda não instalado nesta versão.</div></div>
+  </div>
+
+  {% if v.observacoes %}<div class="box" style="margin-top:14px"><h2>Descrição do anúncio</h2><p style="white-space:pre-wrap;color:var(--tx2);margin:0">{{ v.observacoes }}</p></div>{% endif %}
+
+  <div class="box" style="margin-top:14px"><h2>Galeria ({{ galeria|length }})</h2>
+    {% if galeria %}<div class="galeria">{% for f in galeria %}<a href="{% url 'captacao:foto' f.pk 1200 %}" target="_blank" rel="noopener"><img src="{% url 'captacao:foto' f.pk 480 %}" loading="lazy" alt="Foto {{ forloop.counter }}"></a>{% endfor %}</div>
+    {% else %}<div class="vazio-g" style="border:0">Este carro ainda não tem fotos no AutoCerto.</div>{% endif %}</div>
+</div>
+{% endblock %}
+{% block scripts %}<script>
+document.addEventListener('click',function(e){var b=e.target.closest('[data-copiar]');if(!b)return;
+ navigator.clipboard.writeText(b.dataset.copiar).then(function(){var t=b.textContent;b.textContent='Copiado ✓';setTimeout(function(){b.textContent=t},1500)});});
+</script>{% endblock %}

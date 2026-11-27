@@ -3,23 +3,44 @@
 {% block titulo %}Carros{% endblock %}
 {% block content %}
 <div class="pg">
-<form class="barra" method="get" style="padding:0 0 12px"><input type="search" name="q" value="{{ q }}" placeholder="Buscar carro ou placa" style="max-width:280px"><button class="btn sec sm">Buscar</button>
-<span style="color:var(--mu);font-size:13px">{{ carros|length }} carros disponíveis · cada um tem a sua página de captura</span></form>
-{% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}{% if erro %}<p class="err">{{ erro }}</p>{% endif %}
-<div class="box" style="margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between"><div><b>Estoque do AutoCerto</b><br><small style="color:var(--mu)">{% if fonte_ok %}Atualizado sozinho a cada 15 minutos{% if ultima_sync %} · última vez {{ ultima_sync|date:"d/m H:i" }}{% endif %}.{% else %}Falta configurar AUTOCERTO_URL no servidor.{% endif %}</small></div>
-{% if eh_gestor %}<form method="post" action="{% url 'captacao:estoque_sincronizar' %}">{% csrf_token %}<button class="btn sec sm" {% if not fonte_ok %}disabled{% endif %}>Atualizar agora</button></form>{% endif %}</div>
-<div class="box" style="margin-bottom:12px"><h2>Parâmetros para o anúncio (Meta)</h2>
-<p style="margin:0 0 8px;color:var(--mu);font-size:14px">Cole em "Parâmetros de URL" do anúncio. Assim o CRM sabe de qual campanha e anúncio veio cada lead.</p>
-<code id="utm" style="word-break:break-all">{{ utm }}</code> <button class="btn sec sm" data-copiar="{{ utm }}">Copiar</button></div>
-<div class="box"><table class="t"><tr><th>Carro</th><th class="n">Preço</th><th class="n">Fotos</th><th class="n">Vídeos</th><th class="n">Leads</th><th>Página de captura</th></tr>
-{% for c in carros %}<tr>
-<td><b>{{ c.v.marca_fmt }} {{ c.v.modelo_fmt }}</b> {{ c.v.ano }}<br><small style="color:var(--mu)">{{ c.v.versao_fmt }} · {{ c.v.placa }} · {% if c.v.local %}está em {{ c.v.local }}{% else %}local não informado{% endif %}{% if not c.fotos %} · <span style="color:var(--am)">sem fotos vinculadas: a página fica indisponível</span>{% endif %}</small></td>
-<td class="n">{{ c.preco }}</td><td class="n"><button class="btn sec sm" hx-get="{% url 'captacao:midias' c.v.pk %}?aba=fotos" hx-target="#dlg-box">{{ c.fotos }}</button></td>
-<td class="n"><button class="btn sec sm" hx-get="{% url 'captacao:midias' c.v.pk %}?aba=videos" hx-target="#dlg-box">{{ c.videos }}</button></td><td class="n">{{ c.leads }}</td>
-<td style="white-space:nowrap"><a class="btn sm" href="{{ c.caminho }}" target="_blank" rel="noopener">Abrir</a>
-<button class="btn sec sm" data-copiar="{{ c.url }}">Copiar link</button>
-<button class="btn sec sm" data-copiar="{{ c.url }}?{{ utm }}">Link do anúncio</button></td></tr>
-{% empty %}<tr><td colspan="6" style="color:var(--mu)">Nenhum carro disponível.</td></tr>{% endfor %}</table></div>
+  <div class="titulo-pg"><div><h1>Carros à venda</h1><small>Estoque do AutoCerto, com a página de captura e os leads de cada carro. {% if fonte_ok %}Atualizado sozinho a cada 15 minutos{% if ultima_sync %} · última vez {{ ultima_sync|date:"d/m H:i" }}{% endif %}.{% else %}Falta configurar a URL do AutoCerto no servidor.{% endif %}</small></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <details class="pop"><summary class="btn sec sm">Parâmetros do anúncio</summary><div class="pop-box" style="min-width:min(420px,86vw);right:0;left:auto"><small style="color:var(--mu)">Cole em “Parâmetros de URL” do anúncio da Meta: assim o CRM sabe de qual campanha e anúncio veio cada lead.</small><code style="word-break:break-all">{{ utm }}</code><button class="btn sec sm" data-copiar="{{ utm }}">Copiar</button></div></details>
+      {% if eh_gestor %}<form method="post" action="{% url 'captacao:estoque_sincronizar' %}">{% csrf_token %}<button class="btn sm" {% if not fonte_ok %}disabled{% endif %}>Atualizar agora</button></form>{% endif %}</div></div>
+  {% if msg %}<p class="ok-msg">{{ msg }}</p>{% endif %}{% if erro %}<p class="err">{{ erro }}</p>{% endif %}
+  <div class="kpis">
+    <div class="kpi"><b>{{ n_total }}</b><small>carros à venda · preço médio {{ preco_medio }}</small></div>
+    <div class="kpi"><b>{{ n_leads }}</b><small>leads ligados a um carro</small></div>
+    <div class="kpi"><b {% if n_sem_foto %}style="color:var(--warn)"{% endif %}>{{ n_sem_foto }}</b><small>sem foto (a página não abre)</small></div>
+    <div class="kpi"><b>{{ n_parados }}</b><small>há mais de 45 dias no estoque</small></div>
+  </div>
+  <form class="filtros-l" method="get">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar modelo, placa, cor ou ano">
+    <select name="marca" onchange="this.form.submit()"><option value="">Todas as marcas</option>{% for m in marcas %}<option {% if m == marca %}selected{% endif %}>{{ m }}</option>{% endfor %}</select>
+    <select name="ordem" onchange="this.form.submit()">{% for k, r in ordens.items %}<option value="{{ k }}" {% if k == ordem %}selected{% endif %}>{{ r }}</option>{% endfor %}</select>
+    <input type="hidden" name="v" value="{{ visao }}"><button class="btn sec sm">Buscar</button>
+    <span class="seg-v"><a href="?q={{ q|urlencode }}&marca={{ marca|urlencode }}&ordem={{ ordem }}&v=grade" class="{% if visao == 'grade' %}on{% endif %}" title="Vitrine">▦</a><a href="?q={{ q|urlencode }}&marca={{ marca|urlencode }}&ordem={{ ordem }}&v=lista" class="{% if visao == 'lista' %}on{% endif %}" title="Lista">☰</a></span>
+  </form>
+  {% if visao == 'grade' %}
+  <div class="vitrine">{% for c in carros %}
+    <article class="car-card">
+      <a class="car-foto" href="{{ c.detalhe }}">{% if c.capa %}<img src="{% url 'captacao:foto' c.capa.pk 480 %}" srcset="{% url 'captacao:foto' c.capa.pk 480 %} 480w, {% url 'captacao:foto' c.capa.pk 800 %} 800w" sizes="(min-width:900px) 300px, 90vw" loading="lazy" alt="{{ c.v.marca_fmt }} {{ c.v.modelo_fmt }}">{% else %}<span class="sem">sem foto</span>{% endif %}
+        <span class="car-tags">{% if c.v.local %}<i>📍 {{ c.v.local }}</i>{% endif %}{% if c.fotos %}<i>📷 {{ c.fotos }}</i>{% endif %}{% if c.dias is not None %}<i>{{ c.dias }} d</i>{% endif %}</span></a>
+      <div class="car-info"><p class="car-marca">{{ c.v.marca_fmt }}</p>
+        <h3><a href="{{ c.detalhe }}">{{ c.v.modelo_fmt }}</a> <span>{{ c.v.versao_fmt|truncatechars:26 }}</span></h3>
+        <p class="car-spec">{{ c.v.ano }}{% if c.v.km is not None %} · {{ c.v.km|floatformat:0 }} km{% endif %}{% if c.v.cambio_fmt %} · {{ c.v.cambio_fmt }}{% endif %}{% if c.v.cor_fmt %} · {{ c.v.cor_fmt }}{% endif %}</p>
+        <div class="car-preco"><b>{{ c.preco }}</b>{% if c.leads %}<a class="badge enviado" href="{% url 'captacao:contatos' %}?q={{ c.v.modelo|urlencode }}">{{ c.leads }} lead{{ c.leads|pluralize }}</a>{% else %}<span class="badge">0 leads</span>{% endif %}</div>
+        {% if not c.fotos %}<p class="aviso-jan" style="margin:8px 0 0;font-size:12px">Sem foto: a página de captura fica indisponível.</p>{% endif %}
+        <div class="car-acoes"><a class="btn sm" href="{{ c.caminho }}" target="_blank" rel="noopener">Abrir página</a><button class="btn sec sm" data-copiar="{{ c.url }}?{{ utm }}" title="Link para colocar no anúncio">Link do anúncio</button><a class="btn sec sm" href="{{ c.detalhe }}">Detalhes</a></div></div>
+    </article>{% empty %}<div class="vazio-g" style="grid-column:1/-1">Nenhum carro encontrado.</div>{% endfor %}</div>
+  {% else %}
+  <div class="box" style="padding:4px 8px;overflow-x:auto"><table class="t"><tr><th colspan="2">Carro</th><th class="n">Preço</th><th class="n">Fotos</th><th class="n">Leads</th><th class="n">No estoque</th><th></th></tr>
+    {% for c in carros %}<tr><td style="width:92px;padding-right:0">{% if c.capa %}<a href="{{ c.detalhe }}"><img class="capa-t" src="{% url 'captacao:foto' c.capa.pk 160 %}" srcset="{% url 'captacao:foto' c.capa.pk 160 %} 1x, {% url 'captacao:foto' c.capa.pk 480 %} 3x" width="80" height="60" loading="lazy" alt=""></a>{% else %}<span class="capa-t sem">sem foto</span>{% endif %}</td>
+      <td><a href="{{ c.detalhe }}" style="text-decoration:none"><b>{{ c.v.marca_fmt }} {{ c.v.modelo_fmt }}</b> {{ c.v.ano }}</a><br><small style="color:var(--mu)">{{ c.v.versao_fmt }} · {{ c.v.placa }}</small></td>
+      <td class="n">{{ c.preco }}</td><td class="n">{{ c.fotos }}</td><td class="n">{{ c.leads }}</td><td class="n">{% if c.dias is not None %}{{ c.dias }} d{% else %}—{% endif %}</td>
+      <td style="white-space:nowrap;text-align:right"><a class="btn sm" href="{{ c.caminho }}" target="_blank" rel="noopener">Abrir</a> <button class="btn sec sm" data-copiar="{{ c.url }}?{{ utm }}">Link do anúncio</button></td></tr>
+    {% empty %}<tr><td colspan="7" style="color:var(--mu)">Nenhum carro encontrado.</td></tr>{% endfor %}</table></div>
+  {% endif %}
 </div>
 {% endblock %}
 {% block scripts %}<script>

@@ -293,8 +293,8 @@ class MidiasTests(Base):
         html = self.client.get("/carros/").content.decode()
         self.assertIn(f"/v/{a.pk}-", html)
         self.assertIn(f"/v/{b.pk}-", html)
-        self.assertIn("está em Recife", html)
-        self.assertIn("está em Olinda", html)
+        self.assertIn("📍 Recife", html)           # onde o carro está (os dois estoques são vendidos juntos)
+        self.assertIn("📍 Olinda", html)
 
     def test_foto_vem_do_banco_e_e_redimensionada(self):
         import io

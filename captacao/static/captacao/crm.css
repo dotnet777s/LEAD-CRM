@@ -341,3 +341,25 @@ details.dprog{border:1px dashed var(--line2);border-radius:10px;padding:6px 10px
 .barra .extra select,.barra>select{min-width:0;padding:8px 28px 8px 11px;font-size:13px}.barra input[type=search]{flex:0 1 230px}
 .som span{display:none}.som{padding:8px 10px}
 @media(max-width:900px){.som span{display:inline}}
+
+.capa-t{display:block;width:80px;height:60px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:var(--sf2)}.capa-t.sem{display:grid;place-items:center;font-size:10.5px;color:var(--faint);text-align:center}
+
+/* Carros: vitrine e workspace */
+.seg-v{display:inline-flex;border:1px solid var(--line2);border-radius:var(--r-sm);overflow:hidden;margin-left:auto}.seg-v a{padding:7px 12px;text-decoration:none;color:var(--mu);background:var(--sf2)}.seg-v a.on{background:var(--brand-soft);color:var(--brand)}
+.vitrine{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.car-card{background:var(--sf);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,box-shadow .15s,transform .15s}
+.car-card:hover{border-color:var(--brand-line);box-shadow:var(--shadow);transform:translateY(-2px)}
+.car-foto{position:relative;display:block;aspect-ratio:4/3;background:var(--sf2);overflow:hidden}.car-foto img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}.car-card:hover .car-foto img{transform:scale(1.04)}
+.car-foto .sem,.car-capa .sem{position:absolute;inset:0;display:grid;place-items:center;color:var(--faint);font-size:13px}
+.car-tags{position:absolute;left:10px;bottom:10px;display:flex;gap:6px}.car-tags i{font-style:normal;font-size:11.5px;font-weight:700;background:rgba(6,10,15,.72);color:#fff;border-radius:999px;padding:3px 9px;backdrop-filter:blur(6px)}
+.car-info{padding:14px 16px 16px;display:flex;flex-direction:column;gap:2px;flex:1}
+.car-marca{margin:0;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--brand);font-weight:700}
+.car-info h3{margin:2px 0 0;font:700 17px/1.2 var(--tt);letter-spacing:-.01em}.car-info h3 a{text-decoration:none}.car-info h3 span{font-weight:500;font-size:.72em;color:var(--tx2)}
+.car-spec{margin:2px 0 8px;color:var(--mu);font-size:13px}
+.car-preco{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}.car-preco b{font:800 20px var(--tt);letter-spacing:-.02em}
+.car-acoes{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.car-topo{display:grid;grid-template-columns:minmax(0,520px) minmax(0,1fr);gap:24px;align-items:start}
+.car-capa{position:relative;aspect-ratio:4/3;border-radius:var(--r);overflow:hidden;background:var(--sf2);border:1px solid var(--line)}.car-capa img{width:100%;height:100%;object-fit:cover;display:block}
+.galeria{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}.galeria img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block;border:1px solid var(--line);background:var(--sf2)}.galeria a:hover img{border-color:var(--brand)}
+@media(max-width:900px){.car-topo{grid-template-columns:1fr}.vitrine{grid-template-columns:1fr 1fr;gap:10px}.car-info{padding:10px 11px 12px}.car-info h3{font-size:15px}.car-preco b{font-size:16px}}
+@media(max-width:480px){.vitrine{grid-template-columns:1fr}}
